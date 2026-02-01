@@ -9,7 +9,7 @@ export default function Clients() {
 
   const filteredClients = mockHeatmapData.filter((client) => {
     const matchesSearch = client.account_id.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = 
+    const matchesFilter =
       filterRisk === 'all' ||
       (filterRisk === 'high' && client.churn_risk_label === 1) ||
       (filterRisk === 'safe' && client.churn_risk_label === 0);
@@ -75,8 +75,8 @@ export default function Clients() {
               onClick={() => setFilterRisk(filter)}
               className={`
                 px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                ${filterRisk === filter 
-                  ? 'bg-primary text-primary-foreground' 
+                ${filterRisk === filter
+                  ? 'bg-primary text-primary-foreground'
                   : 'bg-muted/50 text-muted-foreground hover:bg-muted'
                 }
               `}
@@ -120,11 +120,19 @@ export default function Clients() {
                 </h3>
                 <p className="text-xs text-muted-foreground mt-1">Enterprise Tier</p>
               </div>
-              {client.churn_risk_label === 1 ? (
-                <span className="badge-risk">High Risk</span>
-              ) : (
-                <span className="badge-safe">Healthy</span>
-              )}
+              <div className="text-right">
+                {client.churn_risk_label === 1 ? (
+                  <span className="badge-risk mb-1 block">High Risk</span>
+                ) : (
+                  <span className="badge-safe mb-1 block">Healthy</span>
+                )}
+                {client.risk_score !== undefined && (
+                  <span className={`text-xs font-mono font-medium ${client.risk_score > 50 ? 'text-destructive' : 'text-success'
+                    }`}>
+                    Risk: {client.risk_score}/100
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -144,11 +152,10 @@ export default function Clients() {
                 <span className="text-sm text-muted-foreground">Utilization</span>
                 <div className="flex items-center gap-2">
                   <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${
-                        client.license_utilization < 40 ? 'bg-destructive' :
-                        client.license_utilization < 70 ? 'bg-warning' : 'bg-success'
-                      }`}
+                    <div
+                      className={`h-full rounded-full ${client.license_utilization < 40 ? 'bg-destructive' :
+                          client.license_utilization < 70 ? 'bg-warning' : 'bg-success'
+                        }`}
                       style={{ width: `${client.license_utilization}%` }}
                     />
                   </div>

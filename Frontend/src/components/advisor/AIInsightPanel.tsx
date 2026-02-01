@@ -19,7 +19,7 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
       setShowEmail(false);
       let index = 0;
       const text = insight.notification;
-      
+
       const timer = setInterval(() => {
         if (index < text.length) {
           setDisplayedText(text.slice(0, index + 1));
@@ -108,7 +108,7 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-6"
+            className="space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] pr-2"
           >
             {/* Alert Box */}
             <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30">
@@ -124,6 +124,67 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
                 </div>
               </div>
             </div>
+
+            {/* Playbook Section */}
+            {insight.playbook && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+                className="glass-card p-4 border-l-4 border-l-primary"
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-lg bg-primary/20">
+                    <Check className="w-4 h-4 text-primary" />
+                  </div>
+                  <h4 className="font-semibold text-foreground text-sm">Strategic Playbook</h4>
+                </div>
+                <div className="space-y-3">
+                  <p className="text-xs font-medium text-primary uppercase tracking-wider">{insight.playbook.strategy_name}</p>
+                  <ul className="space-y-2">
+                    {insight.playbook.action_steps.map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                        {step}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-3 pt-3 border-top border-border/50 text-xs text-muted-foreground italic">
+                    Outcome: {insight.playbook.expected_outcome}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Sentiment Section */}
+            {insight.sentiment_analysis && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.7 }}
+                className="glass-card p-4"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <h4 className="font-semibold text-foreground text-sm">Sentiment Detection</h4>
+                  </div>
+                  <div className={`px-2 py-1 rounded text-xs font-medium ${insight.sentiment_analysis.sentiment_score > 0 ? 'bg-green-500/20 text-green-400' :
+                      insight.sentiment_analysis.sentiment_score < 0 ? 'bg-red-500/20 text-red-400' :
+                        'bg-gray-500/20 text-gray-400'
+                    }`}>
+                    {insight.sentiment_analysis.overall_sentiment}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {insight.sentiment_analysis.key_themes.map((theme, i) => (
+                    <span key={i} className="text-xs px-2 py-1 rounded bg-secondary text-secondary-foreground border border-border">
+                      {theme}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+            )}
 
             {/* Email Draft */}
             <AnimatePresence>

@@ -30,19 +30,22 @@ class Account(Base):
     # payment_failures, license_utilization, churn_risk_label, upsell_opportunity_label
     
     account_id = Column(String, primary_key=True, index=True)
+    company_name = Column(String) # Added
     arr = Column(Float)
     renewal_date = Column(Date)
     days_to_renewal = Column(Integer)
+    health_score = Column(Integer) # Added
     login_drop_rate = Column(Float)
     support_tickets = Column(Integer)
-    resolution_time_hours = Column(Float) # Added based on CSV structure
+    resolution_time_hours = Column(Float) 
     payment_failures = Column(Integer)
-    nps_score = Column(Integer) # Added based on CSV structure
+    nps_score = Column(Integer) 
     license_utilization = Column(Float)
-    storage_utilization = Column(Float) # Added
-    feature_usage_score = Column(Integer) # Added
+    storage_utilization = Column(Float) 
+    feature_usage_score = Column(Integer) 
     churn_risk_label = Column(Integer)
     upsell_opportunity_label = Column(Integer)
-    industry = Column(String) # Added
-    tier = Column(String) # Added
+    industry = Column(String) 
+    tier = Column(String) 
+    last_contact_date = Column(Date) # Added
 
