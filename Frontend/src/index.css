@@ -1,0 +1,230 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@layer base {
+  :root {
+    /* Deep Navy & Slate palette - Bloomberg meets Fintech */
+    --background: 222 47% 6%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 8%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 6%;
+
+    --secondary: 215 25% 20%;
+    --secondary-foreground: 210 40% 90%;
+
+    --muted: 215 25% 15%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 210 40% 98%;
+
+    /* Signal colors */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142 76% 45%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 6%;
+
+    --border: 215 25% 18%;
+    --input: 215 25% 18%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+
+    /* Glassmorphism */
+    --glass-bg: 222 47% 11% / 0.7;
+    --glass-border: 215 25% 25% / 0.5;
+    --glass-blur: 12px;
+
+    /* Sidebar */
+    --sidebar-background: 222 47% 5%;
+    --sidebar-foreground: 215 20% 65%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 215 25% 12%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 215 25% 15%;
+    --sidebar-ring: 217 91% 60%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(199 89% 48%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 45%), hsl(163 94% 40%));
+    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%), hsl(15 80% 55%));
+    --gradient-glass: linear-gradient(135deg, hsl(222 47% 12% / 0.8), hsl(222 47% 8% / 0.6));
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/30;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+@layer components {
+  /* Glassmorphism card */
+  .glass-card {
+    @apply relative overflow-hidden rounded-xl border border-white/10;
+    background: linear-gradient(135deg, hsl(222 47% 12% / 0.7), hsl(222 47% 8% / 0.5));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-card::before {
+    content: '';
+    @apply absolute inset-0 rounded-xl;
+    background: linear-gradient(135deg, hsl(217 91% 60% / 0.05), transparent);
+    pointer-events: none;
+  }
+
+  /* Glow effects */
+  .glow-primary {
+    box-shadow: 0 0 20px hsl(217 91% 60% / 0.3),
+                0 0 40px hsl(217 91% 60% / 0.15),
+                inset 0 1px 0 hsl(217 91% 70% / 0.2);
+  }
+
+  .glow-success {
+    box-shadow: 0 0 20px hsl(142 76% 45% / 0.3),
+                0 0 40px hsl(142 76% 45% / 0.15);
+  }
+
+  .glow-danger {
+    box-shadow: 0 0 20px hsl(0 84% 60% / 0.3),
+                0 0 40px hsl(0 84% 60% / 0.15);
+  }
+
+  /* Animated border gradient */
+  .border-gradient {
+    @apply relative;
+  }
+
+  .border-gradient::before {
+    content: '';
+    @apply absolute -inset-[1px] rounded-xl -z-10;
+    background: linear-gradient(135deg, hsl(217 91% 60% / 0.5), hsl(199 89% 48% / 0.3), transparent);
+  }
+
+  /* Status badges */
+  .badge-risk {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+    background: hsl(0 84% 60% / 0.15);
+    color: hsl(0 84% 65%);
+    border: 1px solid hsl(0 84% 60% / 0.3);
+  }
+
+  .badge-safe {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+    background: hsl(142 76% 45% / 0.15);
+    color: hsl(142 76% 55%);
+    border: 1px solid hsl(142 76% 45% / 0.3);
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+    background: hsl(38 92% 50% / 0.15);
+    color: hsl(38 92% 60%);
+    border: 1px solid hsl(38 92% 50% / 0.3);
+  }
+
+  /* Metric card styling */
+  .metric-card {
+    @apply glass-card p-6;
+  }
+
+  .metric-value {
+    @apply text-3xl font-bold tracking-tight;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Table styling */
+  .data-table {
+    @apply w-full;
+  }
+
+  .data-table th {
+    @apply px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground border-b border-border/50;
+  }
+
+  .data-table td {
+    @apply px-4 py-4 text-sm border-b border-border/30;
+  }
+
+  .data-table tr {
+    @apply transition-colors hover:bg-white/[0.02];
+  }
+
+  /* Animated pulse for alerts */
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(217 91% 60% / 0.4),
+                  0 0 40px hsl(217 91% 60% / 0.2);
+    }
+    50% {
+      box-shadow: 0 0 30px hsl(217 91% 60% / 0.6),
+                  0 0 60px hsl(217 91% 60% / 0.3);
+    }
+  }
+
+  /* Typewriter effect */
+  .typewriter {
+    overflow: hidden;
+    border-right: 2px solid hsl(217 91% 60%);
+    animation: blink-caret 0.75s step-end infinite;
+  }
+
+  @keyframes blink-caret {
+    from, to { border-color: transparent; }
+    50% { border-color: hsl(217 91% 60%); }
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
