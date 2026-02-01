@@ -144,3 +144,6 @@ Thumbs.db
 
 # Project specific
 extracted_text.txt
+
+# Node.js
+node_modules/
