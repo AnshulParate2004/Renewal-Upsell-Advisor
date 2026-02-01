@@ -72,7 +72,7 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
         </div>
         <div>
           <h3 className="text-lg font-semibold text-foreground">AI Analysis</h3>
-          <p className="text-xs text-muted-foreground">Powered by S-007 Intelligence</p>
+          <p className="text-xs text-muted-foreground">Powered by RevIQ Intelligence</p>
         </div>
       </div>
 
@@ -170,8 +170,8 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
                     <h4 className="font-semibold text-foreground text-sm">Sentiment Detection</h4>
                   </div>
                   <div className={`px-2 py-1 rounded text-xs font-medium ${insight.sentiment_analysis.sentiment_score > 0 ? 'bg-green-500/20 text-green-400' :
-                      insight.sentiment_analysis.sentiment_score < 0 ? 'bg-red-500/20 text-red-400' :
-                        'bg-gray-500/20 text-gray-400'
+                    insight.sentiment_analysis.sentiment_score < 0 ? 'bg-red-500/20 text-red-400' :
+                      'bg-gray-500/20 text-gray-400'
                     }`}>
                     {insight.sentiment_analysis.overall_sentiment}
                   </div>

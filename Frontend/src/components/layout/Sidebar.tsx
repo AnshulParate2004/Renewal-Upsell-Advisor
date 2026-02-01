@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  Users, 
-  BrainCircuit, 
-  Settings, 
-  ChevronLeft, 
+import {
+  LayoutDashboard,
+  Users,
+  BrainCircuit,
+  Settings,
+  ChevronLeft,
   ChevronRight,
   Shield,
   Zap
@@ -21,7 +21,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
   { name: 'Clients', path: '/clients', icon: <Users size={20} /> },
-  { name: 'S-007 Advisor', path: '/advisor', icon: <BrainCircuit size={20} /> },
+  { name: 'RevIQ Advisor', path: '/advisor', icon: <BrainCircuit size={20} /> },
   { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
 ];
 
@@ -38,7 +38,7 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
-        <motion.div 
+        <motion.div
           className="flex items-center gap-3"
           animate={{ opacity: 1 }}
         >
@@ -53,8 +53,8 @@ export function Sidebar() {
                 exit={{ opacity: 0, x: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <h1 className="font-bold text-foreground tracking-tight">S-007</h1>
-                <p className="text-xs text-muted-foreground">Renewal Advisor</p>
+                <h1 className="font-bold text-foreground tracking-tight">RevIQ</h1>
+                <p className="text-xs text-muted-foreground">Strategic Advisor</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -77,8 +77,8 @@ export function Sidebar() {
                   to={item.path}
                   className={`
                     flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
-                    ${isActive 
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
+                    ${isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
                       : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
                     }
                     ${collapsed ? 'justify-center' : ''}

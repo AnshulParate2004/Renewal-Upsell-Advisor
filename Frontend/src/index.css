@@ -4,64 +4,59 @@
 
 @layer base {
   :root {
-    /* Deep Navy & Slate palette - Bloomberg meets Fintech */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
+    /* Enterprise Light Theme - "Official" Look */
+    --background: 210 40% 98%;
+    /* Slate 50 */
+    --foreground: 222 47% 11%;
+    /* Slate 900 */
 
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 98%;
+    --card: 0 0% 100%;
+    /* White */
+    --card-foreground: 222 47% 11%;
 
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 221 83% 53%;
+    /* Blue 600 */
+    --primary-foreground: 210 40% 98%;
 
-    --secondary: 215 25% 20%;
-    --secondary-foreground: 210 40% 90%;
+    --secondary: 210 40% 96.1%;
+    /* Slate 100 */
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 215 25% 15%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
 
-    /* Signal colors */
-    --destructive: 0 84% 60%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --success: 142 76% 45%;
+    --success: 142 71% 45%;
+    /* Green 600 */
     --success-foreground: 210 40% 98%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 6%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 215 25% 18%;
-    --input: 215 25% 18%;
-    --ring: 217 91% 60%;
+    --border: 214.3 31.8% 91.4%;
+    /* Slate 200 */
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 53%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    /* Glassmorphism */
-    --glass-bg: 222 47% 11% / 0.7;
-    --glass-border: 215 25% 25% / 0.5;
-    --glass-blur: 12px;
+    /* Glassmorphism / Shadows - Subtle for Enterprise */
+    --glass-bg: 0 0% 100% / 0.8;
+    --glass-border: 214.3 31.8% 91.4% / 0.8;
+    --glass-blur: 8px;
 
-    /* Sidebar */
-    --sidebar-background: 222 47% 5%;
-    --sidebar-foreground: 215 20% 65%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 215 25% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 25% 15%;
-    --sidebar-ring: 217 91% 60%;
-
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(199 89% 48%));
-    --gradient-success: linear-gradient(135deg, hsl(142 76% 45%), hsl(163 94% 40%));
-    --gradient-danger: linear-gradient(135deg, hsl(0 84% 60%), hsl(15 80% 55%));
-    --gradient-glass: linear-gradient(135deg, hsl(222 47% 12% / 0.8), hsl(222 47% 8% / 0.6));
+    /* Gradients (Subtle) */
+    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%), hsl(217 91% 60%));
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%), hsl(150 100% 35%));
+    --gradient-danger: linear-gradient(135deg, hsl(0 84.2% 60.2%), hsl(0 70% 50%));
   }
 }
 
@@ -95,69 +90,39 @@
 }
 
 @layer components {
+
+  /* Glassmorphism card */
   /* Glassmorphism card */
   .glass-card {
-    @apply relative overflow-hidden rounded-xl border border-white/10;
-    background: linear-gradient(135deg, hsl(222 47% 12% / 0.7), hsl(222 47% 8% / 0.5));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    @apply relative overflow-hidden rounded-xl border border-border bg-white shadow-sm;
+    /* background: var(--glass-bg); -- removed heavily blurred bg for solid enterprise look */
   }
 
-  .glass-card::before {
-    content: '';
-    @apply absolute inset-0 rounded-xl;
-    background: linear-gradient(135deg, hsl(217 91% 60% / 0.05), transparent);
-    pointer-events: none;
-  }
-
-  /* Glow effects */
+  /* Glow effects - toned down for office usage */
   .glow-primary {
-    box-shadow: 0 0 20px hsl(217 91% 60% / 0.3),
-                0 0 40px hsl(217 91% 60% / 0.15),
-                inset 0 1px 0 hsl(217 91% 70% / 0.2);
-  }
-
-  .glow-success {
-    box-shadow: 0 0 20px hsl(142 76% 45% / 0.3),
-                0 0 40px hsl(142 76% 45% / 0.15);
-  }
-
-  .glow-danger {
-    box-shadow: 0 0 20px hsl(0 84% 60% / 0.3),
-                0 0 40px hsl(0 84% 60% / 0.15);
-  }
-
-  /* Animated border gradient */
-  .border-gradient {
-    @apply relative;
-  }
-
-  .border-gradient::before {
-    content: '';
-    @apply absolute -inset-[1px] rounded-xl -z-10;
-    background: linear-gradient(135deg, hsl(217 91% 60% / 0.5), hsl(199 89% 48% / 0.3), transparent);
+    box-shadow: 0 0 15px hsl(221 83% 53% / 0.2);
   }
 
   /* Status badges */
   .badge-risk {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
-    background: hsl(0 84% 60% / 0.15);
-    color: hsl(0 84% 65%);
-    border: 1px solid hsl(0 84% 60% / 0.3);
+    background: hsl(0 84% 60% / 0.1);
+    color: hsl(0 84% 40%);
+    border: 1px solid hsl(0 84% 60% / 0.2);
   }
 
   .badge-safe {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
-    background: hsl(142 76% 45% / 0.15);
-    color: hsl(142 76% 55%);
-    border: 1px solid hsl(142 76% 45% / 0.3);
+    background: hsl(142 71% 45% / 0.1);
+    color: hsl(142 71% 35%);
+    border: 1px solid hsl(142 71% 45% / 0.2);
   }
 
   .badge-warning {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
-    background: hsl(38 92% 50% / 0.15);
-    color: hsl(38 92% 60%);
-    border: 1px solid hsl(38 92% 50% / 0.3);
+    background: hsl(38 92% 50% / 0.1);
+    color: hsl(38 92% 35%);
+    border: 1px solid hsl(38 92% 50% / 0.2);
   }
 
   /* Metric card styling */
@@ -193,13 +158,16 @@
   }
 
   @keyframes pulse-glow {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 20px hsl(217 91% 60% / 0.4),
-                  0 0 40px hsl(217 91% 60% / 0.2);
+        0 0 40px hsl(217 91% 60% / 0.2);
     }
+
     50% {
       box-shadow: 0 0 30px hsl(217 91% 60% / 0.6),
-                  0 0 60px hsl(217 91% 60% / 0.3);
+        0 0 60px hsl(217 91% 60% / 0.3);
     }
   }
 
@@ -211,8 +179,15 @@
   }
 
   @keyframes blink-caret {
-    from, to { border-color: transparent; }
-    50% { border-color: hsl(217 91% 60%); }
+
+    from,
+    to {
+      border-color: transparent;
+    }
+
+    50% {
+      border-color: hsl(217 91% 60%);
+    }
   }
 }
 

@@ -34,7 +34,7 @@ I noticed your contract is coming up for renewal in {days} days, and we want to 
 We've detected some challenges regarding {reason_str}, and I'd love to schedule a brief call to address these immediately and discuss your renewal options.
 
 Best regards,
-S-007 Advisor"""
+RevIQ Advisor"""
 
     # Logic for Upsell Opportunity
     elif upsell_label == 1:
@@ -49,7 +49,7 @@ With your renewal approaching in {days} days, I noticed you are getting great va
 We have a new Premium tier that matches your growth trajectory. Let's discuss how we can support your scaling needs during your renewal.
 
 Best regards,
-S-007 Advisor"""
+RevIQ Advisor"""
     
     # Logic for Safe/Neutral
     else:
@@ -64,7 +64,7 @@ Your contract renewal is coming up in {days} days. Everything looks great on our
 I'll send over the renewal paperwork shortly. Let me know if you have any questions.
 
 Best regards,
-S-007 Advisor"""
+RevIQ Advisor"""
 
     return {
         "notification": notification,

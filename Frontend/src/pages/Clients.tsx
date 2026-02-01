@@ -1,13 +1,28 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, Download, Plus } from 'lucide-react';
-import { mockHeatmapData, type CustomerAccount } from '@/lib/api';
+import { getHeatmapData, type CustomerAccount } from '@/lib/api';
+import { useEffect } from 'react';
 
 export default function Clients() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRisk, setFilterRisk] = useState<'all' | 'high' | 'safe'>('all');
+  const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredClients = mockHeatmapData.filter((client) => {
+  useEffect(() => {
+    getHeatmapData()
+      .then(data => {
+        setAccounts(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Failed to fetch clients:", err);
+        setIsLoading(false);
+      });
+  }, []);
+
+  const filteredClients = accounts.filter((client) => {
     const matchesSearch = client.account_id.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter =
       filterRisk === 'all' ||
@@ -22,6 +37,55 @@ export default function Clients() {
       currency: 'USD',
       minimumFractionDigits: 0,
     }).format(value);
+  };
+
+  const handleExportCSV = () => {
+    if (filteredClients.length === 0) return;
+
+    // Define CSV headers
+    const headers = [
+      'Account ID',
+      'ARR',
+      'Renewal Date',
+      'Days to Renewal',
+      'Login Drop Rate (%)',
+      'Support Tickets',
+      'Payment Failures',
+      'License Utilization (%)',
+      'Churn Risk Label'
+    ];
+
+    // Convert data to CSV rows
+    const rows = filteredClients.map(client => [
+      client.account_id,
+      client.arr,
+      client.renewal_date,
+      client.days_to_renewal,
+      client.login_drop_rate,
+      client.support_tickets,
+      client.payment_failures,
+      client.license_utilization,
+      client.churn_risk_label === 1 ? 'High Risk' : 'Healthy'
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create blob and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `s007_clients_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -88,6 +152,7 @@ export default function Clients() {
 
         {/* Export */}
         <motion.button
+          onClick={handleExportCSV}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-card text-muted-foreground hover:text-foreground transition-colors"
@@ -154,7 +219,7 @@ export default function Clients() {
                   <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full ${client.license_utilization < 40 ? 'bg-destructive' :
-                          client.license_utilization < 70 ? 'bg-warning' : 'bg-success'
+                        client.license_utilization < 70 ? 'bg-warning' : 'bg-success'
                         }`}
                       style={{ width: `${client.license_utilization}%` }}
                     />

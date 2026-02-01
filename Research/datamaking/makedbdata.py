@@ -13,6 +13,7 @@ def generate_s007_dataset(num_records=1000):
     for i in range(num_records):
         # --- 1. Basic Account Info ---
         account_id = f"ACC-{1000 + i}"
+        company_name = f"Company-{1000 + i}"
         industry = random.choice(industries)
         tier = random.choice(tiers)
         
@@ -28,20 +29,25 @@ def generate_s007_dataset(num_records=1000):
         # Randomize days until renewal (between -30 days ago and 365 days future)
         days_to_renewal = random.randint(-30, 365)
         renewal_date = (datetime.now() + timedelta(days=days_to_renewal)).strftime('%Y-%m-%d')
+        last_contact_date = (datetime.now() - timedelta(days=random.randint(2, 60))).strftime('%Y-%m-%d')
 
         # --- 3. Risk Signals (FR-2 inputs) ---
-        # Login Frequency Drop: 0.0 to 1.0 (e.g., 0.45 = 45% drop)
-        login_freq_drop = round(random.uniform(0.0, 0.8), 2)
+        # Login Frequency Drop: 0.0 to 0.6 (e.g., 0.6 = 60% drop). 
+        # Weighted to be low mostly.
+        login_freq_drop = round(random.uniform(0.0, 0.5), 2)
         
-        # Support Health: Tickets (0-15) and Resolution Time (hours)
-        support_tickets = random.randint(0, 15)
-        resolution_time_hours = random.randint(2, 72)
+        # Support Health: Tickets (0-10)
+        # Reduced max ticket count to lower probability of >5
+        support_tickets = random.randint(0, 8)
+        resolution_time_hours = random.randint(2, 48)
         
         # Billing Health: 0 = Good, 1 = Has Failed Payments
-        payment_failures = 1 if random.random() < 0.15 else 0  # 15% chance of payment issues
+        # Reduced failure rate to 5%
+        payment_failures = 1 if random.random() < 0.05 else 0
         
         # Sentiment: NPS Score (0-10)
-        nps_score = random.randint(0, 10)
+        # Shifted range to 4-10 to result in fewer Detractors (0-6)
+        nps_score = random.randint(4, 10)
 
         # --- 4. Upsell Signals (FR-3 inputs) ---
         # License Utilization: 0.0 to 1.0 (Target > 0.80)
@@ -52,6 +58,10 @@ def generate_s007_dataset(num_records=1000):
         
         # Feature Usage Score: 0-100 (High usage of premium features)
         feature_usage_score = random.randint(10, 100)
+        
+        # Health Score (0-100) - Simple calculation
+        health_score = 100 - int(login_freq_drop * 100 / 2) - (support_tickets * 2) - (payment_failures * 20)
+        health_score = max(0, min(100, health_score))
 
         # --- 5. TARGET LABEL LOGIC (The "Ground Truth") ---
         # We start with False/0 and turn it to True/1 based on rules + some randomness
@@ -82,18 +92,18 @@ def generate_s007_dataset(num_records=1000):
 
         # --- Append Record ---
         data.append([
-            account_id, industry, tier, arr, renewal_date, days_to_renewal,
+            account_id, company_name, industry, tier, arr, renewal_date, days_to_renewal, health_score,
             login_freq_drop, support_tickets, resolution_time_hours, payment_failures, nps_score,
             license_utilization, storage_utilization, feature_usage_score,
-            is_high_risk, is_upsell_opp
+            is_high_risk, is_upsell_opp, last_contact_date
         ])
 
     # --- Create DataFrame and Save ---
     columns = [
-        'Account_ID', 'Industry', 'Tier', 'ARR', 'Renewal_Date', 'Days_To_Renewal',
+        'Account_ID', 'Company_Name', 'Industry', 'Tier', 'ARR', 'Renewal_Date', 'Days_To_Renewal', 'Health_Score',
         'Login_Drop_Rate', 'Support_Tickets', 'Resolution_Time_Hours', 'Payment_Failures', 'NPS_Score',
         'License_Utilization', 'Storage_Utilization', 'Feature_Usage_Score',
-        'Churn_Risk_Label', 'Upsell_Opportunity_Label'
+        'Churn_Risk_Label', 'Upsell_Opportunity_Label', 'Last_Contact_Date'
     ]
     
     df = pd.DataFrame(data, columns=columns)

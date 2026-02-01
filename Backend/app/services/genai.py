@@ -14,7 +14,7 @@ class GenAIService:
             print("WARNING: GOOGLE_API_KEY not found in environment variables")
         
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash",
             temperature=0.3,
             google_api_key=api_key,
             convert_system_message_to_human=True
@@ -100,7 +100,7 @@ class GenAIService:
         chain = prompt | self.llm | JsonOutputParser()
         
         try:
-            result = await chain.ainvoke({"interactions": json.dumps(interactions)})
+            result = await chain.ainvoke({"interactions": json.dumps(interactions, default=str)})
             return result
         except Exception as e:
             print(f"Error in analyze_sentiment: {e}")

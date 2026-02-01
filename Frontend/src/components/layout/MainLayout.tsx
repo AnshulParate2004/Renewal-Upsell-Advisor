@@ -18,9 +18,9 @@ export function MainLayout({ children }: MainLayoutProps) {
       >
         <div className="sticky top-0 z-40 w-full h-16 px-8 flex items-center justify-between bg-background/80 backdrop-blur-md border-b border-white/5">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">S-007</span>
+            <span className="font-semibold text-foreground">RevIQ</span>
             <span>/</span>
-            <span>Renewal Advisor</span>
+            <span>Strategic Advisor</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-blue-400 border border-white/10" />

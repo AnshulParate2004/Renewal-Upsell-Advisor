@@ -7,8 +7,6 @@ import { RiskHeatmap } from '@/components/dashboard/RiskHeatmap';
 import {
   getDashboardStats,
   getHeatmapData,
-  mockDashboardStats,
-  mockHeatmapData,
   type DashboardStats,
   type CustomerAccount
 } from '@/lib/api';
@@ -22,8 +20,12 @@ interface Alert {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [stats, setStats] = useState<DashboardStats>(mockDashboardStats);
-  const [heatmapData, setHeatmapData] = useState<CustomerAccount[]>(mockHeatmapData);
+  const [stats, setStats] = useState<DashboardStats>({
+    renewing_count: 0,
+    total_arr_at_risk: 0,
+    upsell_pipeline: 0
+  });
+  const [heatmapData, setHeatmapData] = useState<CustomerAccount[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [activeAlert, setActiveAlert] = useState<Alert | null>(null);
@@ -69,8 +71,7 @@ export default function Dashboard() {
       setHeatmapData(heatmap);
       setLastUpdated(new Date());
     } catch (error) {
-      console.log('Using mock data - backend not available');
-      // Keep using mock data
+      console.error('Failed to fetch dashboard data:', error);
     } finally {
       setIsLoading(false);
     }
