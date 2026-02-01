@@ -4,14 +4,21 @@ import { DollarSign, AlertTriangle, TrendingUp, Users, RefreshCw } from 'lucide-
 import { useNavigate } from 'react-router-dom';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { RiskHeatmap } from '@/components/dashboard/RiskHeatmap';
-import { 
-  getDashboardStats, 
-  getHeatmapData, 
-  mockDashboardStats, 
+import {
+  getDashboardStats,
+  getHeatmapData,
+  mockDashboardStats,
   mockHeatmapData,
   type DashboardStats,
-  type CustomerAccount 
+  type CustomerAccount
 } from '@/lib/api';
+import { AnimatePresence } from 'framer-motion';
+
+interface Alert {
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+  timestamp: string;
+}
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -19,6 +26,37 @@ export default function Dashboard() {
   const [heatmapData, setHeatmapData] = useState<CustomerAccount[]>(mockHeatmapData);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [activeAlert, setActiveAlert] = useState<Alert | null>(null);
+
+  useEffect(() => {
+    // WebSocket Connection
+    const ws = new WebSocket('ws://localhost:8000/ws/alerts');
+
+    ws.onopen = () => {
+      console.log('Connected to Alert System');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'alert') {
+          setActiveAlert({
+            message: data.message,
+            severity: data.severity,
+            timestamp: data.timestamp
+          });
+          // Auto-dismiss after 5 seconds
+          setTimeout(() => setActiveAlert(null), 8000);
+        }
+      } catch (e) {
+        console.error('Error parsing alert:', e);
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -78,6 +116,25 @@ export default function Dashboard() {
           <span className="text-sm font-medium">Refresh</span>
         </motion.button>
       </motion.div>
+
+      {/* Real-Time Alert Banner */}
+      <AnimatePresence>
+        {activeAlert && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className={`p-4 rounded-xl border ${activeAlert.severity === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-500' : 'bg-blue-500/10 border-blue-500/20 text-blue-500'
+              }`}
+          >
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5" />
+              <span className="font-semibold">REAL-TIME ALERT:</span>
+              <span>{activeAlert.message}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

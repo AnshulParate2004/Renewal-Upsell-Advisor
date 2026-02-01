@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.db.connection import get_db, Account
 from app.services.genai import GenAIService
+from app.api.websocket import manager as websocket_manager
 
 router = APIRouter()
 genai_service = GenAIService()
@@ -43,6 +44,15 @@ async def get_advisor_insight(account_id: str, background_tasks: BackgroundTasks
         {"date": "2023-12-01", "type": "Support Ticket", "notes": "feature request pending since Q3"}
     ]
     sentiment_analysis = await genai_service.analyze_sentiment(interactions)
+
+    # Real-Time Alert Logic
+    risk_level = churn_analysis.get("risk_level", "Medium")
+    if risk_level == "High" or churn_analysis.get("risk_score", 0) > 75:
+        await websocket_manager.broadcast_alert(
+            message=f"Critical Risk Detected for {account_id}: {risk_level} Churn Probability",
+            severity="critical"
+        )
+
 
     return {
         "account_id": account.account_id,

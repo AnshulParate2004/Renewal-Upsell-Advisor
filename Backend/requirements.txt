@@ -7,3 +7,5 @@ python-dotenv
 langchain
 langchain-google-genai
 langchain-core
+simple-salesforce
+stripe
