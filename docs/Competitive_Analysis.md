@@ -43,6 +43,4 @@ Our competitive advantages include:
 | **Sentiment Analysis** | Yes (NLP) | Yes | Yes | No | Partial |
 | **Salesforce Native** | Bidirectional | Native | Sync | Sync | Sync |
 | **Stripe Integration** | Yes | Yes | Limited | Yes | Yes |
-| **Deployment Time** | 7 Days | 8-12 Weeks | 4-6 Weeks | 2-4 Weeks | 3-5 Weeks |
-| **Est. Pricing** | $25K/yr | $50K+/yr | $30K/yr | $20K/yr | $35K/yr |
 | **ML Accuracy** | 85%+ | 82% | 78% | 70% | 80% |
