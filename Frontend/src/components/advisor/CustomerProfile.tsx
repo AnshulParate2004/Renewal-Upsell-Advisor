@@ -63,29 +63,29 @@ export function CustomerProfile({ account }: CustomerProfileProps) {
       className="p-0 h-full border-r-2 border-black bg-white"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6 p-6 border-b-2 border-black bg-gray-50">
+      <div className="flex items-center gap-3 mb-6 p-6 border-b-2 border-black bg-indigo-50/30">
         <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <Building2 className="w-6 h-6 text-black" />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-black font-mono tracking-tighter">{account.account_id}</h3>
+          <h3 className="text-lg font-black text-black font-mono tracking-tighter">{account.account_id}</h3>
           <p className="text-[10px] uppercase tracking-widest text-gray-500 font-bold">Enterprise Tier</p>
         </div>
         <div className="ml-auto">
           {account.churn_risk_label === 1 ? (
-            <span className="px-2 py-1 text-[10px] font-bold bg-red-600 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">HIGH RISK</span>
+            <span className="px-2 py-1 text-[10px] font-black bg-red-600 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">HIGH RISK</span>
           ) : (
-            <span className="px-2 py-1 text-[10px] font-bold bg-green-600 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">HEALTHY</span>
+            <span className="px-2 py-1 text-[10px] font-black bg-white text-green-700 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">HEALTHY</span>
           )}
         </div>
       </div>
 
       {/* Stats List */}
-      <div className="space-y-0 text-sm px-6">
-        {stats.map((stat, index) => (
+      <div className="space-y-2 text-sm px-6">
+        {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex items-center justify-between py-4 border-b-2 border-black/10 last:border-0 hover:bg-black/5 transition-colors px-2 -mx-2"
+            className="flex items-center justify-between py-3 px-3 border-2 border-transparent hover:border-black hover:bg-indigo-50 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-default"
           >
             <div className="flex items-center gap-3">
               <stat.icon className="w-4 h-4 text-black" />
@@ -99,10 +99,10 @@ export function CustomerProfile({ account }: CustomerProfileProps) {
       {/* License Utilization */}
       <div className="mt-8 mx-6 pt-6 border-t-2 border-black">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-black">License Utilization</span>
+          <span className="text-xs font-black uppercase tracking-wider text-black">License Utilization</span>
           <span className="font-mono text-sm font-bold text-black">{account.license_utilization}%</span>
         </div>
-        <div className="h-4 border-2 border-black bg-white p-0.5">
+        <div className="h-6 border-2 border-black bg-white p-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${account.license_utilization}%` }}

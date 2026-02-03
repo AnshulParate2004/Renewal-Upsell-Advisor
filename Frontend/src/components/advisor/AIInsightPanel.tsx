@@ -136,31 +136,34 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
                     transition={{ duration: 0.2 }}
                     className="space-y-4"
                   >
-                    <div className="glass-card p-5 border-l-4 border-l-primary">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="p-1.5 rounded-lg bg-primary/20">
-                          <Check className="w-4 h-4 text-primary" />
+                    <div className="p-6 border-2 border-black bg-indigo-50/30 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                      <div className="flex items-center gap-3 mb-4 border-b-2 border-black pb-3">
+                        <div className="p-1.5 border-2 border-black bg-indigo-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                          <Check className="w-4 h-4 text-white" />
                         </div>
-                        <h4 className="font-semibold text-foreground text-sm">Recommended Strategy</h4>
+                        <h4 className="font-black text-black text-sm uppercase tracking-wider">Recommended Strategy</h4>
                       </div>
                       <div className="space-y-4">
                         <div>
-                          <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2">{insight.playbook.strategy_name}</p>
+                          <p className="text-xs font-black text-indigo-700 uppercase tracking-widest mb-4 bg-white inline-block px-2 py-1 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">{insight.playbook.strategy_name}</p>
                           <ul className="space-y-3">
                             {insight.playbook.action_steps.map((step, idx) => (
-                              <li key={idx} className="flex items-start gap-3 text-sm text-muted-foreground bg-muted/30 p-2 rounded-lg">
-                                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                              <li key={idx} className="flex items-start gap-3 text-sm text-black bg-white p-3 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all">
+                                <span className="w-6 h-6 border-2 border-black bg-black text-white flex items-center justify-center text-[10px] font-black shrink-0 mt-0.5 shadow-[1px_1px_0px_0px_rgba(0,0,0,0.5)]">
                                   {idx + 1}
                                 </span>
-                                {step}
+                                <span className="font-medium leading-relaxed">{step}</span>
                               </li>
                             ))}
                           </ul>
                         </div>
-                        <div className="pt-3 border-t border-border/50">
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-bold text-foreground">Expected Outcome:</span> {insight.playbook.expected_outcome}
-                          </p>
+                        <div className="pt-4 border-t-2 border-black/10">
+                          <div className="bg-yellow-50 border-2 border-black p-3 flex gap-2 items-start">
+                            <Sparkles className="w-4 h-4 text-black mt-0.5 shrink-0" />
+                            <p className="text-xs text-black leading-relaxed">
+                              <span className="font-black uppercase tracking-wide">Expected Outcome:</span> {insight.playbook.expected_outcome}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -176,28 +179,32 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
                     transition={{ duration: 0.2 }}
                     className="space-y-4"
                   >
-                    <div className="glass-card p-5">
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-purple-400" />
-                          <h4 className="font-semibold text-foreground text-sm">Sentiment Analysis</h4>
+                    <div className="p-6 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                      <div className="flex items-center justify-between mb-6 border-b-2 border-black pb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-1.5 border-2 border-black bg-pink-500 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <Sparkles className="w-4 h-4 text-white" />
+                          </div>
+                          <h4 className="font-black text-black text-sm uppercase tracking-wider">Sentiment Analysis</h4>
                         </div>
-                        <div className={`px-3 py-1.5 rounded-full text-xs font-bold border ${insight.sentiment_analysis.sentiment_score > 0
-                          ? 'bg-green-500/10 text-green-600 border-green-500/20'
+                        <div className={`px-4 py-1.5 text-xs font-black border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] uppercase tracking-wide ${insight.sentiment_analysis.sentiment_score > 0
+                          ? 'bg-green-100 text-green-700'
                           : insight.sentiment_analysis.sentiment_score < 0
-                            ? 'bg-red-500/10 text-red-600 border-red-500/20'
-                            : 'bg-gray-500/10 text-gray-600 border-gray-500/20'
+                            ? 'bg-red-100 text-red-600'
+                            : 'bg-gray-100 text-gray-700'
                           }`}>
-                          {insight.sentiment_analysis.overall_sentiment.toUpperCase()}
+                          {insight.sentiment_analysis.overall_sentiment}
                         </div>
                       </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-6">
                         <div>
-                          <h5 className="text-xs font-semibold text-muted-foreground uppercase mb-3">Key Themes Detected</h5>
-                          <div className="flex flex-wrap gap-2">
+                          <h5 className="text-xs font-black text-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <span className="w-2 h-2 bg-black"></span> Key Themes Detected
+                          </h5>
+                          <div className="flex flex-wrap gap-3">
                             {insight.sentiment_analysis.key_themes.map((theme, i) => (
-                              <span key={i} className="text-xs px-2.5 py-1.5 rounded-md bg-secondary text-secondary-foreground border border-border font-medium">
+                              <span key={i} className="text-xs px-3 py-1.5 bg-white text-black border-2 border-black font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-1px] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] transition-all cursor-default">
                                 {theme}
                               </span>
                             ))}
@@ -218,12 +225,12 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
                     className="space-y-4 h-full"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-muted-foreground">Generated Draft</span>
+                      <span className="text-xs font-black text-black uppercase tracking-wider">Generated Draft</span>
                       <motion.button
                         onClick={handleCopy}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                        className="flex items-center gap-1.5 px-4 py-2 border-2 border-black bg-white text-black text-xs font-bold uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-colors"
                       >
                         {copied ? (
                           <>
@@ -238,8 +245,8 @@ export function AIInsightPanel({ insight, isLoading }: AIInsightPanelProps) {
                         )}
                       </motion.button>
                     </div>
-                    <div className="p-4 rounded-xl bg-muted/30 border border-border/50 h-full overflow-auto">
-                      <pre className="text-sm text-foreground/90 whitespace-pre-wrap font-sans leading-relaxed">
+                    <div className="p-6 border-2 border-black bg-white h-full overflow-auto shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+                      <pre className="text-sm text-black whitespace-pre-wrap font-mono leading-relaxed">
                         {insight.email_draft}
                       </pre>
                     </div>

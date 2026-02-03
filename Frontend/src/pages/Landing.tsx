@@ -46,15 +46,15 @@ export default function Landing() {
             </nav>
 
             {/* Hero Section */}
-            <section className="pt-32 pb-20 border-b-2 border-black bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
+            <section className="pt-32 pb-20 border-b-2 border-black bg-indigo-50 [background-image:radial-gradient(#a5b4fc_1px,transparent_1px)] [background-size:20px_20px]">
                 <div className="container mx-auto px-6 text-center max-w-5xl">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white text-black text-xs font-black uppercase tracking-widest mb-8 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse border border-black" />
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-300 text-black text-xs font-black uppercase tracking-widest mb-8 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transform -rotate-1 hover:rotate-0 transition-transform cursor-default">
+                            <span className="w-2 h-2 rounded-full bg-black animate-pulse border border-black" />
                             New: Risk Heatmaps 2.0
                         </div>
 
@@ -92,22 +92,25 @@ export default function Landing() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <FeatureCard
-                            icon={<BrainCircuit className="w-6 h-6 text-white" />}
-                            iconBg="bg-blue-600"
+                            icon={<BrainCircuit className="w-6 h-6 text-black" />}
+                            iconBg="bg-white"
+                            cardBg="bg-blue-100"
                             title="Predictive Analytics"
                             description="Our ML models analyze usage patterns, support tickets, and engagement metrics to generate a daily Churn Risk Score for every account."
                             delay={0.1}
                         />
                         <FeatureCard
-                            icon={<Zap className="w-6 h-6 text-white" />}
-                            iconBg="bg-amber-500"
+                            icon={<Zap className="w-6 h-6 text-black" />}
+                            iconBg="bg-white"
+                            cardBg="bg-amber-100"
                             title="Real-Time Intervention"
                             description="Receive instant alerts via Slack or Email when key accounts show distress signals, allowing your CS team to act immediately."
                             delay={0.2}
                         />
                         <FeatureCard
-                            icon={<BarChart3 className="w-6 h-6 text-white" />}
-                            iconBg="bg-emerald-500"
+                            icon={<BarChart3 className="w-6 h-6 text-black" />}
+                            iconBg="bg-white"
+                            cardBg="bg-emerald-100"
                             title="Expansion Discovery"
                             description="Automatically identify accounts ready for upsell based on feature usage saturation and license utilization trends."
                             delay={0.3}
@@ -116,15 +119,15 @@ export default function Landing() {
                 </div>
             </section>
 
-            <footer className="py-12 border-t border-zinc-200 bg-white">
+            <footer className="py-12 border-t-2 border-black bg-white">
                 <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded bg-zinc-200 flex items-center justify-center">
-                            <span className="font-bold text-xs text-zinc-600">R</span>
+                        <div className="w-6 h-6 bg-black text-white flex items-center justify-center border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
+                            <span className="font-black text-xs text-white">R</span>
                         </div>
-                        <span className="text-sm font-bold text-zinc-700">RevIQ Advisor</span>
+                        <span className="text-sm font-black text-black uppercase tracking-wide">RevIQ Advisor</span>
                     </div>
-                    <div className="text-sm text-zinc-400">
+                    <div className="text-sm font-bold text-gray-500 uppercase tracking-widest">
                         © 2025 RevIQ Inc. All rights reserved.
                     </div>
                 </div>
@@ -134,20 +137,20 @@ export default function Landing() {
 }
 
 // FeatureCard Component
-function FeatureCard({ icon, iconBg, title, description, delay }: { icon: React.ReactNode, iconBg: string, title: string, description: string, delay: number }) {
+function FeatureCard({ icon, iconBg, cardBg, title, description, delay }: { icon: React.ReactNode, iconBg: string, cardBg: string, title: string, description: string, delay: number }) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay }}
-            className="p-8 bg-white border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all"
+            className={`p-8 ${cardBg} border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all`}
         >
             <div className={`w-12 h-12 ${iconBg} border-2 border-black flex items-center justify-center mb-6 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
                 {icon}
             </div>
             <h3 className="text-xl font-black text-black uppercase tracking-tight mb-3">{title}</h3>
-            <p className="text-zinc-600 leading-relaxed text-sm font-medium border-l-2 border-black/10 pl-4">
+            <p className="text-zinc-800 leading-relaxed text-sm font-bold border-l-2 border-black/20 pl-4">
                 {description}
             </p>
         </motion.div>

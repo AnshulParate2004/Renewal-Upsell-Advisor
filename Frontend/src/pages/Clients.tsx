@@ -117,7 +117,7 @@ export default function Clients() {
                 onClick={() => setFilterRisk(filter)}
                 className={`px-4 py-1.5 text-xs font-bold uppercase border-2 border-black transition-all duration-200
                   ${filterRisk === filter
-                    ? 'bg-black text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
+                    ? 'bg-indigo-600 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
                     : 'bg-white text-black hover:bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]'
                   }`}
               >
@@ -146,8 +146,8 @@ export default function Clients() {
       <div className="border-2 border-black flex-1 overflow-hidden flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-white">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-white border-b-2 border-black shadow-sm">
-              <tr className="text-xs uppercase text-black font-bold tracking-wide">
+            <thead className="sticky top-0 z-10 bg-indigo-600 border-b-2 border-black shadow-sm">
+              <tr className="text-xs uppercase text-white font-black tracking-wide">
                 <th className="pl-4 py-3 w-[150px]">Account ID</th>
                 <th className="py-3 w-[200px]">Company Name</th>
                 <th className="text-right py-3">ARR</th>

@@ -109,41 +109,41 @@ export default function AdvisorView() {
           <div className="relative">
             <motion.button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-3 px-4 py-2 h-10 border-2 border-black bg-white hover:bg-gray-50 transition-colors min-w-[260px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px]"
+              className="flex items-center gap-3 px-4 py-2 h-10 border-2 border-black bg-indigo-600 hover:bg-indigo-500 transition-colors min-w-[260px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px]"
             >
-              <span className="text-xs font-bold text-black uppercase tracking-wider">Target:</span>
-              <span className="font-mono text-sm font-bold text-black flex-1 text-left truncate">
+              <span className="text-xs font-black text-white uppercase tracking-wider">Target:</span>
+              <span className="font-mono text-sm font-bold text-white flex-1 text-left truncate">
                 {selectedAccount?.account_id || 'SELECT ACCOUNT...'}
               </span>
-              <ChevronDown className={`w-4 h-4 text-black transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 text-white transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
             </motion.button>
 
             {isDropdownOpen && (
               <motion.div
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="absolute right-0 top-full mt-2 w-80 max-h-[400px] overflow-y-auto border-2 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,0.5)] z-50 py-0"
+                className="absolute right-0 top-full mt-2 w-80 max-h-[400px] overflow-y-auto border-2 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] z-50 py-0"
               >
                 {accounts.map((account) => (
                   <button
                     key={account.account_id}
                     onClick={() => handleSelectAccount(account)}
                     className={`
-                      w-full px-4 py-3 text-left hover:bg-black hover:text-white transition-colors border-b border-black/10 last:border-0 group
-                      ${selectedAccount?.account_id === account.account_id ? 'bg-black text-white' : ''}
+                      w-full px-4 py-3 text-left hover:bg-indigo-600 hover:text-white transition-colors border-b-2 border-black/5 last:border-0 group
+                      ${selectedAccount?.account_id === account.account_id ? 'bg-indigo-600 text-white' : ''}
                     `}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-mono text-sm font-bold">{account.account_id}</span>
                       {account.churn_risk_label === 1 ? (
-                        <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-600 border border-red-200 group-hover:bg-red-600 group-hover:text-white group-hover:border-white">RISK</span>
+                        <span className="px-1.5 py-0.5 text-[10px] font-black bg-red-600 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] group-hover:shadow-none group-hover:border-white">RISK</span>
                       ) : (
-                        <span className="px-1.5 py-0.5 text-[10px] font-bold bg-green-100 text-green-700 border border-green-200 group-hover:bg-green-600 group-hover:text-white group-hover:border-white">SAFE</span>
+                        <span className="px-1.5 py-0.5 text-[10px] font-black bg-white text-green-700 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] group-hover:shadow-none group-hover:border-white">SAFE</span>
                       )}
                     </div>
-                    <div className={`flex items-center justify-between text-xs opacity-70 ${selectedAccount?.account_id === account.account_id ? 'text-white' : 'text-gray-600 group-hover:text-white'}`}>
+                    <div className={`flex items-center justify-between text-xs font-bold ${selectedAccount?.account_id === account.account_id ? 'text-white' : 'text-gray-500 group-hover:text-white'}`}>
                       <span>${(account.arr / 1000).toFixed(0)}K ARR</span>
-                      <span className={account.days_to_renewal <= 30 ? 'font-bold' : ''}>
+                      <span className={account.days_to_renewal <= 30 ? 'text-red-500 group-hover:text-white' : ''}>
                         {account.days_to_renewal} days
                       </span>
                     </div>
@@ -156,14 +156,14 @@ export default function AdvisorView() {
       </motion.div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-12 gap-0 border border-border bg-card rounded overflow-hidden flex-1 shadow-sm">
+      <div className="grid grid-cols-12 gap-0 border-2 border-black bg-white flex-1 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] overflow-hidden">
         {/* Left Panel - Customer Profile */}
-        <div className="col-span-12 lg:col-span-4 border-r border-border h-full overflow-y-auto bg-muted/5">
+        <div className="col-span-12 lg:col-span-4 border-r-2 border-black h-full overflow-y-auto bg-indigo-50/30">
           <CustomerProfile account={selectedAccount} />
         </div>
 
         {/* Right Panel - AI Insight */}
-        <div className="col-span-12 lg:col-span-8 h-full overflow-y-auto bg-background">
+        <div className="col-span-12 lg:col-span-8 h-full overflow-y-auto bg-white">
           <AIInsightPanel insight={insight} isLoading={isLoading} />
         </div>
       </div>
