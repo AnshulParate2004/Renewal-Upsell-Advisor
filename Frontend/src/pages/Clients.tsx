@@ -89,154 +89,126 @@ export default function Clients() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
+    <div className="p-4 max-w-[1600px] mx-auto h-screen flex flex-col">
+      {/* Header & Toolbar */}
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Client Management</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isLoading ? 'Loading accounts...' : `${filteredClients.length} accounts in portfolio`}
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Client Management</h1>
+          <p className="text-xs text-muted-foreground font-mono mt-1">
+            PORTFOLIO: {filteredClients.length} ACCOUNTS
           </p>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          Add Client
-        </motion.button>
-      </motion.div>
-
-      {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="flex items-center gap-4"
-      >
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by account ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-muted/50 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
-          />
-        </div>
-
-        {/* Filter Buttons */}
         <div className="flex items-center gap-2">
-          {(['all', 'high', 'safe'] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setFilterRisk(filter)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterRisk === filter
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                }`}
-            >
-              {filter === 'all' ? 'All' : filter === 'high' ? 'High Risk' : 'Healthy'}
-            </button>
-          ))}
-        </div>
-
-        {/* Export */}
-        <motion.button
-          onClick={handleExportCSV}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-card text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Download className="w-4 h-4" />
-          Export
-        </motion.button>
-      </motion.div>
-
-      {/* Client Cards Grid */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        {filteredClients.map((client, index) => (
-          <motion.div
-            key={client.account_id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            whileHover={{ y: -4 }}
-            className="glass-card p-6 cursor-pointer group"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="font-mono font-semibold text-foreground group-hover:text-primary transition-colors">
-                  {client.account_id}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1">{client.company_name || 'Enterprise Account'}</p>
-              </div>
-              <div className="text-right">
-                {client.churn_risk_label === 1 ? (
-                  <span className="badge-risk mb-1 block">High Risk</span>
-                ) : (
-                  <span className="badge-safe mb-1 block">Healthy</span>
-                )}
-                {/* 
-                  Only show score if it exists and is meaningful.
-                  Assuming 'health_score' is the inverse of risk, or we can use the new 'health_score' field from DB.
-                  Let's check if api.ts has it. It might not be in the interface yet but object has it.
-                  Let's play safe and not show it if not in interface.
-                */}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">ARR</span>
-                <span className="font-mono font-medium text-foreground">
-                  {formatCurrency(client.arr)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Renewal</span>
-                <span className={`font-mono ${client.days_to_renewal <= 30 ? 'text-destructive' : 'text-foreground'}`}>
-                  {client.days_to_renewal} days
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Utilization</span>
-                <span className="font-medium">{(client.license_utilization * 100).toFixed(0)}%</span>
-              </div>
-              <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${client.license_utilization > 0.8 ? 'bg-success' : 'bg-primary'
-                    }`}
-                  style={{ width: `${client.license_utilization * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-border/50 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                {client.support_tickets} tickets • {client.payment_failures} failures
-              </span>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                className="text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity"
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search accounts..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 pr-3 py-1.5 h-8 text-xs rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary w-64"
+            />
+          </div>
+          <div className="h-8 w-[1px] bg-border mx-1" />
+          <div className="flex bg-muted/50 rounded p-0.5 border border-border">
+            {(['all', 'high', 'safe'] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setFilterRisk(filter)}
+                className={`px-3 py-1 text-[10px] font-bold uppercase rounded-sm transition-all ${filterRisk === filter
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                  }`}
               >
-                View →
-              </motion.button>
-            </div>
-          </motion.div>
-        ))}
-      </motion.div>
+                {filter}
+              </button>
+            ))}
+          </div>
+          <div className="h-8 w-[1px] bg-border mx-1" />
+          <button
+            onClick={handleExportCSV}
+            className="h-8 px-3 border border-border bg-card hover:bg-muted text-xs font-medium rounded flex items-center gap-2 transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export
+          </button>
+          <button
+            className="h-8 px-3 bg-primary text-primary-foreground text-xs font-medium rounded flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add
+          </button>
+        </div>
+      </div>
+
+      {/* Data Grid */}
+      <div className="border border-border rounded bg-card flex-1 overflow-hidden flex flex-col shadow-sm">
+        <div className="overflow-auto flex-1 relative">
+          <table className="w-full dense-table text-left">
+            <thead className="sticky top-0 z-10 bg-muted/10 backdrop-blur-sm">
+              <tr>
+                <th className="pl-4 w-[180px]">Account ID</th>
+                <th className="w-[200px]">Company Name</th>
+                <th className="text-right">ARR</th>
+                <th className="text-center">Renewal</th>
+                <th className="text-center">Health</th>
+                <th className="text-center">Utilization</th>
+                <th className="text-center">Tickets</th>
+                <th className="text-center">Failures</th>
+                <th className="w-[100px]">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/50">
+              {filteredClients.map((client) => (
+                <tr key={client.account_id} className="hover:bg-muted/30 group transition-colors">
+                  <td className="pl-4 font-mono font-medium text-foreground">{client.account_id}</td>
+                  <td className="font-medium text-muted-foreground">{client.company_name || '-'}</td>
+                  <td className="text-right font-mono">{formatCurrency(client.arr)}</td>
+                  <td className="text-center">
+                    <span className={`font-mono ${client.days_to_renewal <= 30 ? 'text-destructive font-bold' : ''}`}>
+                      {client.days_to_renewal}d
+                    </span>
+                  </td>
+                  <td className="text-center">
+                    {client.churn_risk_label === 1 ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
+                        RISK
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700 border border-green-200">
+                        SAFE
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="w-8 text-right font-mono">{(client.license_utilization * 100).toFixed(0)}%</span>
+                      <div className="w-16 h-1.5 bg-secondary rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${client.license_utilization > 0.8 ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                          style={{ width: `${client.license_utilization * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="text-center font-mono text-muted-foreground">{client.support_tickets}</td>
+                  <td className="text-center font-mono text-muted-foreground">{client.payment_failures}</td>
+                  <td>
+                    <button className="text-primary text-[10px] font-bold uppercase hover:underline opacity-0 group-hover:opacity-100 transition-opacity">
+                      View Details
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Table Footer */}
+        <div className="border-t border-border p-2 bg-muted/5 flex justify-between items-center text-[10px] text-muted-foreground">
+          <span>Showing {filteredClients.length} of {accounts.length} accounts</span>
+          <span>Sorted by Risk (Default)</span>
+        </div>
+      </div>
     </div>
   );
 }

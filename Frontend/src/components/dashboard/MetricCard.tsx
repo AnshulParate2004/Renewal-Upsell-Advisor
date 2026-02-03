@@ -14,14 +14,14 @@ interface MetricCardProps {
   delay?: number;
 }
 
-export function MetricCard({ 
-  title, 
-  value, 
-  subtitle, 
-  icon: Icon, 
-  trend, 
+export function MetricCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  trend,
   variant = 'default',
-  delay = 0 
+  delay = 0
 }: MetricCardProps) {
   const variantStyles = {
     default: 'from-primary/20 to-primary/5',
@@ -40,32 +40,31 @@ export function MetricCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="glass-card p-6 relative overflow-hidden group"
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className="bg-card border border-border p-6 relative overflow-hidden group shadow-sm"
     >
-      {/* Background gradient */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${variantStyles[variant]} opacity-50`} />
-      
+      {/* Background tint */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${variantStyles[variant]} opacity-20`} />
+
       {/* Content */}
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-4">
-          <div className={`p-3 rounded-xl bg-gradient-to-br ${variantStyles[variant]}`}>
+          <div className={`p-2 rounded bg-muted/50 border border-border/50`}>
             <Icon className={`w-5 h-5 ${iconStyles[variant]}`} />
           </div>
           {trend && (
-            <div className={`flex items-center gap-1 text-xs font-medium ${
-              trend.isPositive ? 'text-success' : 'text-destructive'
-            }`}>
+            <div className={`flex items-center gap-1 text-xs font-bold ${trend.isPositive ? 'text-success' : 'text-destructive'
+              }`}>
               <span>{trend.isPositive ? '↑' : '↓'}</span>
               <span>{Math.abs(trend.value)}%</span>
             </div>
           )}
         </div>
 
-        <h3 className="text-sm font-medium text-muted-foreground mb-1">{title}</h3>
-        
-        <motion.p 
-          className="metric-value text-foreground"
+        <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">{title}</h3>
+
+        <motion.p
+          className="metric-value text-foreground font-mono tracking-tight"
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, delay: delay + 0.2 }}
@@ -74,17 +73,12 @@ export function MetricCard({
         </motion.p>
 
         {subtitle && (
-          <p className="text-xs text-muted-foreground mt-2">{subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-2 font-medium">{subtitle}</p>
         )}
       </div>
 
-      {/* Hover glow effect */}
-      <motion.div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        style={{
-          background: 'radial-gradient(circle at 50% 50%, hsl(217 91% 60% / 0.1), transparent 70%)',
-        }}
-      />
+      {/* Hover border effect or accent */}
+      <div className={`absolute bottom-0 left-0 w-full h-[2px] opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r ${variantStyles[variant]}`} />
     </motion.div>
   );
 }

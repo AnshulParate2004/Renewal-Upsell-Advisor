@@ -61,27 +61,25 @@ export function RiskHeatmap({ data, onSelectAccount }: RiskHeatmapProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
-      className="glass-card overflow-hidden"
+      className="bg-card border border-border shadow-sm overflow-hidden"
     >
-      <div className="p-6 border-b border-border/50">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Risk Heatmap</h2>
-            <p className="text-sm text-muted-foreground">Accounts requiring immediate attention</p>
+      <div className="p-4 border-b border-border flex items-center justify-between bg-muted/5">
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-foreground">Risk Heatmap</h2>
+          <p className="text-[10px] text-muted-foreground font-bold">ACCOUNTS REQUIRING IMMEDIATE ATTENTION</p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+            High Risk
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="w-2 h-2 rounded-full bg-destructive" />
-              High Risk
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="w-2 h-2 rounded-full bg-warning" />
-              At Risk
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="w-2 h-2 rounded-full bg-success" />
-              Healthy
-            </div>
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-warning" />
+            At Risk
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-success" />
+            Healthy
           </div>
         </div>
       </div>
@@ -124,15 +122,13 @@ export function RiskHeatmap({ data, onSelectAccount }: RiskHeatmapProps) {
                 </td>
                 <td>
                   <div className="flex items-center gap-2">
-                    <div 
-                      className={`w-2 h-2 rounded-full ${
-                        account.days_to_renewal <= 30 ? 'bg-destructive animate-pulse' :
-                        account.days_to_renewal <= 60 ? 'bg-warning' : 'bg-success'
-                      }`}
+                    <div
+                      className={`w-2 h-2 rounded-full ${account.days_to_renewal <= 30 ? 'bg-destructive animate-pulse' :
+                          account.days_to_renewal <= 60 ? 'bg-warning' : 'bg-success'
+                        }`}
                     />
-                    <span className={`font-mono ${
-                      account.days_to_renewal <= 30 ? 'text-destructive' : 'text-foreground'
-                    }`}>
+                    <span className={`font-mono ${account.days_to_renewal <= 30 ? 'text-destructive' : 'text-foreground'
+                      }`}>
                       {account.days_to_renewal} days
                     </span>
                   </div>
@@ -140,11 +136,10 @@ export function RiskHeatmap({ data, onSelectAccount }: RiskHeatmapProps) {
                 <td>
                   <div className="flex items-center gap-2">
                     <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all ${
-                          account.login_drop_rate > 40 ? 'bg-destructive' :
-                          account.login_drop_rate > 20 ? 'bg-warning' : 'bg-success'
-                        }`}
+                      <div
+                        className={`h-full rounded-full transition-all ${account.login_drop_rate > 40 ? 'bg-destructive' :
+                            account.login_drop_rate > 20 ? 'bg-warning' : 'bg-success'
+                          }`}
                         style={{ width: `${Math.min(account.login_drop_rate, 100)}%` }}
                       />
                     </div>
@@ -154,10 +149,9 @@ export function RiskHeatmap({ data, onSelectAccount }: RiskHeatmapProps) {
                   </div>
                 </td>
                 <td>
-                  <span className={`font-mono ${
-                    account.support_tickets > 10 ? 'text-destructive' :
-                    account.support_tickets > 5 ? 'text-warning' : 'text-muted-foreground'
-                  }`}>
+                  <span className={`font-mono ${account.support_tickets > 10 ? 'text-destructive' :
+                      account.support_tickets > 5 ? 'text-warning' : 'text-muted-foreground'
+                    }`}>
                     {account.support_tickets}
                   </span>
                 </td>
