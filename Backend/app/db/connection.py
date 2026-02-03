@@ -47,5 +47,14 @@ class Account(Base):
     upsell_opportunity_label = Column(Integer)
     industry = Column(String) 
     tier = Column(String) 
-    last_contact_date = Column(Date) # Added
+    last_contact_date = Column(Date)
+
+class MonthlyStats(Base):
+    __tablename__ = "monthly_stats"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    month_date = Column(Date, unique=True) # First day of the month
+    renewals_count = Column(Integer, default=0)
+    churned_count = Column(Integer, default=0)
+    upsell_revenue = Column(Float, default=0.0)
 

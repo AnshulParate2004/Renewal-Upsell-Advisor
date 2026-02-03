@@ -4,11 +4,14 @@ import { DollarSign, AlertTriangle, TrendingUp, Users, RefreshCw } from 'lucide-
 import { useNavigate } from 'react-router-dom';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { RiskHeatmap } from '@/components/dashboard/RiskHeatmap';
+import { HistoryChart } from '@/components/dashboard/HistoryChart';
 import {
   getDashboardStats,
   getHeatmapData,
+  getDashboardHistory,
   type DashboardStats,
-  type CustomerAccount
+  type CustomerAccount,
+  type HistoryData
 } from '@/lib/api';
 import { AnimatePresence } from 'framer-motion';
 
@@ -26,18 +29,16 @@ export default function Dashboard() {
     upsell_pipeline: 0
   });
   const [heatmapData, setHeatmapData] = useState<CustomerAccount[]>([]);
+  const [historyData, setHistoryData] = useState<HistoryData[]>([]);
+  const [historyRange, setHistoryRange] = useState('12m');
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(new Date());
   const [activeAlert, setActiveAlert] = useState<Alert | null>(null);
 
+  // WebSocket Logic
   useEffect(() => {
-    // WebSocket Connection
     const ws = new WebSocket('ws://localhost:8000/ws/alerts');
-
-    ws.onopen = () => {
-      console.log('Connected to Alert System');
-    };
-
+    ws.onopen = () => console.log('Connected to Alert System');
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
@@ -47,28 +48,26 @@ export default function Dashboard() {
             severity: data.severity,
             timestamp: data.timestamp
           });
-          // Auto-dismiss after 5 seconds
           setTimeout(() => setActiveAlert(null), 8000);
         }
       } catch (e) {
         console.error('Error parsing alert:', e);
       }
     };
-
-    return () => {
-      ws.close();
-    };
+    return () => ws.close();
   }, []);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [statsData, heatmap] = await Promise.all([
+      const [statsData, heatmap, history] = await Promise.all([
         getDashboardStats(),
         getHeatmapData(),
+        getDashboardHistory(historyRange),
       ]);
       setStats(statsData);
       setHeatmapData(heatmap);
+      setHistoryData(history);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
@@ -79,7 +78,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [historyRange]); // Refetch when range changes
+
+  const handleRangeChange = (range: string) => {
+    setHistoryRange(range);
+  };
 
   const handleSelectAccount = (account: CustomerAccount) => {
     navigate('/advisor', { state: { selectedAccount: account } });
@@ -173,6 +176,13 @@ export default function Dashboard() {
           delay={0.3}
         />
       </div>
+
+      {/* History Chart */}
+      <HistoryChart
+        data={historyData}
+        selectedRange={historyRange}
+        onRangeChange={handleRangeChange}
+      />
 
       {/* Risk Heatmap */}
       <RiskHeatmap data={heatmapData} onSelectAccount={handleSelectAccount} />
