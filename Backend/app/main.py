@@ -8,6 +8,8 @@ app = FastAPI(title="RevIQ Renewal & Upsell Advisor")
 origins = [
     "http://localhost:3000",
     "http://localhost:5173", # Add Vite default port
+    "http://localhost:8080", # Alternative port
+    "http://localhost:8081",
     "*"
 ]
 

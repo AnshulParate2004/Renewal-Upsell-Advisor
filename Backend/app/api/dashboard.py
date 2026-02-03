@@ -28,12 +28,21 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
 
 @router.get("/heatmap")
 def get_dashboard_heatmap(db: Session = Depends(get_db)):
-    # Top 20 High Risk accounts within 90 days renewal window, sorted by ARR desc
+    # Top 20 accounts within 90 days renewal window, sorted by ARR desc
+    # Removed risk filter to show full picture
     results = db.query(Account)\
         .filter(Account.days_to_renewal <= 90)\
-        .filter(Account.churn_risk_label == 1)\
         .order_by(Account.arr.desc())\
         .limit(20)\
         .all()
     
+    return results
+
+@router.get("/clients")
+def get_all_clients(db: Session = Depends(get_db)):
+    # Return all clients, limit 100 for now, sorted by ARR
+    results = db.query(Account)\
+        .order_by(Account.arr.desc())\
+        .limit(100)\
+        .all()
     return results

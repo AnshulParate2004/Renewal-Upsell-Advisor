@@ -19,7 +19,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
+  { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
   { name: 'Clients', path: '/clients', icon: <Users size={20} /> },
   { name: 'RevIQ Advisor', path: '/advisor', icon: <BrainCircuit size={20} /> },
   { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },

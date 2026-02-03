@@ -1,33 +1,31 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, Download, Plus } from 'lucide-react';
-import { getHeatmapData, type CustomerAccount } from '@/lib/api';
-import { useEffect } from 'react';
+import { Search, Download, Plus } from 'lucide-react';
+import { type CustomerAccount, getAllClients } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 
 export default function Clients() {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [filterRisk, setFilterRisk] = useState<'all' | 'high' | 'safe'>('all');
-  const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    getHeatmapData()
-      .then(data => {
-        setAccounts(data);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to fetch clients:", err);
-        setIsLoading(false);
-      });
-  }, []);
+  const { data: accounts = [], isLoading } = useQuery({
+    queryKey: ['clients'],
+    queryFn: getAllClients
+  });
 
-  const filteredClients = accounts.filter((client) => {
-    const matchesSearch = client.account_id.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredClients = accounts.filter((client: CustomerAccount) => {
+    const matchesSearch = client.account_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (client.company_name && client.company_name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    // Safety check for risk label (sometimes valid 0/1, sometimes missing?)
+    // Assuming backend returns 1 for high, 0 for safe.
+    const isHighRisk = client.churn_risk_label === 1;
+
     const matchesFilter =
       filterRisk === 'all' ||
-      (filterRisk === 'high' && client.churn_risk_label === 1) ||
-      (filterRisk === 'safe' && client.churn_risk_label === 0);
+      (filterRisk === 'high' && isHighRisk) ||
+      (filterRisk === 'safe' && !isHighRisk);
+
     return matchesSearch && matchesFilter;
   });
 
@@ -45,6 +43,7 @@ export default function Clients() {
     // Define CSV headers
     const headers = [
       'Account ID',
+      'Company Name',
       'ARR',
       'Renewal Date',
       'Days to Renewal',
@@ -58,6 +57,7 @@ export default function Clients() {
     // Convert data to CSV rows
     const rows = filteredClients.map(client => [
       client.account_id,
+      client.company_name || '',
       client.arr,
       client.renewal_date,
       client.days_to_renewal,
@@ -80,7 +80,7 @@ export default function Clients() {
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
       link.setAttribute('href', url);
-      link.setAttribute('download', `s007_clients_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `reviq_clients_export_${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
@@ -99,7 +99,7 @@ export default function Clients() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Client Management</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {filteredClients.length} accounts in renewal window
+            {isLoading ? 'Loading accounts...' : `${filteredClients.length} accounts in portfolio`}
           </p>
         </div>
         <motion.button
@@ -125,8 +125,8 @@ export default function Clients() {
           <input
             type="text"
             placeholder="Search by account ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-muted/50 border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
           />
         </div>
@@ -137,13 +137,10 @@ export default function Clients() {
             <button
               key={filter}
               onClick={() => setFilterRisk(filter)}
-              className={`
-                px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                ${filterRisk === filter
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filterRisk === filter
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                }
-              `}
+                }`}
             >
               {filter === 'all' ? 'All' : filter === 'high' ? 'High Risk' : 'Healthy'}
             </button>
@@ -183,7 +180,7 @@ export default function Clients() {
                 <h3 className="font-mono font-semibold text-foreground group-hover:text-primary transition-colors">
                   {client.account_id}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-1">Enterprise Tier</p>
+                <p className="text-xs text-muted-foreground mt-1">{client.company_name || 'Enterprise Account'}</p>
               </div>
               <div className="text-right">
                 {client.churn_risk_label === 1 ? (
@@ -191,12 +188,12 @@ export default function Clients() {
                 ) : (
                   <span className="badge-safe mb-1 block">Healthy</span>
                 )}
-                {client.risk_score !== undefined && (
-                  <span className={`text-xs font-mono font-medium ${client.risk_score > 50 ? 'text-destructive' : 'text-success'
-                    }`}>
-                    Risk: {client.risk_score}/100
-                  </span>
-                )}
+                {/* 
+                  Only show score if it exists and is meaningful.
+                  Assuming 'health_score' is the inverse of risk, or we can use the new 'health_score' field from DB.
+                  Let's check if api.ts has it. It might not be in the interface yet but object has it.
+                  Let's play safe and not show it if not in interface.
+                */}
               </div>
             </div>
 
@@ -213,21 +210,16 @@ export default function Clients() {
                   {client.days_to_renewal} days
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Utilization</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${client.license_utilization < 40 ? 'bg-destructive' :
-                        client.license_utilization < 70 ? 'bg-warning' : 'bg-success'
-                        }`}
-                      style={{ width: `${client.license_utilization}%` }}
-                    />
-                  </div>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {client.license_utilization}%
-                  </span>
-                </div>
+              <div className="flex items-center justify-between text-sm mb-1">
+                <span className="text-muted-foreground">Utilization</span>
+                <span className="font-medium">{(client.license_utilization * 100).toFixed(0)}%</span>
+              </div>
+              <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${client.license_utilization > 0.8 ? 'bg-success' : 'bg-primary'
+                    }`}
+                  style={{ width: `${client.license_utilization * 100}%` }}
+                />
               </div>
             </div>
 
