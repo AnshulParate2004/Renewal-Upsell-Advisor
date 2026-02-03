@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Sidebar } from './Sidebar';
+import { Header } from './Header';
 import { motion } from 'framer-motion';
 
 interface MainLayoutProps {
@@ -8,13 +7,13 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground flex">
-      <Sidebar />
+    <div className="min-h-screen bg-background font-sans text-foreground flex flex-col">
+      <Header />
       <motion.main
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
-        className="flex-1 ml-[260px] min-h-screen relative bg-background"
+        className="flex-1 mt-16 relative bg-background"
       >
         {children}
       </motion.main>

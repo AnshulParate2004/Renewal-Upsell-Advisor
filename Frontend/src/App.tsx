@@ -7,8 +7,8 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard"; // Renaming Index to Dashboard for clarity if file exists, or import Index
-import Index from "./pages/Index"; // Keeping original import but will map to /dashboard
+import Dashboard from "./pages/Dashboard";
+import Analytics from "./pages/Analytics";
 import Clients from "./pages/Clients";
 import AdvisorView from "./pages/AdvisorView";
 import Settings from "./pages/Settings";
@@ -30,7 +30,8 @@ const App = () => (
           {/* Protected Application Routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<MainLayout><Outlet /></MainLayout>}> {/* Wrap protected routes in Layout */}
-              <Route path="/dashboard" element={<Index />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/analytics" element={<Analytics />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/advisor" element={<AdvisorView />} />
               <Route path="/settings" element={<Settings />} />

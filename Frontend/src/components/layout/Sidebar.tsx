@@ -25,6 +25,8 @@ const navItems: NavItem[] = [
   { name: 'Settings', path: '/settings', icon: <Settings size={20} /> },
 ];
 
+import { RevIQLogo } from '@/components/ui/CustomIcons';
+
 export function Sidebar() {
   const location = useLocation();
 
@@ -33,8 +35,8 @@ export function Sidebar() {
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-border bg-card/95 backdrop-blur">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold border border-primary/20">
-            <Shield className="w-5 h-5" />
+          <div className="w-8 h-8 flex items-center justify-center">
+            <RevIQLogo className="w-full h-full" />
           </div>
           <div>
             <h1 className="font-bold text-foreground tracking-tight text-base leading-tight">RevIQ</h1>

@@ -40,10 +40,9 @@ def get_dashboard_heatmap(db: Session = Depends(get_db)):
 
 @router.get("/clients")
 def get_all_clients(db: Session = Depends(get_db)):
-    # Return all clients, limit 100 for now, sorted by ARR
+    # Return all clients, sorted by ARR
     results = db.query(Account)\
         .order_by(Account.arr.desc())\
-        .limit(100)\
         .all()
     return results
 

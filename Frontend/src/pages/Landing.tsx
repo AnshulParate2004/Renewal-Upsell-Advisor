@@ -23,21 +23,21 @@ export default function Landing() {
     return (
         <div className="min-h-screen bg-white text-zinc-900 font-sans selection:bg-blue-100">
             {/* Navigation */}
-            <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-zinc-200">
+            <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b-2 border-black">
                 <div className="container mx-auto px-6 h-16 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold">
+                        <div className="w-8 h-8 bg-black text-white border-2 border-black flex items-center justify-center font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
                             <ShieldCheck className="w-5 h-5" />
                         </div>
-                        <span className="text-lg font-bold tracking-tight text-zinc-900">RevIQ Advisor</span>
+                        <span className="text-xl font-black tracking-tighter text-black uppercase">RevIQ Advisor</span>
                     </div>
                     <div className="flex items-center gap-6">
-                        <a href="#" className="text-sm font-medium text-zinc-600 hover:text-primary transition-colors">Features</a>
-                        <a href="#" className="text-sm font-medium text-zinc-600 hover:text-primary transition-colors">Solutions</a>
-                        <a href="#" className="text-sm font-medium text-zinc-600 hover:text-primary transition-colors">Pricing</a>
+                        <a href="#" className="text-sm font-bold uppercase text-black hover:underline decoration-2 underline-offset-4">Features</a>
+                        <a href="#" className="text-sm font-bold uppercase text-black hover:underline decoration-2 underline-offset-4">Solutions</a>
+                        <a href="#" className="text-sm font-bold uppercase text-black hover:underline decoration-2 underline-offset-4">Pricing</a>
                         <button
                             onClick={() => navigate('/login')}
-                            className="px-5 py-2 rounded bg-zinc-900 text-white text-sm font-bold hover:bg-zinc-800 transition-colors"
+                            className="px-5 py-2 bg-black text-white text-sm font-black uppercase tracking-wider border-2 border-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.5)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,0.5)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all"
                         >
                             Log In
                         </button>
@@ -46,35 +46,35 @@ export default function Landing() {
             </nav>
 
             {/* Hero Section */}
-            <section className="pt-32 pb-20 border-b border-zinc-100">
+            <section className="pt-32 pb-20 border-b-2 border-black bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
                 <div className="container mx-auto px-6 text-center max-w-5xl">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wide mb-6 border border-blue-100">
-                            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
-                            New: Risk Heatmaps live now
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white text-black text-xs font-black uppercase tracking-widest mb-8 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse border border-black" />
+                            New: Risk Heatmaps 2.0
                         </div>
 
-                        <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-8 text-zinc-900 leading-[1.1]">
-                            The Intelligence Layer for <br /> <span className="text-primary">Customer Retention</span>
+                        <h1 className="text-6xl lg:text-8xl font-black tracking-tighter mb-8 text-black leading-[0.9]">
+                            PREDICT CHURN. <br /> <span className="text-stroke-3 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-800" style={{ WebkitTextStroke: '2px black' }}>SECURE REVENUE.</span>
                         </h1>
 
-                        <p className="text-xl text-zinc-500 mb-10 max-w-2xl mx-auto leading-relaxed font-normal">
-                            Stop guessing who will churn. RevIQ Advisor unifies your data to predict renewal risks and identify expansion opportunities with 94% accuracy.
+                        <p className="text-xl text-black font-medium mb-10 max-w-2xl mx-auto leading-relaxed border-l-4 border-black pl-6 text-left">
+                            Stop guessing who will churn. RevIQ Advisor unifies your data to predict renewal risks and identify expansion opportunities with <span className="underline decoration-4 decoration-blue-500">94% accuracy</span>.
                         </p>
 
-                        <div className="flex items-center justify-center gap-4">
+                        <div className="flex items-center justify-center gap-6">
                             <button
                                 onClick={() => navigate('/login')}
-                                className="px-8 py-3.5 rounded bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20"
+                                className="px-8 py-4 bg-blue-600 text-white font-black text-lg uppercase tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2"
                             >
                                 Start Free Trial
-                                <ArrowRight className="w-4 h-4" />
+                                <ArrowRight className="w-5 h-5" />
                             </button>
-                            <button className="px-8 py-3.5 rounded bg-white border border-zinc-200 text-zinc-700 font-bold text-lg hover:border-zinc-300 hover:bg-zinc-50 transition-all">
+                            <button className="px-8 py-4 bg-white text-black font-black text-lg uppercase tracking-wider border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
                                 View Demo
                             </button>
                         </div>
@@ -133,6 +133,7 @@ export default function Landing() {
     );
 }
 
+// FeatureCard Component
 function FeatureCard({ icon, iconBg, title, description, delay }: { icon: React.ReactNode, iconBg: string, title: string, description: string, delay: number }) {
     return (
         <motion.div
@@ -140,13 +141,13 @@ function FeatureCard({ icon, iconBg, title, description, delay }: { icon: React.
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay }}
-            className="p-8 rounded-xl bg-white border border-zinc-200 shadow-sm hover:shadow-md transition-shadow"
+            className="p-8 bg-white border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] transition-all"
         >
-            <div className={`w-12 h-12 rounded-lg ${iconBg} flex items-center justify-center mb-6 shadow-sm`}>
+            <div className={`w-12 h-12 ${iconBg} border-2 border-black flex items-center justify-center mb-6 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
                 {icon}
             </div>
-            <h3 className="text-lg font-bold text-zinc-900 mb-3">{title}</h3>
-            <p className="text-zinc-600 leading-relaxed text-sm">
+            <h3 className="text-xl font-black text-black uppercase tracking-tight mb-3">{title}</h3>
+            <p className="text-zinc-600 leading-relaxed text-sm font-medium border-l-2 border-black/10 pl-4">
                 {description}
             </p>
         </motion.div>
