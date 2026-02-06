@@ -59,7 +59,7 @@ export default function Landing() {
                         </div>
 
                         <h1 className="text-6xl lg:text-8xl font-black tracking-tighter mb-8 text-black leading-[0.9]">
-                            PREDICT CHURN. <br /> <span className="text-stroke-3 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-800" style={{ WebkitTextStroke: '2px black' }}>SECURE REVENUE.</span>
+                            AI RENEWAL & <br /> <span className="text-stroke-3 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-800" style={{ WebkitTextStroke: '2px black' }}>UPSELL AGENT.</span>
                         </h1>
 
                         <p className="text-xl text-black font-medium mb-10 max-w-2xl mx-auto leading-relaxed border-l-4 border-black pl-6 text-left">
