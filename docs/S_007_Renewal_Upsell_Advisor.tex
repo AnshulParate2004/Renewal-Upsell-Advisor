@@ -1,0 +1,1106 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{tabularx}
+\usepackage{longtable}
+
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Software Requirements Specification S-007}
+\fancyhead[R]{Renewal \& Upsell Advisor}
+\fancyfoot[C]{\thepage}
+
+\title{\textbf{Software Requirements Specification}\\ \vspace{1cm} \Large Renewal \& Upsell Advisor\\ \vspace{0.5cm} \large Agent ID: S-007\\ Suite Category: Sales Suite}
+\author{}
+\date{Version: 1.0\\ December 28, 2025}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\begin{center}
+    \textbf{Confidential}
+\end{center}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\section{Project Overview}
+
+\subsection{Project Title}
+Renewal \& Upsell Advisor - AI-Powered Revenue Protection and Expansion Agent
+
+\subsection{Agent Identification}
+\begin{itemize}
+    \item \textbf{Agent ID:} S-007
+    \item \textbf{Agent Name:} Renewal \& Upsell Advisor
+    \item \textbf{Suite Category:} Sales Suite
+    \item \textbf{Version:} 1.0
+\end{itemize}
+
+\subsection{Executive Summary}
+The Renewal \& Upsell Advisor is an intelligent AI agent designed to monitor customer contracts, usage patterns, and sentiment signals to predict renewal risk and identify upsell opportunities. The agent provides actionable recommendations including renewal plays, outreach cadences, and personalized value messaging to protect Annual Recurring Revenue (ARR) and maximize expansion revenue. By leveraging machine learning algorithms and real-time data integration from CRM, billing, and analytics platforms, the agent enables sales and customer success teams to take proactive measures before churn occurs.
+
+\section{Objectives}
+
+\subsection{Primary Objectives}
+\begin{enumerate}
+    \item \textbf{Renewal Risk Prediction:} Implement predictive models to identify accounts at risk of churn 60-90 days before contract expiration with 85\% accuracy.
+    \item \textbf{Upsell Opportunity Detection:} Automatically surface high-probability upsell and cross-sell opportunities based on product usage, contract value, and customer behavior patterns.
+    \item \textbf{Automated Playbook Execution:} Generate and execute personalized renewal and expansion playbooks with recommended outreach timing, messaging, and engagement strategies.
+    \item \textbf{ARR Protection:} Reduce revenue churn by 20-30\% through early intervention and proactive customer engagement.
+    \item \textbf{Revenue Expansion:} Increase expansion revenue by 15-25\% by identifying and converting qualified upsell opportunities.
+\end{enumerate}
+
+\subsection{Secondary Objectives}
+\begin{enumerate}
+    \item Enable real-time visibility into renewal pipeline health and revenue forecasting.
+    \item Reduce manual effort for sales and CS teams by automating renewal tracking and risk monitoring.
+    \item Provide data-driven insights to optimize pricing and packaging strategies.
+    \item Integrate sentiment analysis from customer communications to enhance prediction accuracy.
+    \item Generate automated renewal reports and executive dashboards.
+\end{enumerate}
+
+\section{Scope}
+
+\subsection{In-Scope}
+\begin{itemize}
+    \item \textbf{Renewal Risk Management:}
+    \begin{itemize}
+        \item Contract expiration tracking and automated alerts
+        \item Multi-factor churn prediction using ML models
+        \item Customer health scoring based on usage, engagement, and sentiment
+        \item Risk segmentation (High, Medium, Low) with confidence scores
+    \end{itemize}
+    \item \textbf{Upsell \& Cross-sell Intelligence:}
+    \begin{itemize}
+        \item Product adoption and feature usage analysis
+        \item Revenue expansion opportunity identification
+        \item Cross-sell recommendations based on customer profile and behavior
+        \item Whitespace analysis for untapped product offerings
+    \end{itemize}
+    \item \textbf{Automated Playbook Recommendations:}
+    \begin{itemize}
+        \item Personalized renewal and expansion plays
+        \item Multi-channel outreach cadence suggestions (Email, Phone, Meeting)
+        \item Value messaging templates tailored to customer pain points and outcomes
+        \item Best-action recommendations with success probability scores
+    \end{itemize}
+    \item \textbf{Integration Capabilities:}
+    \begin{itemize}
+        \item Primary: Salesforce CRM, Stripe/Chargebee billing platforms, Google Analytics/Mixpanel
+        \item Secondary: Customer Success platforms (Gainsight, ChurnZero), Email (Gmail, Outlook), Product analytics tools
+        \item Webhook-based real-time data synchronization
+    \end{itemize}
+    \item \textbf{Analytics \& Reporting:}
+    \begin{itemize}
+        \item Renewal forecast dashboard with ARR projections
+        \item Pipeline health metrics and trend analysis
+        \item Agent performance tracking and recommendation outcomes
+        \item Executive summary reports with KPI visualization
+    \end{itemize}
+\end{itemize}
+
+\subsection{Out-of-Scope}
+\begin{itemize}
+    \item Contract negotiation and legal document generation
+    \item Direct payment processing and transaction handling
+    \item Customer onboarding and implementation workflows
+    \item Product roadmap planning and feature prioritization
+    \item Marketing campaign creation and execution
+    \item Technical support ticket management
+    \item Full financial accounting and revenue recognition
+    \item Integration with non-B2B SaaS business models (e.g., e-commerce, retail)
+    \item Manual override of contract terms or pricing
+    \item Real-time voice call monitoring and transcription
+\end{itemize}
+
+\section{Business Scenario}
+
+\subsection{Use Case Context}
+Enterprise SaaS companies typically face 5-7\% annual revenue churn and miss 30-40\% of expansion opportunities due to reactive renewal processes and lack of visibility into customer health signals. Sales and Customer Success teams often discover renewal risks too late to intervene effectively, and upsell opportunities are identified manually through sporadic account reviews.
+
+\subsection{Primary Business Scenario}
+\textbf{Scenario:} Proactive Renewal Risk Mitigation and Expansion Revenue Capture
+
+\textbf{Actors:}
+\begin{itemize}
+    \item Account Executives (AE)
+    \item Customer Success Managers (CSM)
+    \item Revenue Operations Manager
+    \item VP of Sales
+\end{itemize}
+
+\textbf{Example Workflow:}
+
+\textbf{Day 0-90 Before Renewal:}
+\begin{enumerate}
+    \item TechCorp has 150 enterprise customers with contracts renewing in the next 90 days, representing \$8.5M in ARR.
+    \item The Renewal \& Upsell Advisor ingests data from Salesforce (contract dates, deal history), Stripe (payment history, plan details), and analytics platforms (product usage, feature adoption).
+    \item The agent identifies 12 high-risk accounts (\$1.2M ARR) showing signals: declining login frequency (45\% drop), increased support tickets (3x average), late payment history, and low NPS scores.
+\end{enumerate}
+
+\textbf{Day 1-30 - Risk Detection \& Alert:}
+\begin{enumerate}
+    \item Agent sends automated Slack alert to assigned CSM: "Account XYZ Corp (\$180K ARR) - HIGH RENEWAL RISK (72\% probability). Key factors: 60\% usage decline, 2 unresolved support escalations, contract expires Jan 15."
+    \item CSM receives recommended playbook: "Executive Business Review + Value Realization Workshop" with 3 personalized email templates emphasizing ROI metrics specific to XYZ Corp’s use case.
+    \item Agent suggests optimal outreach timing: "Schedule call within 5 days, follow-up every 7 days".
+\end{enumerate}
+
+\textbf{Day 30-60 - Upsell Opportunity Detection:}
+\begin{enumerate}
+    \item For 35 healthy accounts (\$2.8M ARR), agent identifies 18 expansion opportunities based on: approaching user license limits (85\% utilization), high engagement with premium features, positive sentiment in recent emails.
+    \item AE receives notification: "ABC Company (\$250K ARR) - UPSELL OPPORTUNITY: Add 25 seats + Premium Analytics Module. Estimated expansion: \$75K. Current plan utilization: 92\%".
+    \item Agent generates value messaging highlighting: "Based on your team’s usage of Report Builder (1,250 reports/month), upgrading to Premium Analytics will unlock automated insights and save 15 hours/week".
+\end{enumerate}
+
+\textbf{Day 60-90 - Renewal Execution:}
+\begin{enumerate}
+    \item Agent tracks engagement metrics from outreach campaigns and updates risk scores in real-time.
+    \item 8 of 12 high-risk accounts move to medium risk after successful intervention.
+    \item Agent auto-generates renewal proposals in Salesforce with recommended contract terms.
+    \item Revenue Operations receives consolidated forecast: "Projected renewals: \$7.9M (93\% retention), Expansion pipeline: \$850K".
+\end{enumerate}
+
+\textbf{Business Outcome:}
+\begin{itemize}
+    \item Churn reduced from 7\% to 4\% (\$255K ARR saved).
+    \item Expansion revenue increased by 22\% (\$680K captured vs. \$557K historical average).
+    \item Sales team productivity increased by 35\% through automated playbook recommendations.
+    \item Renewal forecast accuracy improved to 92\%.
+\end{itemize}
+
+\section{Milestones \& Timeline}
+
+\subsection{7-Day Development Sprint}
+\textbf{Overall Duration:} 7 days (168 hours)\\
+\textbf{Sprint Goal:} Deploy production-ready Renewal \& Upsell Advisor agent with core ML models, integration pipelines, and automated playbook engine.
+
+\subsection{Detailed Task Breakdown}
+\begin{longtable}{|p{2cm}|p{10cm}|p{2cm}|}
+\hline
+\textbf{Day} & \textbf{Tasks} & \textbf{Duration} \\
+\hline
+Day 1 & \textbf{Architecture \& Setup} \newline
+- Environment provisioning (AWS/GCP infrastructure) \newline
+- Database schema design (PostgreSQL/MongoDB) \newline
+- API gateway configuration \newline
+- Authentication \& authorization setup \newline
+- CI/CD pipeline establishment \newline
+- Development environment configuration & 8 hours \\
+\hline
+Day 1-2 & \textbf{Integration Layer Development} \newline
+- Salesforce API integration (REST/SOAP) \newline
+- Stripe/Chargebee webhook setup \newline
+- OAuth 2.0 authentication flows \newline
+- Data extraction pipelines (contracts, billing, accounts) \newline
+- Real-time event listeners \newline
+- Error handling \& retry mechanisms \newline
+- Analytics platform connectors (Segment, Mixpanel) & 14 hours \\
+\hline
+Day 2-3 & \textbf{Data Pipeline \& Feature Engineering} \newline
+- ETL pipeline development \newline
+- Data normalization \& cleansing \newline
+- Feature extraction engine: \newline
+\hspace*{0.5cm} - Contract metadata (renewal date, ARR, tenure) \newline
+\hspace*{0.5cm} - Usage metrics (login frequency, feature adoption) \newline
+\hspace*{0.5cm} - Behavioral signals (support tickets, NPS) \newline
+\hspace*{0.5cm} - Payment history (late payments, failed charges) \newline
+\hspace*{0.5cm} - Time-series aggregation (7/30/90-day windows) \newline
+- Feature store implementation & 12 hours \\
+\hline
+Day 3-4 & \textbf{ML Model Development} \newline
+- Churn prediction model (Gradient Boosting/Random Forest) \newline
+- Training on historical renewal outcomes \newline
+- Model evaluation (Precision, Recall, F1-score) \newline
+- Hyperparameter tuning \newline
+- Upsell propensity scoring model \newline
+- Cross-sell recommendation engine \newline
+- Model versioning \& registry setup \newline
+- Inference API endpoints & 16 hours \\
+\hline
+Day 4-5 & \textbf{Playbook Engine \& Recommendation System} \newline
+- Rule-based playbook matching logic \newline
+- Outreach cadence optimizer \newline
+- Value messaging template engine \newline
+- Personalization layer (dynamic variables) \newline
+- Recommendation scoring algorithm \newline
+- Action prioritization framework \newline
+- A/B testing infrastructure for playbooks & 14 hours \\
+\hline
+Day 5-6 & \textbf{Notification \& Workflow Automation} \newline
+- Slack/Teams webhook integration \newline
+- Email notification service (SendGrid/AWS SES) \newline
+- In-app alert system \newline
+- Task automation in Salesforce (create opportunities, tasks) \newline
+- Scheduled batch jobs (daily risk scoring) \newline
+- Event-driven trigger system \newline
+- Workflow orchestration (Apache Airflow) & 12 hours \\
+\hline
+Day 6 & \textbf{Dashboard \& Analytics UI} \newline
+- Renewal pipeline dashboard (React/Vue.js) \newline
+- Risk heatmap visualization \newline
+- ARR forecasting charts \newline
+- Agent performance metrics \newline
+- Drill-down account details view \newline
+- Export functionality (CSV, PDF) \newline
+- Responsive design implementation & 10 hours \\
+\hline
+Day 7 & \textbf{Testing, Deployment \& Documentation} \newline
+- Unit testing (Jest, PyTest) \newline
+- Integration testing (API contract validation) \newline
+- End-to-end scenario testing \newline
+- Performance testing (load, stress) \newline
+- Security testing (penetration, vulnerability scan) \newline
+- Production deployment \newline
+- Rollback procedures \newline
+- Technical documentation \newline
+- User guide \& playbook library & 14 hours \\
+\hline
+\multicolumn{2}{|r|}{\textbf{Total Development Hours:}} & \textbf{100 hours} \\
+\hline
+\end{longtable}
+
+\subsection{Critical Path Dependencies}
+\begin{enumerate}
+    \item Integration Layer must complete before Data Pipeline development
+    \item Feature Engineering required before ML Model training
+    \item ML Models must be operational before Playbook Engine development
+    \item All backend services completed before Dashboard UI build
+\end{enumerate}
+
+\section{Roles \& Responsibilities}
+
+\subsection{Technical Team Structure}
+\begin{longtable}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Role} & \textbf{Responsibilities} \\
+\hline
+Tech Lead / Architect & - System architecture design \& technical decision-making \newline
+- Technology stack selection \newline
+- Integration strategy definition \newline
+- Code review \& quality assurance \newline
+- Team coordination \& sprint planning \newline
+- Risk identification \& mitigation \newline
+- Performance optimization \& scalability planning \\
+\hline
+Backend Engineer 1 (Integrations) & - Salesforce API integration development \newline
+- Stripe/Chargebee webhook implementation \newline
+- OAuth authentication flows \newline
+- REST API endpoint development \newline
+- Data synchronization pipelines \newline
+- Error handling \& logging \newline
+- API documentation (Swagger/OpenAPI) \\
+\hline
+Backend Engineer 2 (Data Pipeline) & - ETL pipeline architecture \& implementation \newline
+- Data transformation \& normalization logic \newline
+- Feature engineering workflows \newline
+- Database schema design \& optimization \newline
+- Batch processing jobs (Apache Airflow) \newline
+- Data quality validation \& monitoring \newline
+- Time-series data aggregation \\
+\hline
+ML Engineer & - ML model development (churn prediction, upsell scoring) \newline
+- Feature selection \& dimensionality reduction \newline
+- Model training, validation \& hyperparameter tuning \newline
+- ML pipeline orchestration (MLflow, Kubeflow) \newline
+- Model deployment \& serving infrastructure \newline
+- A/B testing framework for model versions \newline
+- Model performance monitoring \& retraining triggers \\
+\hline
+Full-Stack Developer & - Frontend dashboard development (React/Vue.js) \newline
+- Backend API integration for UI \newline
+- Data visualization components (Chart.js, D3.js) \newline
+- Responsive design implementation \newline
+- User authentication \& session management \newline
+- Playbook recommendation UI \newline
+- Export functionality (reports, CSV) \\
+\hline
+DevOps Engineer & - Cloud infrastructure setup (AWS/GCP/Azure) \newline
+- Kubernetes cluster provisioning \& management \newline
+- CI/CD pipeline configuration (Jenkins, GitHub Actions) \newline
+- Container orchestration (Docker, Kubernetes) \newline
+- Monitoring \& alerting setup (Prometheus, Grafana) \newline
+- Secrets management (Vault, AWS Secrets Manager) \newline
+- Production deployment \& rollback procedures \newline
+- Infrastructure-as-Code (Terraform, CloudFormation) \\
+\hline
+QA Engineer & - Test plan creation \& execution \newline
+- Unit test development (Jest, PyTest) \newline
+- Integration testing (API contracts, data flows) \newline
+- End-to-end scenario testing (Selenium, Cypress) \newline
+- Performance \& load testing (JMeter, Locust) \newline
+- Security testing coordination \newline
+- Bug tracking \& regression testing \newline
+- Test automation framework setup \\
+\hline
+Data Scientist (Consultant) & - Churn prediction model design \& algorithm selection \newline
+- Statistical analysis of renewal patterns \newline
+- Feature importance analysis \newline
+- Model interpretability (SHAP, LIME) \newline
+- Business metrics validation \newline
+- Recommendation logic optimization \newline
+- Training data labeling strategy \\
+\hline
+\end{longtable}
+
+\subsection{Team Size}
+\begin{itemize}
+    \item \textbf{Core Team:} 7 members (Tech Lead, 2 Backend Engineers, 1 ML Engineer, 1 Full-Stack Developer, 1 DevOps Engineer, 1 QA Engineer)
+    \item \textbf{Extended Support:} 1 Data Scientist (part-time consultant)
+\end{itemize}
+
+\section{Deliverables}
+
+\subsection{Technical Deliverables}
+\begin{enumerate}
+    \item \textbf{Renewal \& Upsell Advisor Agent - Production Application}
+    \begin{itemize}
+        \item Dockerized microservices architecture
+        \item Deployed on cloud infrastructure (AWS/GCP)
+        \item Auto-scaling configuration
+        \item 99.5\% uptime SLA
+    \end{itemize}
+    \item \textbf{Machine Learning Models}
+    \begin{itemize}
+        \item Churn prediction model (Gradient Boosting Classifier)
+        \item Upsell propensity scoring model
+        \item Cross-sell recommendation engine
+        \item Model artifacts \& versioning (MLflow registry)
+        \item Inference API endpoints
+    \end{itemize}
+    \item \textbf{Integration Connectors}
+    \begin{itemize}
+        \item Salesforce bidirectional sync
+        \item Stripe/Chargebee webhook listeners
+        \item Google Analytics / Mixpanel event streaming
+        \item Customer Success platform connectors (optional: Gainsight, ChurnZero)
+        \item Email service integration (Gmail, Outlook via MS Graph API)
+    \end{itemize}
+    \item \textbf{Automated Playbook Engine}
+    \begin{itemize}
+        \item 15+ pre-built renewal \& upsell playbooks
+        \item Personalized messaging template library
+        \item Outreach cadence optimizer
+        \item Multi-channel recommendation system
+    \end{itemize}
+    \item \textbf{Analytics Dashboard}
+    \begin{itemize}
+        \item Renewal pipeline overview
+        \item Risk heatmap \& account segmentation
+        \item ARR forecast visualization
+        \item Upsell opportunity tracker
+        \item Agent performance metrics
+        \item Exportable reports (PDF, CSV)
+    \end{itemize}
+    \item \textbf{Notification System}
+    \begin{itemize}
+        \item Slack/Teams integration
+        \item Email alerts (SendGrid/AWS SES)
+        \item In-app notification center
+        \item Configurable alert rules
+    \end{itemize}
+    \item \textbf{API Documentation}
+    \begin{itemize}
+        \item REST API specification (OpenAPI 3.0)
+        \item Authentication guide
+        \item Webhook payload schemas
+        \item Code examples (Python, JavaScript)
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Documentation Deliverables}
+\begin{enumerate}
+    \item \textbf{Technical Documentation}
+    \begin{itemize}
+        \item System architecture diagram
+        \item Database schema documentation
+        \item API reference guide
+        \item Deployment runbook
+        \item Disaster recovery procedures
+    \end{itemize}
+    \item \textbf{User Documentation}
+    \begin{itemize}
+        \item User manual (Sales \& CS teams)
+        \item Playbook customization guide
+        \item Dashboard navigation tutorial
+        \item Integration setup guide
+    \end{itemize}
+    \item \textbf{Training Materials}
+    \begin{itemize}
+        \item Video walkthrough (15 minutes)
+        \item Quick start guide
+        \item FAQ document
+        \item Best practices for renewal management
+    \end{itemize}
+\end{enumerate}
+
+\section{Tech Stack}
+
+\subsection{Frontend Technologies}
+\begin{itemize}
+    \item \textbf{Framework:} React 18.x or Vue.js 3.x
+    \item \textbf{State Management:} Redux Toolkit / Vuex
+    \item \textbf{UI Library:} Material-UI / Ant Design
+    \item \textbf{Data Visualization:} Chart.js, Recharts, D3.js
+    \item \textbf{HTTP Client:} Axios
+    \item \textbf{Build Tool:} Vite / Webpack 5
+    \item \textbf{Testing:} Jest, React Testing Library, Cypress
+\end{itemize}
+
+\subsection{Backend Technologies}
+\begin{itemize}
+    \item \textbf{Primary Language:} Python 3.11+
+    \item \textbf{Web Framework:} FastAPI / Django REST Framework
+    \item \textbf{Task Queue:} Celery with Redis broker
+    \item \textbf{Workflow Orchestration:} Apache Airflow
+    \item \textbf{Async Processing:} asyncio, aiohttp
+    \item \textbf{API Standards:} REST, GraphQL (optional)
+    \item \textbf{Authentication:} OAuth 2.0, JWT
+    \item \textbf{API Documentation:} Swagger/OpenAPI 3.0
+\end{itemize}
+
+\subsection{Machine Learning Stack}
+\begin{itemize}
+    \item \textbf{ML Framework:} Scikit-learn, XGBoost, LightGBM
+    \item \textbf{Deep Learning:} TensorFlow / PyTorch (optional for advanced NLP)
+    \item \textbf{NLP:} spaCy, Hugging Face Transformers (sentiment analysis)
+    \item \textbf{Feature Store:} Feast or custom implementation
+    \item \textbf{Model Management:} MLflow
+    \item \textbf{Model Serving:} TensorFlow Serving / TorchServe
+    \item \textbf{Experimentation:} Weights \& Biases (W\&B)
+\end{itemize}
+
+\subsection{Database \& Storage}
+\begin{itemize}
+    \item \textbf{Primary Database:} PostgreSQL 15+ (relational data)
+    \item \textbf{NoSQL Database:} MongoDB / DynamoDB (event logs, unstructured data)
+    \item \textbf{Caching Layer:} Redis 7+ (session, API response cache)
+    \item \textbf{Data Warehouse:} Snowflake / Google BigQuery (analytics)
+    \item \textbf{Object Storage:} AWS S3 / Google Cloud Storage (model artifacts, reports)
+    \item \textbf{Vector Database:} Pinecone / Weaviate (for similarity search, optional)
+\end{itemize}
+
+\subsection{Integration \& APIs}
+\begin{itemize}
+    \item \textbf{Salesforce:} REST API, SOAP API, Bulk API, Streaming API
+    \item \textbf{Stripe:} REST API, Webhooks
+    \item \textbf{Chargebee:} REST API, Webhooks
+    \item \textbf{Google Analytics:} Measurement Protocol, Reporting API
+    \item \textbf{Mixpanel:} Export API, Engage API
+    \item \textbf{Slack:} Web API, Webhook
+    \item \textbf{Microsoft Teams:} Graph API, Incoming Webhooks
+    \item \textbf{Email:} SendGrid, AWS SES, Gmail API, MS Graph API
+    \item \textbf{Customer Success Platforms:} Gainsight API, ChurnZero API
+\end{itemize}
+
+\subsection{DevOps \& Infrastructure}
+\begin{itemize}
+    \item \textbf{Cloud Platform:} AWS / Google Cloud Platform / Azure
+    \item \textbf{Containerization:} Docker
+    \item \textbf{Orchestration:} Kubernetes (EKS, GKE, AKS)
+    \item \textbf{CI/CD:} GitHub Actions / Jenkins / GitLab CI
+    \item \textbf{Infrastructure-as-Code:} Terraform / AWS CloudFormation
+    \item \textbf{Monitoring:} Prometheus, Grafana, Datadog
+    \item \textbf{Logging:} ELK Stack (Elasticsearch, Logstash, Kibana) / Splunk
+    \item \textbf{Error Tracking:} Sentry
+    \item \textbf{Secrets Management:} AWS Secrets Manager / HashiCorp Vault
+    \item \textbf{Load Balancer:} AWS ALB / NGINX
+\end{itemize}
+
+\subsection{Development Tools}
+\begin{itemize}
+    \item \textbf{Version Control:} Git, GitHub/GitLab
+    \item \textbf{IDE:} VS Code, PyCharm, Jupyter Notebook
+    \item \textbf{API Testing:} Postman, Insomnia
+    \item \textbf{Collaboration:} Jira, Confluence, Slack
+    \item \textbf{Code Quality:} SonarQube, ESLint, Pylint, Black (formatter)
+\end{itemize}
+
+\section{Functional Requirements}
+
+\subsection{FR-1: Contract \& Renewal Tracking}
+\subsubsection{FR-1.1: Contract Data Ingestion}
+\begin{itemize}
+    \item System SHALL ingest contract data from Salesforce including: contract ID, account name, ARR/MRR, start date, end date, renewal date, contract terms
+    \item System SHALL automatically sync contract updates within 5 minutes of changes in source system
+    \item System SHALL support bulk import of historical contract data (minimum 5 years)
+\end{itemize}
+\subsubsection{FR-1.2: Renewal Timeline Monitoring}
+\begin{itemize}
+    \item System SHALL track all contracts with renewal dates within 90-day window
+    \item System SHALL automatically create renewal opportunity records in Salesforce 90 days before expiration
+    \item System SHALL categorize renewals by time horizon: Immediate (0-30 days), Near-term (31-60 days), Future (61-90 days)
+\end{itemize}
+
+\subsection{FR-2: Churn Risk Prediction}
+\subsubsection{FR-2.1: Risk Scoring Model}
+\begin{itemize}
+    \item System SHALL calculate renewal risk score (0-100) for each account using ML model
+    \item Risk score SHALL incorporate features: product usage (login frequency, feature adoption), support metrics (ticket volume, resolution time), payment history (late payments, failed charges), engagement (email opens, meeting attendance), sentiment (NPS, survey responses)
+    \item System SHALL update risk scores daily via batch processing
+    \item System SHALL provide 85\% prediction accuracy (validated on historical data)
+\end{itemize}
+\subsubsection{FR-2.2: Risk Segmentation}
+\begin{itemize}
+    \item System SHALL classify accounts into risk categories:
+    \begin{itemize}
+        \item High Risk: Score 70-100 (churn probability >50\%)
+        \item Medium Risk: Score 40-69 (churn probability 25-50\%)
+        \item Low Risk: Score 0-39 (churn probability <25\%)
+    \end{itemize}
+    \item System SHALL display top 5 risk factors for each account
+    \item System SHALL provide confidence intervals for predictions
+\end{itemize}
+\subsubsection{FR-2.3: Early Warning Alerts}
+\begin{itemize}
+    \item System SHALL send real-time alerts when account moves to High Risk category
+    \item Alerts SHALL include: account name, ARR at risk, risk score, primary risk factors, recommended actions
+    \item System SHALL support alert routing rules (assign to CSM, AE, or team lead based on account ownership)
+\end{itemize}
+
+\subsection{FR-3: Upsell \& Cross-sell Identification}
+\subsubsection{FR-3.1: Expansion Opportunity Detection}
+\begin{itemize}
+    \item System SHALL identify upsell opportunities based on:
+    \begin{itemize}
+        \item User license utilization (threshold: >80\% of purchased seats)
+        \item Feature usage patterns (high engagement with premium features on basic plan)
+        \item API usage limits (approaching rate limits)
+        \item Storage consumption (exceeding 75\% of allocated quota)
+    \end{itemize}
+    \item System SHALL calculate expansion revenue potential for each opportunity
+    \item System SHALL rank opportunities by expected value and win probability
+\end{itemize}
+\subsubsection{FR-3.2: Cross-sell Recommendations}
+\begin{itemize}
+    \item System SHALL recommend complementary products based on:
+    \begin{itemize}
+        \item Current product usage (collaborative filtering)
+        \item Industry segment and company size
+        \item Similar customer adoption patterns
+    \end{itemize}
+    \item System SHALL support whitespace analysis (identify unused products in customer’s plan tier)
+\end{itemize}
+\subsubsection{FR-3.3: Opportunity Qualification}
+\begin{itemize}
+    \item System SHALL assign propensity score (0-100) to each upsell opportunity
+    \item System SHALL filter opportunities with score >60 for proactive outreach
+    \item System SHALL estimate deal size and expected close date
+\end{itemize}
+
+\subsection{FR-4: Automated Playbook Recommendations}
+\subsubsection{FR-4.1: Playbook Library}
+\begin{itemize}
+    \item System SHALL include minimum 15 pre-built playbooks:
+    \begin{itemize}
+        \item Renewal Playbooks: High-Risk Intervention, Executive Business Review, Value Realization Workshop, Competitive Displacement Defense
+        \item Upsell Playbooks: License Expansion, Feature Upgrade, Multi-Year Commitment, Premium Support Add-on
+    \end{itemize}
+    \item Each playbook SHALL contain: trigger conditions, outreach cadence (timeline), email/call script templates, success metrics
+\end{itemize}
+\subsubsection{FR-4.2: Playbook Matching Engine}
+\begin{itemize}
+    \item System SHALL automatically recommend playbook based on: account risk level, contract value, industry vertical, customer lifecycle stage
+    \item System SHALL support A/B testing of playbook effectiveness
+    \item System SHALL allow CSM/AE to override recommendations
+\end{itemize}
+\subsubsection{FR-4.3: Personalized Messaging}
+\begin{itemize}
+    \item System SHALL generate personalized email templates with dynamic variables:
+    \begin{itemize}
+        \item Customer-specific ROI metrics
+        \item Recent usage statistics
+        \item Relevant case studies from similar companies
+        \item Competitive insights (if applicable)
+    \end{itemize}
+    \item Templates SHALL maintain brand voice and compliance requirements
+\end{itemize}
+
+\subsection{FR-5: Outreach Cadence Optimization}
+\subsubsection{FR-5.1: Multi-Channel Sequencing}
+\begin{itemize}
+    \item System SHALL recommend outreach sequence across channels: Email, Phone Call, LinkedIn Message, In-Product Notification
+    \item System SHALL optimize timing based on: historical engagement patterns, recipient time zone, industry benchmarks
+    \item System SHALL support customizable cadence templates (3-touch, 5-touch, 7-touch sequences)
+\end{itemize}
+\subsubsection{FR-5.2: Task Automation}
+\begin{itemize}
+    \item System SHALL automatically create tasks in Salesforce for recommended actions
+    \item System SHALL set due dates aligned with playbook timeline
+    \item System SHALL send reminders 24 hours before task due date
+\end{itemize}
+
+\subsection{FR-6: Sentiment \& Engagement Analysis}
+\subsubsection{FR-6.1: Email Sentiment Tracking}
+\begin{itemize}
+    \item System SHALL analyze sentiment from customer emails using NLP (spaCy, Hugging Face)
+    \item System SHALL classify sentiment as Positive, Neutral, Negative with confidence score
+    \item System SHALL detect sentiment shifts (declining trend over 30-day window)
+\end{itemize}
+\subsubsection{FR-6.2: Engagement Monitoring}
+\begin{itemize}
+    \item System SHALL track engagement metrics: email open rate, link click rate, meeting acceptance rate, response time
+    \item System SHALL flag disengaged accounts (no response to 3+ outreach attempts)
+\end{itemize}
+
+\subsection{FR-7: Analytics \& Reporting}
+\subsubsection{FR-7.1: Renewal Pipeline Dashboard}
+\begin{itemize}
+    \item Dashboard SHALL display:
+    \begin{itemize}
+        \item Total ARR at risk (segmented by risk level)
+        \item Renewal rate forecast (current quarter, next quarter)
+        \item Top 10 at-risk accounts by ARR
+        \item Churn reason analysis (historical)
+    \end{itemize}
+    \item Dashboard SHALL support filtering by: renewal date range, account segment, assigned CSM/AE
+\end{itemize}
+\subsubsection{FR-7.2: Expansion Revenue Tracking}
+\begin{itemize}
+    \item Dashboard SHALL display:
+    \begin{itemize}
+        \item Total expansion pipeline value
+        \item Upsell conversion rate
+        \item Average deal size by opportunity type
+        \item Time-to-close for expansion deals
+    \end{itemize}
+\end{itemize}
+\subsubsection{FR-7.3: Agent Performance Metrics}
+\begin{itemize}
+    \item System SHALL track:
+    \begin{itemize}
+        \item Prediction accuracy (renewal outcome vs. predicted risk)
+        \item Playbook effectiveness (conversion rate by playbook type)
+        \item Alert response time (time from alert to first action)
+        \item Revenue saved via early intervention
+    \end{itemize}
+\end{itemize}
+\subsubsection{FR-7.4: Executive Reports}
+\begin{itemize}
+    \item System SHALL generate weekly executive summary including: ARR retention forecast, Top risks \& mitigations, Expansion opportunities closed, YoY performance trends
+    \item Reports SHALL be exportable in PDF and CSV formats
+\end{itemize}
+
+\subsection{FR-8: Integration Requirements}
+\subsubsection{FR-8.1: Salesforce Integration}
+\begin{itemize}
+    \item System SHALL sync bidirectionally: Accounts, Opportunities, Contracts, Tasks, Activities
+    \item System SHALL support custom Salesforce objects
+    \item System SHALL handle API rate limits (5,000 calls/day for Enterprise edition)
+\end{itemize}
+\subsubsection{FR-8.2: Billing Platform Integration}
+\begin{itemize}
+    \item System SHALL ingest data from Stripe/Chargebee: Subscription details, Payment history, Plan changes, Failed charges
+    \item System SHALL process webhook events in real-time
+\end{itemize}
+\subsubsection{FR-8.3: Analytics Platform Integration}
+\begin{itemize}
+    \item System SHALL collect product usage data from: Google Analytics (page views, session duration), Mixpanel (event tracking, funnel analysis), Custom analytics APIs
+\end{itemize}
+
+\subsection{FR-9: Notification System}
+\subsubsection{FR-9.1: Alert Delivery}
+\begin{itemize}
+    \item System SHALL support notification channels: Slack (direct message, channel post), Email (digest or real-time), In-app notification center, Microsoft Teams
+    \item Users SHALL configure notification preferences per alert type
+\end{itemize}
+\subsubsection{FR-9.2: Alert Types}
+\begin{itemize}
+    \item System SHALL generate alerts for:
+    \begin{itemize}
+        \item High-risk account detection
+        \item Upsell opportunity identification
+        \item Contract expiration (30/60/90-day reminders)
+        \item Failed payment events
+        \item Significant usage decline
+    \end{itemize}
+\end{itemize}
+
+\subsection{FR-10: Security \& Compliance}
+\subsubsection{FR-10.1: Authentication \& Authorization}
+\begin{itemize}
+    \item System SHALL support SSO via OAuth 2.0 (Okta, Azure AD)
+    \item System SHALL enforce role-based access control (RBAC): Admin, Sales Manager, CSM, AE, Read-Only
+    \item System SHALL log all user actions for audit trail
+\end{itemize}
+\subsubsection{FR-10.2: Data Privacy}
+\begin{itemize}
+    \item System SHALL encrypt data at rest (AES-256) and in transit (TLS 1.3)
+    \item System SHALL support GDPR/CCPA compliance (data anonymization, deletion)
+    \item System SHALL mask sensitive PII in non-production environments
+\end{itemize}
+
+\section{Flow Diagram / Architecture Diagram}
+
+\subsection{System Architecture Overview}
+The Renewal \& Upsell Advisor follows a microservices architecture with three primary layers:
+\begin{enumerate}
+    \item \textbf{Integration Layer:} Handles bidirectional data synchronization with external systems (Salesforce, Stripe, Analytics platforms)
+    \item \textbf{Processing Layer:} Executes data transformation, feature engineering, ML inference, and business logic
+    \item \textbf{Presentation Layer:} Provides user interfaces (dashboard) and notification delivery
+\end{enumerate}
+
+\subsection{Data Flow}
+\textbf{Ingestion Phase:}
+\begin{enumerate}
+    \item External systems (Salesforce, Stripe, Analytics) push data via webhooks or API polling
+    \item Integration Service validates and queues incoming data
+    \item ETL Pipeline processes raw data and stores in Data Warehouse
+\end{enumerate}
+
+\textbf{Processing Phase:}
+\begin{enumerate}
+    \item Feature Engineering Service extracts signals from historical data
+    \item ML Inference Service calculates risk scores and upsell propensity
+    \item Playbook Engine matches accounts to recommended plays
+    \item Results stored in PostgreSQL for real-time access
+\end{enumerate}
+
+\textbf{Action Phase:}
+\begin{enumerate}
+    \item Notification Service triggers alerts (Slack, Email) based on threshold rules
+    \item Workflow Automation creates tasks/opportunities in Salesforce
+    \item Dashboard displays insights and recommendations to users
+\end{enumerate}
+
+\subsection{Architecture Components}
+\textbf{Microservices:}
+\begin{itemize}
+    \item Integration Service (Node.js / Python FastAPI)
+    \item ETL Pipeline Service (Apache Airflow)
+    \item Feature Engineering Service (Python)
+    \item ML Inference Service (Python + MLflow)
+    \item Playbook Recommendation Engine (Python)
+    \item Notification Service (Python + Celery)
+    \item Dashboard API (FastAPI)
+    \item Frontend Application (React)
+\end{itemize}
+
+\textbf{Data Stores:}
+\begin{itemize}
+    \item PostgreSQL: Contracts, accounts, opportunities, tasks
+    \item MongoDB: Event logs, unstructured customer interactions
+    \item Redis: Session cache, API response cache, task queue
+    \item Snowflake/BigQuery: Historical analytics, reporting
+    \item S3: Model artifacts, exported reports
+\end{itemize}
+
+\textbf{Supporting Infrastructure:}
+\begin{itemize}
+    \item API Gateway (Kong / AWS API Gateway): Rate limiting, authentication
+    \item Message Queue (RabbitMQ / AWS SQS): Async task processing
+    \item Load Balancer (AWS ALB): Traffic distribution
+    \item Monitoring Stack (Prometheus + Grafana): Metrics, alerts
+\end{itemize}
+
+\subsection{Detailed Flow Descriptions}
+\subsubsection{Flow 1: Churn Risk Detection}
+\begin{enumerate}
+    \item Daily batch job retrieves contracts expiring in 90 days from Salesforce
+    \item System fetches associated usage data (Google Analytics), payment history (Stripe), support tickets (Zendesk)
+    \item Feature Engineering Service calculates: 30-day login frequency decline, feature adoption rate, NPS score, payment punctuality score
+    \item ML Model predicts churn probability for each account
+    \item Accounts with risk score >70 trigger High Risk alert
+    \item Playbook Engine recommends intervention playbook
+    \item Notification sent to assigned CSM via Slack with action items
+    \item System creates task in Salesforce: "Schedule Executive Business Review"
+\end{enumerate}
+
+\subsubsection{Flow 2: Upsell Opportunity Identification}
+\begin{enumerate}
+    \item Real-time webhook from product analytics detects: Account XYZ reaches 85\% user license utilization
+    \item System retrieves account profile: current plan tier, contract value, renewal date
+    \item Upsell Propensity Model calculates expansion likelihood (78\% probability)
+    \item System estimates expansion value: +25 seats = \$75K additional ARR
+    \item Opportunity automatically created in Salesforce with "Qualified" stage
+    \item Personalized email template generated: "Your team is growing fast. Unlock 25 more seats with preferred pricing."
+    \item AE receives in-app notification with recommended talk track
+    \item System schedules 3-touch follow-up sequence (Email Day 1, Call Day 3, Email Day 7)
+\end{enumerate}
+
+\subsubsection{Flow 3: Renewal Forecast Generation}
+\begin{enumerate}
+    \item Monthly batch job aggregates all renewals for next quarter
+    \item System calculates weighted renewal forecast: (Low Risk ARR $\times$ 95\%) + (Medium Risk $\times$ 75\%) + (High Risk $\times$ 40\%)
+    \item Expansion pipeline added to base renewal forecast
+    \item Historical conversion rates applied to upsell opportunities
+    \item Dashboard displays: Total forecasted ARR, Confidence intervals (P10, P50, P90), Risk-adjusted retention rate
+    \item Executive report exported to PDF and emailed to VP Sales
+\end{enumerate}
+
+\textbf{Note:} Detailed architecture diagram is provided separately as a visual chart. Reference the flow diagram PDF attached with this SRS document.
+
+\section{Competitive Analysis}
+
+\subsection{Market Landscape}
+The renewal and upsell intelligence market includes specialized customer success platforms, revenue operations tools, and AI-powered sales enablement solutions. Key competitors offer varying degrees of automation, predictive analytics, and CRM integration.
+
+\subsection{Primary Competitors}
+\subsubsection{Gainsight Customer Success}
+\textbf{Product URL:} \url{https://www.gainsight.com/}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item Industry-leading customer health scoring with ML-powered predictions
+    \item Native Salesforce integration with deep data synchronization
+    \item Comprehensive playbook automation and journey orchestration
+    \item Strong analytics and executive reporting dashboards
+    \item Extensive third-party integrations (200+ apps)
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item Complex setup requiring significant admin resources
+    \item Higher cost (enterprise pricing starts at \$50K+/year)
+    \item Steeper learning curve for end users
+    \item Limited flexibility for mid-market companies
+\end{itemize}
+
+\textbf{Technical Approach:} Gainsight uses Bayesian recursive models for churn prediction, combining usage telemetry, support data, and sentiment analysis. Their "Rules Engine" triggers automated workflows based on multi-dimensional health scores. Data aggregation occurs in their proprietary data warehouse with scheduled ETL jobs from source systems.
+
+\subsubsection{ChurnZero}
+\textbf{Product URL:} \url{https://churnzero.com/}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item Real-time customer engagement tracking and alerts
+    \item Easy-to-use interface with faster time-to-value
+    \item Strong renewal forecasting with Forecast Hub
+    \item AI agents (Vibes, Harbinger, Beacon) for risk and opportunity detection
+    \item Competitive pricing for mid-market segment
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item Less robust analytics compared to Gainsight
+    \item Limited customization for complex enterprise workflows
+    \item Fewer native integrations (relies on Zapier for some connections)
+    \item Reporting can feel rigid per user feedback
+\end{itemize}
+
+\textbf{Technical Approach:} ChurnZero emphasizes real-time event streaming from product analytics. Their AI agents use sentiment shift detection (NLP on emails/chat) and behavioral pattern matching. Renewal forecasting combines health scores with historical win/loss rates. They employ a segment-based approach for playbook recommendations.
+
+\subsubsection{Totango}
+\textbf{Product URL:} \url{https://www.totango.com/}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item Product adoption-focused with deep usage analytics
+    \item Flexible pricing and modular features (scale as needed)
+    \item Strong customer segmentation capabilities
+    \item Pre-built success plans and templates
+    \item Good balance of simplicity and functionality
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item Churn prediction less sophisticated than Gainsight
+    \item Limited upsell recommendation intelligence
+    \item Fewer automated playbook options
+    \item Smaller user community and ecosystem
+\end{itemize}
+
+\textbf{Technical Approach:} Totango’s core philosophy centers on product usage as the primary health indicator. They auto-generate health scores based on feature adoption patterns without requiring manual configuration. Segments are dynamically updated based on lifecycle stage and account attributes. Renewal risk is inferred from usage decline trends.
+
+\subsubsection{Catalyst (formerly ProsperWorks)}
+\textbf{Product URL:} \url{https://www.catalyst.io/}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item Unified customer data platform (CDP) approach
+    \item Strong revenue forecasting and pipeline management
+    \item AI-driven insights with "moments" (trigger events)
+    \item Modern UI with intuitive UX
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item Relatively new player (smaller customer base)
+    \item Fewer proven ML models compared to Gainsight
+    \item Limited third-party integration ecosystem
+    \item Still building out playbook automation
+\end{itemize}
+
+\textbf{Technical Approach:} Catalyst aggregates customer data into a unified profile (CDP model). Their "moments" feature detects trigger events (e.g., usage spike, support escalation) using rule-based and ML hybrid models. Revenue forecasting uses cohort analysis and time-series prediction.
+
+\subsection{Differentiation Strategy}
+\subsubsection{Our Competitive Advantages}
+\begin{enumerate}
+    \item \textbf{Unified Renewal \& Upsell Focus:} Unlike competitors that bolt-on upsell features, our agent treats renewal protection and expansion as integrated workflows.
+    \item \textbf{Advanced ML Models:} State-of-the-art gradient boosting with 85\%+ accuracy, incorporating sentiment analysis and behavioral signals.
+    \item \textbf{Faster Time-to-Value:} 7-day deployment vs. 6-12 weeks for enterprise CS platforms.
+    \item \textbf{Cost Efficiency:} Lightweight architecture reduces infrastructure costs by 40\% vs. Gainsight.
+    \item \textbf{Multi-Channel Playbook Automation:} Pre-built library of 15+ proven playbooks with A/B testing capability.
+    \item \textbf{Real-Time Risk Updates:} Event-driven architecture provides instant alerts vs. daily batch processing.
+\end{enumerate}
+
+\subsection{Feature Comparison Matrix}
+\begin{longtable}{|l|l|l|l|l|l|}
+\hline
+\textbf{Feature} & \textbf{Our Agent} & \textbf{Gainsight} & \textbf{ChurnZero} & \textbf{Totango} & \textbf{Catalyst} \\
+\hline
+Churn Prediction & Yes (ML) & Yes (ML) & Yes (ML) & Yes (Basic) & Yes (ML) \\
+\hline
+Upsell Propensity & Yes (ML) & Partial & Yes & Limited & Yes \\
+\hline
+Automated Playbooks & 15+ & 20+ & 10+ & 8+ & 5+ \\
+\hline
+Real-Time Alerts & Yes & Limited & Yes & No & Yes \\
+\hline
+Sentiment Analysis & Yes (NLP) & Yes & Yes & No & Partial \\
+\hline
+Salesforce Native Sync & Bidirectional & Native Sync & Sync & Sync & Native Sync \\
+\hline
+Stripe/Billing Integration & Yes & Yes & Limited & Yes & Yes \\
+\hline
+Deployment Time & 7 days & 8-12 weeks & 4-6 weeks & 2-4 weeks & 3-5 weeks \\
+\hline
+Pricing (Est.) & \$25K/yr & \$50K+/yr & \$30K/yr & \$20K/yr & \$35K/yr \\
+\hline
+ML Model Accuracy & 85\%+ & 82\% & 78\% & 70\% & 80\% \\
+\hline
+\end{longtable}
+
+\subsection{References}
+\begin{enumerate}
+    \item Gainsight Customer Success Platform: \url{https://www.gainsight.com/customer-success/}
+    \item ChurnZero Renewal Management: \url{https://churnzero.com/renewal-expansion-solutions/}
+    \item Totango vs Gainsight Comparison: \url{https://www.accoil.com/blog/totango-gainsight}
+    \item Customer Success Renewal Forecasting: \url{https://churnzero.com/blog/customer-success-renewals-forecasting/}
+    \item Renewal Manager AI Agents: \url{https://relevanceai.com/agent-templates-roles/renewal-manager-ai-agents-1}
+    \item ML-Based Renewal Prediction: \url{https://www.sirion.ai/library/contract-insights/predicting-renewal-probability-machine-learning/}
+    \item Stripe + Salesforce Integration Guide: \url{https://candyboxcrm.com/blog/how-to-set-up-the-stripe-to-salesforce-integration-a-how-to-guide}
+    \item ARR Forecasting Methods: \url{https://www.drivetrain.ai/post/arr-forecasting-corkscrew-model}
+    \item Churn Prediction Tools 2025: \url{https://www.zendesk.com/in/service/customer-experience/churn-prediction-software/}
+    \item Sentiment Analysis for Churn: \url{https://insight7.io/how-to-use-sentiment-analysis-to-predict-churn/}
+\end{enumerate}
+
+\section{Assumptions \& Constraints}
+
+\subsection{Assumptions}
+\begin{enumerate}
+    \item Client has active Salesforce instance (Enterprise or Unlimited edition).
+    \item Historical data available for minimum 2 years (contracts, renewals, usage).
+    \item API access credentials provided for all integrated systems.
+    \item Dedicated technical point-of-contact available during development.
+    \item Cloud infrastructure budget allocated (AWS/GCP).
+\end{enumerate}
+
+\subsection{Constraints}
+\begin{enumerate}
+    \item 7-day development timeline (no scope creep).
+    \item API rate limits from external systems (Salesforce: 5,000 calls/day).
+    \item Data privacy regulations (GDPR, CCPA compliance required).
+    \item Limited budget for third-party ML services (prefer open-source).
+    \item Single deployment environment (production only, no separate staging initially).
+\end{enumerate}
+
+\section{Success Metrics}
+
+\subsection{Technical KPIs}
+\begin{itemize}
+    \item \textbf{ML Model Accuracy:} >85\% precision and recall on churn prediction
+    \item \textbf{System Uptime:} 99.5\% availability
+    \item \textbf{API Response Time:} <200ms (P95)
+    \item \textbf{Data Sync Latency:} <5 minutes for real-time updates
+    \item \textbf{Alert Delivery Time:} <60 seconds from trigger event
+\end{itemize}
+
+\subsection{Business KPIs}
+\begin{itemize}
+    \item \textbf{Churn Reduction:} 20-30\% decrease in revenue churn
+    \item \textbf{Expansion Revenue:} 15-25\% increase in upsell conversions
+    \item \textbf{Forecast Accuracy:} >90\% accuracy on quarterly renewal predictions
+    \item \textbf{Team Productivity:} 35\% reduction in manual renewal tracking time
+    \item \textbf{Early Intervention Rate:} 80\% of high-risk accounts engaged within 5 days of alert
+\end{itemize}
+
+\section{Risk Management}
+
+\subsection{Technical Risks}
+\begin{itemize}
+    \item \textbf{Risk:} API rate limit exceeded during peak usage
+    \begin{itemize}
+        \item \textbf{Mitigation:} Implement request queuing, caching, and batch processing
+    \end{itemize}
+    \item \textbf{Risk:} ML model drift (accuracy degrades over time)
+    \begin{itemize}
+        \item \textbf{Mitigation:} Automated weekly model performance monitoring, quarterly retraining
+    \end{itemize}
+    \item \textbf{Risk:} Integration failure with external systems
+    \begin{itemize}
+        \item \textbf{Mitigation:} Implement retry logic, fallback mechanisms, comprehensive error logging
+    \end{itemize}
+\end{itemize}
+
+\subsection{Business Risks}
+\begin{itemize}
+    \item \textbf{Risk:} User adoption challenges (sales team ignores recommendations)
+    \begin{itemize}
+        \item \textbf{Mitigation:} Comprehensive training, in-app guidance, demonstrate early wins
+    \end{itemize}
+    \item \textbf{Risk:} Data quality issues (incomplete or inaccurate source data)
+    \begin{itemize}
+        \item \textbf{Mitigation:} Data validation rules, quality scoring, alert admins to data gaps
+    \end{itemize}
+\end{itemize}
+
+\section{Appendices}
+
+\subsection{Appendix A: Glossary}
+\begin{itemize}
+    \item \textbf{ARR:} Annual Recurring Revenue
+    \item \textbf{MRR:} Monthly Recurring Revenue
+    \item \textbf{Churn:} Loss of customers or revenue
+    \item \textbf{NPS:} Net Promoter Score
+    \item \textbf{CSM:} Customer Success Manager
+    \item \textbf{AE:} Account Executive
+    \item \textbf{CRM:} Customer Relationship Management
+    \item \textbf{ETL:} Extract, Transform, Load
+    \item \textbf{ML:} Machine Learning
+    \item \textbf{NLP:} Natural Language Processing
+\end{itemize}
+
+\subsection{Appendix B: API Endpoints (Sample)}
+\begin{verbatim}
+POST /api/v1/predict/churn
+GET /api/v1/renewals?risk_level=high
+POST /api/v1/playbooks/recommend
+GET /api/v1/opportunities/upsell
+POST /api/v1/alerts/configure
+\end{verbatim}
+
+\subsection{Appendix C: Contact Information}
+\begin{itemize}
+    \item \textbf{Project Manager:} [Name], [Email]
+    \item \textbf{Tech Lead:} [Name], [Email]
+    \item \textbf{Product Owner:} [Name], [Email]
+\end{itemize}
+
+\section{Document Approval}
+\begin{tabularx}{\textwidth}{|X|X|}
+\hline
+\textbf{Prepared By:} & [Name], [Title] \\
+\textbf{Date:} & \\
+\hline
+\textbf{Reviewed By:} & [Name], [Title] \\
+\textbf{Date:} & \\
+\hline
+\textbf{Approved By:} & [Name], [Title] \\
+\textbf{Date:} & \\
+\hline
+\end{tabularx}
+
+\end{document}

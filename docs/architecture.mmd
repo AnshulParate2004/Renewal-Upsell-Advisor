@@ -1,0 +1,93 @@
+graph TB
+    subgraph "External Systems"
+        Salesforce[Salesforce CRM]
+        Stripe[Stripe / Chargebee]
+        Analytics[Google Analytics / Mixpanel]
+        Usage[Product Usage Data]
+        Support[Zendesk / Support]
+    end
+
+    subgraph "Backend Services (FastAPI)"
+        API_GW[API Gateway / Router]
+        IntegrationService[Integration Service]
+        NotificationService[Notification Service]
+        WorkflowService[Workflow Automation]
+        DashboardAPI[Dashboard API]
+    end
+
+    subgraph "ML Layer"
+        ML_Model_Churn[Churn Prediction Model]
+        ML_Model_Upsell[Upsell Propensity Model]
+        ML_Model_Sentiment[Sentiment Analysis Model]
+    end
+
+    subgraph "Data Storage"
+        Postgres[(PostgreSQL<br/>Core Data)]
+        MongoDB[(MongoDB<br/>Logs & Events)]
+        S3[(AWS S3<br/>Files & Models)]
+    end
+
+    subgraph "Communication Channels"
+        EmailSystem[Email / SES]
+        VoiceSystem[Voice / Phone System]
+    end
+
+    subgraph "Users & Recipients"
+        CSM[Customer Success Manager]
+        AE[Account Executive]
+        Customer[End Customer]
+    end
+
+    %% Data Ingestion Flows
+    Salesforce -->|Sync| IntegrationService
+    Stripe -->|Webhooks| IntegrationService
+    Analytics -->|Events| IntegrationService
+    Usage -->|Logs| IntegrationService
+    Support -->|Tickets| IntegrationService
+
+    IntegrationService -->|Store Data| Postgres
+    IntegrationService -->|Store Logs| MongoDB
+
+    %% ML Processing (Direct Call or Async Background Task)
+    IntegrationService -.-> ML_Model_Churn
+    IntegrationService -.-> ML_Model_Upsell
+    IntegrationService -.-> ML_Model_Sentiment
+
+    ML_Model_Churn -->|Risk Scores| Postgres
+    ML_Model_Upsell -->|Opportunities| Postgres
+    ML_Model_Sentiment -->|Sentiment Score| Postgres
+
+    %% Logic & Notifications
+    Postgres --> NotificationService
+    
+    NotificationService -->|Email Outreach| EmailSystem
+    NotificationService -->|Voice Calls| VoiceSystem
+
+    %% Detailed Notification Flow
+    EmailSystem --> AE
+    EmailSystem -->|Renewal Reminders| Customer
+    VoiceSystem -->|Automated Calls| Customer
+
+    %% Workflow & Dashboard
+    Postgres --> WorkflowService
+    WorkflowService -->|Update CRM| Salesforce
+
+    Postgres --> DashboardAPI
+    DashboardAPI --> Frontend["Frontend Dashboard<br/>(React / Vue.js)"]
+    Frontend --> CSM
+    Frontend --> AE
+
+    %% Styling
+    classDef external fill:#f8cecc,stroke:#b85450,stroke-width:2px;
+    classDef backend fill:#d5e8d4,stroke:#82b366,stroke-width:2px;
+    classDef ml fill:#e1d5e7,stroke:#9673a6,stroke-width:2px;
+    classDef storage fill:#fff2cc,stroke:#d6b656,stroke-width:2px;
+    classDef comms fill:#dae8fc,stroke:#6c8ebf,stroke-width:2px;
+    classDef users fill:#f5f5f5,stroke:#666666,stroke-width:2px,stroke-dasharray: 5 5;
+
+    class Salesforce,Stripe,Analytics,Usage,Support external;
+    class API_GW,IntegrationService,NotificationService,WorkflowService,DashboardAPI backend;
+    class ML_Model_Churn,ML_Model_Upsell,ML_Model_Sentiment ml;
+    class Postgres,MongoDB,S3 storage;
+    class EmailSystem,VoiceSystem comms;
+    class CSM,AE,Customer,Frontend users;
