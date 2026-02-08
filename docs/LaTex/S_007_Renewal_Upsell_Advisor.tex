@@ -892,6 +892,26 @@ The renewal and upsell intelligence market includes specialized customer success
 
 \textbf{Technical Approach:} ChurnZero emphasizes real-time event streaming from product analytics. Their AI agents use sentiment shift detection (NLP on emails/chat) and behavioral pattern matching. Renewal forecasting combines health scores with historical win/loss rates. They employ a segment-based approach for playbook recommendations.
 
+\subsubsection{Yagna iQ Channel Ecosystem Platform}
+\textbf{Product URL:} \url{https://www.yagnaiq.com/}
+
+\textbf{Strengths:}
+\begin{itemize}
+    \item \textbf{High ROI \& Efficiency:} Proven to save 125+ hours per 100 contracts and increase on-time renewal rates by 20--25\%.
+    \item \textbf{Zero-Touch Automation:} "Set and forget" workflows for low-value, high-volume renewals, triggering proactive quotes 90/60/30 days in advance.
+    \item \textbf{Unified Channel View:} Solves the "1000 Portal Problem" by aggregating multi-vendor data into a single dashboard for distributors and resellers.
+    \item \textbf{Security \& Integration:} ISO 27001 certified with native connectors for Salesforce, Microsoft Dynamics, and major ERPs.
+\end{itemize}
+
+\textbf{Weaknesses:}
+\begin{itemize}
+    \item Highly specialized for \textit{indirect} channel sales (Vendors $\rightarrow$ Distributors $\rightarrow$ Resellers), which may be overkill for direct-only SaaS businesses.
+    \item UI/UX is function-first (industrial strength) rather than "consumer-grade" aesthetic compared to modern PLG tools.
+\end{itemize}
+
+\textbf{Technical Approach:} Yagna iQ operates as a cloud-native "Channel Ecosystem" platform. It ingests "Golden Record" data from vendor ERPs/CRMs and normalizes it for downstream partners. Its core engine uses AI/ML to identify "Smart Leads" for cross-selling (XSUS Cloud) and automates the entire quote-to-cash cycle for renewals (Renewal Cloud) using event-driven triggers.
+
+
 \subsubsection{Totango}
 \textbf{Product URL:} \url{https://www.totango.com/}
 
@@ -935,44 +955,63 @@ The renewal and upsell intelligence market includes specialized customer success
 
 \textbf{Technical Approach:} Catalyst aggregates customer data into a unified profile (CDP model). Their "moments" feature detects trigger events (e.g., usage spike, support escalation) using rule-based and ML hybrid models. Revenue forecasting uses cohort analysis and time-series prediction.
 
-\subsection{Differentiation Strategy}
+\subsection{Innovation \& Differentiation Strategy}
+\subsubsection{Core Innovation: The "Agentic" Shift}
+The primary innovation of our Renewal \& Upsell Advisor is the fundamental shift from \textbf{Passive Analytics} (Dashboards) to \textbf{Active Agency} (Co-Pilots).
+
+\begin{enumerate}
+    \item \textbf{From "Insights" to "Actions":}
+    Legacy platforms (Gainsight, Yagna iQ) identify a risk and populate a dashboard, requiring a human Key Account Manager (KAM) to log in, interpretation the data, and decide on an action.
+    \textbf{Our Innovation:} The Agent identifies the risk and \textit{immediately drafts the remedial action} (e.g., a personalized email, a meeting agenda, or a discount offer) for the KAM to approve. The KAM manages \textit{decisions}, not data.
+
+    \item \textbf{Generative vs. Static Playbooks:}
+    Competitors use rigid "If-Then" rule engines (e.g., "If health score < 50, send Email Template B").
+    \textbf{Our Innovation:} We utilize Large Language Models (LLMs) to generate \textit{context-aware} playbooks on the fly. The Agent reads the last 10 emails, analyzes the support ticket tone, and generates a truly personalized message that acknowledges specific client pain points, rather than using a generic template.
+
+    \item \textbf{Unified "Growth Loop" Architecture:}
+    Most platforms treat "Renewals" (Defense) and "Upsells" (Offense) as separate pipelines.
+    \textbf{Our Innovation:} We model them as a single \textbf{Revenue Optimization Problem}. Every interaction is scored for both Retention Probability and Expansion Propensity simultaneously. The Agent will suppress an upsell offer if the renewal risk is high, or leverage a successful renewal to immediately pitch an upsell, creating a continuous growth loop.
+\end{enumerate}
+
 \subsubsection{Our Competitive Advantages}
 \begin{enumerate}
-    \item \textbf{Unified Renewal \& Upsell Focus:} Unlike competitors that bolt-on upsell features, our agent treats renewal protection and expansion as integrated workflows.
-    \item \textbf{Advanced ML Models:} State-of-the-art gradient boosting with 85\%+ accuracy, incorporating sentiment analysis and behavioral signals.
-    \item \textbf{Faster Time-to-Value:} 7-day deployment vs. 6-12 weeks for enterprise CS platforms.
-    \item \textbf{Cost Efficiency:} Lightweight architecture reduces infrastructure costs by 40\% vs. Gainsight.
-    \item \textbf{Multi-Channel Playbook Automation:} Pre-built library of 15+ proven playbooks with A/B testing capability.
-    \item \textbf{Real-Time Risk Updates:} Event-driven architecture provides instant alerts vs. daily batch processing.
+    \item \textbf{Zero-Login Experience:} The Agent lives where the KAM works (Slack, Teams, Email). There is no "platform" to learn or log into.
+    \item \textbf{Hyper-Personalization at Scale:} Using Generative AI to craft unique account plans for thousands of long-tail customers that would otherwise receive generic automation.
+    \item \textbf{Faster Time-to-Value:} 7-day deployment via API overlay, compared to 6--12 week implementation cycles for heavy platforms like Yagna or Gainsight.
 \end{enumerate}
 
 \subsection{Feature Comparison Matrix}
-\begin{longtable}{|l|l|l|l|l|l|}
+
+% Use small font for the table to fit the width
+\footnotesize
+% Reduce padding to maximize space
+\setlength{\tabcolsep}{2pt}
+% Add some vertical space
+\renewcommand{\arraystretch}{1.2}
+
+\begin{longtable}{|p{2.2cm}|p{2.8cm}|p{1.7cm}|p{1.7cm}|p{1.5cm}|p{1.7cm}|p{2.2cm}|}
 \hline
-\textbf{Feature} & \textbf{Our Agent} & \textbf{Gainsight} & \textbf{ChurnZero} & \textbf{Totango} & \textbf{Catalyst} \\
+\textbf{Feature} & \textbf{Our Agent} & \textbf{Gainsight} & \textbf{ChurnZero} & \textbf{Totango} & \textbf{Catalyst} & \textbf{Yagna iQ} \\
 \hline
-Churn Prediction & Yes (ML) & Yes (ML) & Yes (ML) & Yes (Basic) & Yes (ML) \\
+Churn Prediction & \textbf{Action-Oriented} & Descriptive & Descriptive & Basic & Descriptive & Analytical \\
 \hline
-Upsell Propensity & Yes (ML) & Partial & Yes & Limited & Yes \\
+Upsell Propensity & \textbf{Generative Pitch} & Partial & Yes & Limited & Yes & Smart Leads \\
 \hline
-Automated Playbooks & 15+ & 20+ & 10+ & 8+ & 5+ \\
+Playbook Engine & \textbf{GenAI (Dynamic)} & Rigid Rules & Rigid Rules & Rigid Rules & Rigid Rules & Rigid Workflow \\
 \hline
-Real-Time Alerts & Yes & Limited & Yes & No & Yes \\
+Real-Time Alerts & \textbf{Drafts Response} & Notification & Notification & No & Notification & Quote Trigger \\
 \hline
-Sentiment Analysis & Yes (NLP) & Yes & Yes & No & Partial \\
+User Interface & \textbf{Chat/Slack (Headless)} & Dashboard & Dashboard & Dashboard & Dashboard & Portal \\
 \hline
-Salesforce Native Sync & Bidirectional & Native Sync & Sync & Sync & Native Sync \\
+Salesforce Sync & \textbf{ bidirectional Agent} & Native Sync & Sync & Sync & Native Sync & Native Sync \\
 \hline
-Stripe/Billing Integration & Yes & Yes & Limited & Yes & Yes \\
+Deployment & \textbf{7 Days (Overlay)} & 8--12 weeks & 4--6 weeks & 2--4 weeks & 3--5 weeks & 4--8 weeks \\
 \hline
-Deployment Time & 7 days & 8-12 weeks & 4-6 weeks & 2-4 weeks & 3-5 weeks \\
+Pricing & \textbf{Usage/Outcome} & Seat-Based & Seat-Based & Seat-Based & Seat-Based & Volume-Based \\
 \hline
-Pricing (Est.) & \$25K/yr & \$50K+/yr & \$30K/yr & \$20K/yr & \$35K/yr \\
-\hline
-ML Model Accuracy & 85\%+ & 82\% & 78\% & 70\% & 80\% \\
+Core AI Tech & \textbf{LLM + RAG} & Predictive ML & Predictive ML & Basic ML & Predictive ML & Predictive ML \\
 \hline
 \end{longtable}
-
 \subsection{References}
 \begin{enumerate}
     \item Gainsight Customer Success Platform: \url{https://www.gainsight.com/customer-success/}
