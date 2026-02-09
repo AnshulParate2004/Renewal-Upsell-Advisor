@@ -129,56 +129,57 @@ The Renewal \& Upsell Advisor is an intelligent AI agent designed to monitor cus
 \section{Business Scenario}
 
 \subsection{Use Case Context}
-Enterprise SaaS companies typically face 5-7\% annual revenue churn and miss 30-40\% of expansion opportunities due to reactive renewal processes and lack of visibility into customer health signals. Sales and Customer Success teams often discover renewal risks too late to intervene effectively, and upsell opportunities are identified manually through sporadic account reviews.
+Enterprise SaaS companies typically face 5-7\% annual revenue churn and miss 30-40\% of expansion opportunities due to reactive renewal processes. Traditional methods rely on human CSMs to identify risks and negotiate renewals manually, which is unscalable for long-tail accounts. Sales teams often lack visibility into real-time customer health signals, leading to missed upsell windows.
 
 \subsection{Primary Business Scenario}
-\textbf{Scenario:} Proactive Renewal Risk Mitigation and Expansion Revenue Capture
+\textbf{Scenario:} Fully Autonomous Renewal Negotiation and Upsell Execution
 
 \textbf{Actors:}
 \begin{itemize}
-    \item Account Executives (AE)
-    \item Customer Success Managers (CSM)
-    \item Revenue Operations Manager
-    \item VP of Sales
+    \item \textbf{Autonomous Revenue Agent (S-007)}
+    \item Customer Decision Maker (Signer)
+    \item Revenue Operations Manager (Supervisor)
+    \item Account Executive (AE) - Override Only
 \end{itemize}
 
 \textbf{Example Workflow:}
 
-\textbf{Day 0-90 Before Renewal:}
+\textbf{Day 0-90 Before Renewal - Autonomous Monitoring:}
 \begin{enumerate}
-    \item TechCorp has 150 enterprise customers with contracts renewing in the next 90 days, representing \$8.5M in ARR.
-    \item The Renewal \& Upsell Advisor ingests data from Salesforce (contract dates, deal history), Stripe (payment history, plan details), and analytics platforms (product usage, feature adoption).
-    \item The agent identifies 12 high-risk accounts (\$1.2M ARR) showing signals: declining login frequency (45\% drop), increased support tickets (3x average), late payment history, and low NPS scores.
+    \item TechCorp has 150 enterprise customers renewing in 90 days (\$8.5M ARR).
+    \item The Agent continuously monitors real-time signals: contract terms (Salesforce), payment health (Stripe), usage trends (Mixpanel), and support sentiment (Zendesk).
+    \item The Agent identifies 12 High-Risk accounts. For Account XYZ (\$180K ARR), it detects low login frequency (-45\%) and negative sentiment in recent tickets.
 \end{enumerate}
 
-\textbf{Day 1-30 - Risk Detection \& Alert:}
+\textbf{Day 1-30 - Autonomous Negotiation (Risk Mitigation):}
 \begin{enumerate}
-    \item Agent sends automated Slack alert to assigned CSM: "Account XYZ Corp (\$180K ARR) - HIGH RENEWAL RISK (72\% probability). Key factors: 60\% usage decline, 2 unresolved support escalations, contract expires Jan 15."
-    \item CSM receives recommended playbook: "Executive Business Review + Value Realization Workshop" with 3 personalized email templates emphasizing ROI metrics specific to XYZ Corp’s use case.
-    \item Agent suggests optimal outreach timing: "Schedule call within 5 days, follow-up every 7 days".
+    \item \textbf{Agent Action:} Instead of alerting a CSM to manually email, the Agent autonomously drafts and sends a personalized "Value Realization" email to the XYZ champion.
+    \item \textbf{Agent Capability:} The email highlights specific ROI metrics achieved ("Your team saved 400 hours using Feature A despite lower logins") and proposes a check-in call.
+    \item \textbf{Negotiation:} The customer replies with pricing concerns. The Agent, adhering to pre-approved discount guardrails, autonomously negotiates: "We can offer a 5\% loyalty discount for a 2-year early renewal."
+    \item \textbf{Outcome:} The customer accepts via email. The Agent updates the Salesforce Opportunity to "Verbal Agreement" and triggers the contract generation workflow.
 \end{enumerate}
 
-\textbf{Day 30-60 - Upsell Opportunity Detection:}
+\textbf{Day 30-60 - Autonomous Upsell Pitching:}
 \begin{enumerate}
-    \item For 35 healthy accounts (\$2.8M ARR), agent identifies 18 expansion opportunities based on: approaching user license limits (85\% utilization), high engagement with premium features, positive sentiment in recent emails.
-    \item AE receives notification: "ABC Company (\$250K ARR) - UPSELL OPPORTUNITY: Add 25 seats + Premium Analytics Module. Estimated expansion: \$75K. Current plan utilization: 92\%".
-    \item Agent generates value messaging highlighting: "Based on your team’s usage of Report Builder (1,250 reports/month), upgrading to Premium Analytics will unlock automated insights and save 15 hours/week".
+    \item \textbf{Opportunity Detection:} For healthy Account ABC (\$250K ARR), the Agent detects 92\% license utilization and high usage of the "Standard Reporting" feature.
+    \item \textbf{Agent Action:} The Agent identifies a "Premium Analytics" upsell opportunity (\$75K expansion). It autonomously sends a "Growth Proposal" to the ABC admin.
+    \item \textbf{Pitch:} "You are hitting limits on Standard Reports. Upgrading to Premium will unlock unlimited history and predictive charts. Click here to activate a 14-day trial or instant upgrade."
+    \item \textbf{Closing:} The admin clicks "Instant Upgrade". The Agent processes the prorated invoice via Stripe and provisions the licenses automatically.
 \end{enumerate}
 
-\textbf{Day 60-90 - Renewal Execution:}
+\textbf{Day 60-90 - Execution and Closure:}
 \begin{enumerate}
-    \item Agent tracks engagement metrics from outreach campaigns and updates risk scores in real-time.
-    \item 8 of 12 high-risk accounts move to medium risk after successful intervention.
-    \item Agent auto-generates renewal proposals in Salesforce with recommended contract terms.
-    \item Revenue Operations receives consolidated forecast: "Projected renewals: \$7.9M (93\% retention), Expansion pipeline: \$850K".
+    \item The Agent finalizes all renewal contracts via DocuSign integration.
+    \item For complex deals requiring human sign-off (e.g., >\$500K or non-standard terms), the Agent loops in the VP of Sales with a summarized "Deal Memo" for one-click approval.
+    \item Revenue Operations receives a finalized forecast: "Closed Renewals: \$8.1M (95\% retention), Expansion Booked: \$920K".
 \end{enumerate}
 
 \textbf{Business Outcome:}
 \begin{itemize}
-    \item Churn reduced from 7\% to 4\% (\$255K ARR saved).
-    \item Expansion revenue increased by 22\% (\$680K captured vs. \$557K historical average).
-    \item Sales team productivity increased by 35\% through automated playbook recommendations.
-    \item Renewal forecast accuracy improved to 92\%.
+    \item \textbf{Reduced Churn:} 40\% reduction in churn via instant, 24/7 autonomous negotiation.
+    \item \textbf{Increased Efficiency:} 70\% reduction in CSM manual overhead; CSMs focus only on strategic relationships.
+    \item \textbf{Expansion Revenue:} 25\% increase in upsell conversion due to timely, usage-based autonomous offers.
+    \item \textbf{Faster Cycles:} Renewal cycle shortened from 45 days to 14 days.
 \end{itemize}
 
 \section{Milestones \& Timeline}
@@ -475,6 +476,8 @@ Data Scientist (Consultant) & - Churn prediction model design \& algorithm selec
 \begin{itemize}
     \item \textbf{ML Framework:} Scikit-learn, XGBoost, LightGBM
     \item \textbf{Deep Learning:} TensorFlow / PyTorch (optional for advanced NLP)
+    \item \textbf{LLM Service:} OpenAI GPT-4 / Anthropic Claude / AWS Bedrock (for generation)
+    \item \textbf{Agent Framework:} LangChain / AutoGen (for orchestration)
     \item \textbf{NLP:} spaCy, Hugging Face Transformers (sentiment analysis)
     \item \textbf{Feature Store:} Feast or custom implementation
     \item \textbf{Model Management:} MLflow
@@ -740,6 +743,26 @@ Data Scientist (Consultant) & - Churn prediction model design \& algorithm selec
     \item System SHALL encrypt data at rest (AES-256) and in transit (TLS 1.3)
     \item System SHALL support GDPR/CCPA compliance (data anonymization, deletion)
     \item System SHALL mask sensitive PII in non-production environments
+\end{itemize}
+
+\subsection{FR-11: Autonomous Negotiation \& Execution}
+\subsubsection{FR-11.1: Autonomous Engagement}
+\begin{itemize}
+    \item System SHALL Autonomous Agent capable of initiating and maintaining natural language conversations (email/chat) with customers.
+    \item System SHALL support "Human-in-the-Loop" mode where Agent drafts are queued for approval before sending.
+    \item System SHALL switch to "Fully Autonomous" mode for pre-approved low-risk segments (< \$10k ARR).
+\end{itemize}
+\subsubsection{FR-11.2: Negotiation Logic}
+\begin{itemize}
+    \item System SHALL execute negotiation strategies based on playbooks (e.g., offer 5\% discount if customer mentions "competitor pricing").
+    \item System SHALL enforce strict guardrails: maximum discount limits, contract term constraints, and required approvals for exceptions.
+    \item System SHALL handle common objections (price, timing, features) using a retrieval-augmented generation (RAG) knowledge base.
+\end{itemize}
+\subsubsection{FR-11.3: Contract Execution}
+\begin{itemize}
+    \item System SHALL automatically generate quote documents (PDF) with negotiated terms.
+    \item System SHALL integrate with e-signature platforms (DocuSign/Adobe Sign) to send contracts for signature.
+    \item System SHALL provision licenses/features immediately upon contract signature or payment confirmation.
 \end{itemize}
 
 \section{Flow Diagram / Architecture Diagram}
