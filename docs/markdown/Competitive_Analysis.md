@@ -1,46 +1,26 @@
-# Competitive Analysis
+# Competitive Analysis: S-007 vs. Market
 
-Analysis of the current market landscape compared to the S-007 Agent.
+## Market Landscape
+The market is shifting from "Passive Insight" (Gainsight/ChurnZero) to "Active Agency".
 
-## 4.1 Primary Competitors
+## Primary Competitors
 
-### 1. Gainsight Customer Success
-*   **Strengths:** Industry-leading health scoring, deep Salesforce integration, comprehensive playbook automation.
-*   **Weaknesses:** Expensive ($50K+/yr), complex setup requiring admin resources, steep learning curve.
-*   **Technical Approach:** Uses Bayesian recursive models and a proprietary data warehouse for aggregation.
+### 1. Gainsight / ChurnZero (The Incumbents)
+*   **Strengths:** Deep analytics, health scoring, rich dashboards.
+*   **Weaknesses:** **Passive.** They rely on CSMs to log in and take action. High cost ($50k+).
+*   **Differentiation:** S-007 is **Autonomous**. It updates scores every 24 hours and takes action (Voice/Email) without human intervention.
 
-### 2. ChurnZero
-*   **Strengths:** Real-time engagement tracking, easy-to-use interface, AI agents for risk/opportunity detection.
-*   **Weaknesses:** Less robust analytics, limited customization, fewer native integrations.
-*   **Technical Approach:** Emphasizes real-time event streaming and sentiment shift detection via NLP.
+### 2. Yagna iQ (The Channel Specialist)
+*   **Strengths:** Excellent T-90/60/30 renewal automation for channel partners.
+*   **Weaknesses:** Focused on distribution channels, less on direct B2B SaaS AI.
+*   **Differentiation:** S-007 adopts Yagna's **Quote Automation** triggers but adds **Voice AI** and **Proprietary ML** for direct sales.
 
-### 3. Totango
-*   **Strengths:** Deep usage analytics, flexible modular pricing, strong segmentation.
-*   **Weaknesses:** Less sophisticated churn prediction, limited upsell intelligence, fewer automated playbooks.
-*   **Technical Approach:** Centers on product usage as the primary health indicator; segments update dynamically.
+## Feature Comparison
 
-### 4. Catalyst
-*   **Strengths:** Unified Customer Data Platform (CDP) approach, strong revenue forecasting, modern UI.
-*   **Weaknesses:** Smaller customer base, fewer proven ML models, limited integrations.
-*   **Technical Approach:** Aggregates data into a unified profile and uses "moments" to detect trigger events.
-
-## 4.2 Differentiation Strategy
-Our competitive advantages include:
-*   **Unified Focus:** Integrated renewal and expansion workflows (unlike bolt-on features).
-*   **Advanced ML:** State-of-the-art gradient boosting with >85% accuracy.
-*   **Speed:** 7-day deployment vs. 6-12 weeks for competitors.
-*   **Cost:** Lightweight architecture reduces costs by ~40% vs. Gainsight.
-*   **Real-Time:** Event-driven architecture for instant alerts.
-
-## 4.3 Feature Comparison Matrix
-
-| Feature | Our Agent (S-007) | Gainsight | ChurnZero | Totango | Catalyst |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Churn Prediction** | Yes (ML) | Yes (ML) | Yes (ML) | Yes (Basic) | Yes (ML) |
-| **Upsell Propensity** | Yes (ML) | Partial | Yes | Limited | Yes |
-| **Automated Playbooks** | 15+ | 20+ | 10+ | 8+ | 5+ |
-| **Real-Time Alerts** | Yes | Limited | Yes | No | Yes |
-| **Sentiment Analysis** | Yes (NLP) | Yes | Yes | No | Partial |
-| **Salesforce Native** | Bidirectional | Native | Sync | Sync | Sync |
-| **Stripe Integration** | Yes | Yes | Limited | Yes | Yes |
-| **ML Accuracy** | 85%+ | 82% | 78% | 70% | 80% |
+| Feature | S-007 (Autonomous Agent) | Gainsight / ChurnZero | Yagna iQ |
+| :--- | :--- | :--- | :--- |
+| **Core Philosophy** | **Active Agency** (Do it for you) | Passive Insight (Tell you what to do) | Channel Automation |
+| **Analysis Loop** | **Every 24 Hours** | Weekly / Monthly | Transactional |
+| **Voice Capability** | **Closed-Loop Agents** (Call + Retry) | None | Limited |
+| **Quote Generation** | **Auto-Generated + Payment Link** | Integration Required | **Native Core Feature** |
+| **Time to Value** | **7 Days** | 3-6 Months | 1-3 Months |

@@ -1,0 +1,126 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+\title{\textbf{Technical Implementation Plan for Renewal \& Upsell Advisor}}
+\author{Autonomous Revenue Agent Strategy}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Goal}
+To build an Autonomous Revenue Agent that proactively manages renewals and upsells through a 24-hour analysis loop, Yagna-style triggers, and closed-loop voice outreach.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{1.png}
+    \caption{High-Level System Architecture}
+\end{figure}
+
+\section{Phase 1: Foundation \& Data Infrastructure}
+\subsection{Database Schema (PostgreSQL)}
+\begin{itemize}
+    \item \textbf{Accounts Table:} \texttt{account\_id}, \texttt{arr}, \texttt{contract\_end\_date}, \texttt{health\_score}.
+    \item \textbf{Interactions Table:} \texttt{id}, \texttt{type} (EMAIL/CALL), \texttt{status} (SENT/PICKED\_UP/MISSED), \texttt{transcript}.
+    \item \textbf{Opportunities Table:} Tracks automated renewal and upsell deals.
+\end{itemize}
+
+\subsection{Event Logging (MongoDB)}
+\begin{itemize}
+    \item Set up a \texttt{logs} collection for unstructured data (voice call transcripts, raw email bodies, webhook payloads).
+\end{itemize}
+
+\subsection{Integration Service (FastAPI)}
+\begin{itemize}
+    \item Implement \textbf{Salesforce Sync} (Bidirectional logic for Accounts/Contacts).
+    \item Implement \textbf{Stripe Webhook Listener} to capture payment success/failure events in real-time.
+\end{itemize}
+
+\section{Phase 2: The 24-Hour Analysis Engine}
+\subsection{Scheduler Setup}
+\begin{itemize}
+    \item Configure a daily job (using APScheduler or Celery Beat) to trigger at 00:00 UTC.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.0\textwidth]{2.png}
+    \caption{Detailed Autonomous Data Flow and Analysis Loop}
+\end{figure}
+
+\subsection{AI Models Implementation}
+\begin{enumerate}
+    \item \textbf{Sentiment Analysis (NLP):}
+    \begin{itemize}
+        \item Integrate HuggingFace \texttt{distilbert-base-uncased-finetuned-sst-2-english}.
+        \item \textbf{Task:} Score all emails/tickets from the last 24 hours.
+    \end{itemize}
+    
+    \item \textbf{Churn Prediction (XGBoost):}
+    \begin{itemize}
+        \item \textbf{Inputs:} Usage drops (login frequency) + recent Sentiment Scores.
+        \item \textbf{Output:} Risk Probability (0-100\%).
+    \end{itemize}
+    
+    \item \textbf{Upsell Propensity (Collaborative Filtering):}
+    \begin{itemize}
+        \item \textbf{Logic:} Identify accounts with $>85\%$ license utilization.
+        \item \textbf{Action:} Flag for "Seat Expansion" campaign.
+    \end{itemize}
+\end{enumerate}
+
+\section{Phase 3: Yagna-Style Notification Triggers}
+\subsection{Automated Workflow Logic}
+The Scheduler will check contract dates daily and trigger specific actions:
+
+\begin{description}
+    \item[T-90 Days (Early Warning):] Generate preliminary Quote PDF. Send "Upcoming Renewal" email.
+    \item[T-60 Days (Adoption Check):] Check license usage. If usage $<50\%$, trigger "Adoption Intervention" playbook instead of a quote.
+    \item[T-30 Days (Urgent Action):] Generate final Quote. \textbf{Embed Stripe Payment Link} directly in the email for one-click renewal.
+\end{description}
+
+\section{Phase 4: Closed-Loop Voice Agent}
+\subsection{Voice System (Twilio / Amazon Connect)}
+\begin{itemize}
+    \item Implement programmable voice calls for high-value accounts.
+    \item \textbf{Script Logic:} "Hello [Name], your renewal is due on [Date]. Do you have 2 minutes to discuss?"
+\end{itemize}
+
+\subsection{Outcome Handling Logic}
+\begin{enumerate}
+    \item \textbf{Picked Up:}
+    \begin{itemize}
+        \item Record conversation transcript.
+        \item Save to MongoDB \texttt{interactions} collection.
+        \item Tag status as \texttt{SUCCESS}.
+    \end{itemize}
+    
+    \item \textbf{Missed / No Answer:}
+    \begin{itemize}
+        \item Log status as \texttt{MISSED}.
+        \item Schedule a \textbf{Retry Task} for $+4$ hours later.
+    \end{itemize}
+\end{enumerate}
+
+\section{Phase 5: Engagement AI Dashboard}
+\subsection{Frontend Development (React)}
+\begin{itemize}
+    \item Build the "Flyout" style dashboard (referencing \texttt{Engagement-AI...png}).
+    \item \textbf{Visualizations:}
+    \begin{itemize}
+        \item Risk Score Trendline (using Recharts/Chart.js).
+        \item "Top 3 Risk Factors" highlighter.
+        \item Relationship Score gauge.
+    \end{itemize}
+\end{itemize}
+
+\end{document}

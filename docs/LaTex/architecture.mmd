@@ -77,6 +77,53 @@ graph TB
     Frontend --> CSM
     Frontend --> AE
 
+    %% 24-Hour Analysis Loop & Yagna-style Triggers
+    subgraph "Automation"
+        Scheduler((24-Hour Timer))
+    end
+
+    Scheduler -->|1. Trigger Re-analysis| IntegrationService
+    IntegrationService -->|2. Re-run All 3| ML_Model_Sentiment
+    IntegrationService -->|2. Re-run All 3| ML_Model_Churn
+    IntegrationService -->|2. Re-run All 3| ML_Model_Upsell
+    
+    %% Yagna-Style Notification Logic
+    subgraph "Renewal Logic"
+        CheckDates{Check Dates}
+        GenerateQuote[Generate Quote / CPQ]
+        PaymentLink[Embed Payment Link]
+    end
+
+    Scheduler -->|daily check| CheckDates
+    CheckDates -->|T-90, T-60, T-30 Days| GenerateQuote
+    GenerateQuote --> PaymentLink
+    PaymentLink --> NotificationService
+
+    ML_Model_Sentiment -.->|3. Updated Score| NotificationService
+    ML_Model_Churn -.->|3. Updated Risk| NotificationService
+    ML_Model_Upsell -.->|3. Updated Propensity| NotificationService
+
+    NotificationService -->|4. Action: Send Email| EmailSystem
+    NotificationService -->|4. Action: Make Call| VoiceSystem
+    
+    EmailSystem -->|5. Quote + Payment Link| Customer
+    VoiceSystem -->|5. Attempt Call| Customer
+
+    %% Call Outcome Logic
+    subgraph "Call Handling"
+        CallStatus{Picked Up?}
+        LogSuccess[Log Success & Summarize]
+        LogRetry[Log Miss & Schedule Retry]
+    end
+
+    Customer -->|Result| CallStatus
+    CallStatus -->|Yes| LogSuccess
+    CallStatus -->|No| LogRetry
+
+    LogSuccess -->|Save Interaction| MongoDB
+    LogRetry -->|Save Status| MongoDB
+    LogRetry -.->|Queue Next| Scheduler
+
     %% Styling
     classDef external fill:#f8cecc,stroke:#b85450,stroke-width:2px;
     classDef backend fill:#d5e8d4,stroke:#82b366,stroke-width:2px;

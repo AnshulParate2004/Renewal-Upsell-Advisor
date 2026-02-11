@@ -1,25 +1,29 @@
-# Project Aim & Requirements
+# Project Aim & Requirements: S-007 Autonomous Revenue Agent
 
-**Agent ID:** S-007
-**Document Date:** December 28, 2025
-**Version:** 1.0
+**Agent ID:** S-007  
+**Document Date:** Feb 2026  
+**Version:** 2.0 (Agentic Architecture)
 
 ## 1. Project Aim
-The goal is to build an intelligent backend system ("Advisor") that proactively monitors customer data to prevent churn and identify expansion revenue.
+The goal is to build an **Autonomous Revenue Agent** that goes beyond passive advice. S-007 proactively monitors customer data 24/7, predicts risks and opportunities, and **autonomously executes** renewal and upsell workflows (emailing quotes, calling customers) to maximize Net Revenue Retention (NRR).
 
 ### A. Core Objectives
-*   **Renewal Risk Prediction:** Identify accounts at risk of churning 60-90 days before expiration with 85% accuracy.
-*   **Upsell Opportunity Detection:** Automatically surface high-probability upsell opportunities based on usage and behavior.
-*   **Automated Playbooks:** Generate personalized outreach strategies and messaging for CSMs.
-*   **Revenue Protection:** Reduce churn by 20-30% and increase expansion revenue by 15-25%.
+*   **Autonomous Renewal:** Automatically generate and send quotes with embedded payment links based on T-90/60/30 triggers.
+*   **Closed-Loop Voice Outreach:** Initiate voice calls for high-value renewals, logging "Picked Up" vs. "Missed" outcomes and auto-scheduling retries.
+*   **24-Hour Intelligence:** Re-evaluate Churn Risk, Sentiment, and Upsell Propensity for every account every 24 hours.
+*   **Revenue Protection:** Reduce churn by 20-30% through zero-touch automation and timely voice intervention.
 
 ### B. Functional Requirements
-*   **Contract Monitoring:** Track renewals within a 90-day window and categorize them by timeline (Immediate, Near-term, Future).
-*   **Risk Scoring:** Calculate a 0-100 risk score using usage decline, support tickets, and payment history.
-    *   **High Risk:** > 70
-    *   **Medium Risk:** 40-69
-    *   **Low Risk:** < 40
-*   **Upsell Triggers:** Flag opportunities when:
-    *   License utilization > 80%
-    *   Storage > 75%
-*   **Playbook Engine:** Match risks to specific actions (e.g., "High Risk" $\rightarrow$ "Executive Business Review") and generate email templates.
+*   **24-Hour Analysis Loop:**
+    *   System SHALL re-scan all accounts daily.
+    *   Updates Risk Score (0-100), Sentiment (Pos/Neut/Neg), and Upsell Propensity.
+*   **Yagna-Style Triggers:**
+    *   **T-90 Days:** Early Warning Quote + Email.
+    *   **T-60 Days:** Usage & Adoption Check.
+    *   **T-30 Days:** Urgent Quote + **Embedded Stripe Payment Link**.
+*   **Voice Agent Capability:**
+    *   System SHALL initiate calls via Twilio/Amazon Connect.
+    *   **Logic:** If "Picked Up" -> Log Success. If "Missed" -> Log & Retry (+4 hours).
+*   **Upsell Detection:**
+    *   Flag opportunity if License Utilization > 85%.
+    *   Auto-generate "Seat Expansion" quote.
