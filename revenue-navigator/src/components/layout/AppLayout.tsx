@@ -9,7 +9,7 @@ export function AppLayout() {
       {/* Content area offset by sidebar min-width */}
       <div className="ml-16 flex flex-1 flex-col lg:ml-60">
         <TopBar />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 bg-background">
           <Outlet />
         </main>
       </div>

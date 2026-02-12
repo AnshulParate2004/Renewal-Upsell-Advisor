@@ -1,17 +1,14 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Eye, Phone, Mail, GripVertical } from "lucide-react";
-import { accounts, formatCurrency, getRiskColor, getDaysUntil, type Account } from "@/data/mockData";
+import { GripVertical } from "lucide-react";
+import { accounts, formatCurrency, getDaysUntil } from "@/data/mockData";
 
 type Stage = "t90" | "t60" | "t30" | "renewed";
 
-const stageConfig: Record<Stage, { title: string; color: string }> = {
-  t90: { title: "T-90 Days", color: "border-t-info" },
-  t60: { title: "T-60 Days", color: "border-t-warning" },
-  t30: { title: "T-30 Days", color: "border-t-destructive" },
-  renewed: { title: "Renewed ✅", color: "border-t-success" },
+const stageConfig: Record<Stage, { title: string; borderColor: string; bgColor: string }> = {
+  t90: { title: "T-90 Days", borderColor: "border-b-blue-600", bgColor: "bg-blue-50" },
+  t60: { title: "T-60 Days", borderColor: "border-b-yellow-500", bgColor: "bg-yellow-50" },
+  t30: { title: "T-30 Days", borderColor: "border-b-red-600", bgColor: "bg-red-50" },
+  renewed: { title: "Renewed ✅", borderColor: "border-b-emerald-600", bgColor: "bg-emerald-50" },
 };
 
 const stages: Stage[] = ["t90", "t60", "t30", "renewed"];
@@ -34,8 +31,8 @@ export default function Pipeline() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-bold">Renewal Pipeline</h1>
+    <div className="p-4 space-y-4">
+      <h1 className="text-2xl font-bold text-foreground tracking-tight">Renewal Pipeline</h1>
 
       <div className="flex gap-4 overflow-x-auto pb-4">
         {stages.map((stage) => (
@@ -45,54 +42,45 @@ export default function Pipeline() {
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(stage)}
           >
-            <Card className={`border-t-4 ${stageConfig[stage].color}`}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">{stageConfig[stage].title}</CardTitle>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="font-mono">{formatCurrency(stageArr(stage))}</span>
-                  <span>{byStage(stage).length} accounts</span>
+            <div className={`border-2 border-black dark:border-white border-b-[6px] ${stageConfig[stage].borderColor} bg-white dark:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]`}>
+              <div className={`p-3 border-b-2 border-black dark:border-white ${stageConfig[stage].bgColor} dark:bg-gray-700`}>
+                <p className="text-sm font-black uppercase tracking-wider text-black dark:text-white">{stageConfig[stage].title}</p>
+                <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-300 mt-1">
+                  <span className="font-mono font-bold">{formatCurrency(stageArr(stage))}</span>
+                  <span className="font-bold">{byStage(stage).length} accounts</span>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-3 min-h-[200px]">
+              </div>
+              <div className="p-3 space-y-3 min-h-[200px]">
                 {byStage(stage).map((account) => {
-                  const riskColor = getRiskColor(account.riskScore);
                   const days = getDaysUntil(account.renewalDate);
                   return (
                     <div
                       key={account.id}
                       draggable
                       onDragStart={() => handleDragStart(account.id)}
-                      className="cursor-grab rounded-lg border bg-card p-3 transition-all hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"
+                      className="cursor-grab rounded border-2 border-black dark:border-white bg-white dark:bg-gray-900 p-3 transition-all hover:-translate-y-0.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.3)] active:cursor-grabbing"
                     >
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-sm font-semibold">{account.name}</p>
-                          <p className="text-xs font-mono text-muted-foreground">{formatCurrency(account.arr)}</p>
+                          <p className="text-sm font-bold text-black dark:text-white">{account.name}</p>
+                          <p className="text-xs font-mono text-gray-600 dark:text-gray-400 mt-0.5">{formatCurrency(account.arr)}</p>
                         </div>
-                        <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+                        <GripVertical className="h-4 w-4 text-gray-400" />
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${riskColor === "destructive" ? "border-destructive text-destructive" : riskColor === "warning" ? "border-warning text-warning" : "border-success text-success"}`}
-                        >
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase border-2 border-black ${account.riskScore >= 70
+                          ? 'bg-red-600 text-white shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]'
+                          : 'bg-white text-green-700 shadow-[1px_1px_0px_0px_rgba(0,0,0,0.1)]'
+                          }`}>
                           Risk: {account.riskScore}
-                        </Badge>
-                        <span className="text-[10px] text-muted-foreground">📅 {account.renewalDate}</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-1.5">
-                        Last contact: {account.lastContact}
-                      </p>
-                      <div className="flex gap-1 mt-2">
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]"><Eye className="h-3 w-3" /></Button>
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]"><Phone className="h-3 w-3" /></Button>
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]"><Mail className="h-3 w-3" /></Button>
+                        </span>
+                        <span className="text-[10px] text-gray-600 dark:text-gray-400 font-mono">📅 {days}d</span>
                       </div>
                     </div>
                   );
                 })}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         ))}
       </div>

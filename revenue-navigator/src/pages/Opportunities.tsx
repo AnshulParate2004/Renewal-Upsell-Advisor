@@ -1,149 +1,97 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { TrendingUp, DollarSign, BarChart3, Target } from "lucide-react";
-import { opportunities, formatCurrency, type Opportunity } from "@/data/mockData";
+import { DollarSign, TrendingUp, BarChart3, Target } from "lucide-react";
+import { opportunities, formatCurrency } from "@/data/mockData";
 
-const typeBadge: Record<string, { label: string; class: string }> = {
-  renewal: { label: "Renewal", class: "bg-primary/20 text-primary" },
-  upsell: { label: "Upsell", class: "bg-accent/20 text-accent" },
-  cross_sell: { label: "Cross-sell", class: "bg-info/20 text-info" },
-};
-
-const stageLabels: Record<string, string> = {
-  identified: "Identified",
-  quote_sent: "Quote Sent",
-  negotiation: "Negotiation",
-  closed_won: "Closed Won",
-  closed_lost: "Closed Lost",
+const typeBadge: Record<string, { label: string; bgColor: string; textColor: string }> = {
+  renewal: { label: "Renewal", bgColor: "bg-blue-600", textColor: "text-white" },
+  upsell: { label: "Upsell", bgColor: "bg-purple-600", textColor: "text-white" },
+  cross_sell: { label: "Cross-sell", bgColor: "bg-cyan-600", textColor: "text-white" },
 };
 
 export default function Opportunities() {
-  const [data, setData] = useState(opportunities);
   const [typeFilter, setTypeFilter] = useState("all");
 
-  const filtered = data.filter((o) => typeFilter === "all" || o.type === typeFilter);
+  const filtered = opportunities.filter((o) => typeFilter === "all" || o.type === typeFilter);
 
-  const totalPipeline = data.reduce((s, o) => s + o.value, 0);
-  const weightedValue = data.reduce((s, o) => s + o.value * (o.probability / 100), 0);
-  const avgDeal = totalPipeline / data.length;
+  const totalPipeline = opportunities.reduce((s, o) => s + o.value, 0);
+  const weightedValue = opportunities.reduce((s, o) => s + o.value * (o.probability / 100), 0);
+  const avgDeal = totalPipeline / opportunities.length;
   const conversionRate = Math.round(
-    (data.filter((o) => o.stage === "closed_won").length / data.length) * 100
+    (opportunities.filter((o) => o.stage === "closed_won").length / opportunities.length) * 100
   ) || 15;
 
-  const updateStage = (id: string, stage: string) => {
-    setData((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, stage: stage as Opportunity["stage"] } : o))
-    );
-  };
-
   return (
-    <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-bold">Opportunities</h1>
+    <div className="p-4 space-y-4">
+      <h1 className="text-2xl font-bold text-foreground tracking-tight">Opportunities</h1>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Pipeline</CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-mono text-2xl font-bold">{formatCurrency(totalPipeline)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Weighted Value</CardTitle>
-            <BarChart3 className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-mono text-2xl font-bold">{formatCurrency(weightedValue)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Avg Deal Size</CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-mono text-2xl font-bold">{formatCurrency(avgDeal)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Conversion Rate</CardTitle>
-            <Target className="h-4 w-4 text-info" />
-          </CardHeader>
-          <CardContent>
-            <div className="font-mono text-2xl font-bold">{conversionRate}%</div>
-          </CardContent>
-        </Card>
+      {/* NB-Style Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Pipeline', value: formatCurrency(totalPipeline), icon: <DollarSign size={20} />, color: 'text-black', borderColor: 'border-b-black', iconBg: 'bg-black' },
+          { label: 'Weighted Value', value: formatCurrency(weightedValue), icon: <BarChart3 size={20} />, color: 'text-purple-600', borderColor: 'border-b-purple-600', iconBg: 'bg-purple-600' },
+          { label: 'Avg Deal Size', value: formatCurrency(avgDeal), icon: <TrendingUp size={20} />, color: 'text-emerald-600', borderColor: 'border-b-emerald-600', iconBg: 'bg-emerald-600' },
+          { label: 'Conversion Rate', value: `${conversionRate}%`, icon: <Target size={20} />, color: 'text-blue-600', borderColor: 'border-b-blue-600', iconBg: 'bg-blue-600' }
+        ].map((metric, idx) => (
+          <div key={idx} className={`p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white border-b-[6px] ${metric.borderColor.replace('border-b-', 'border-b-')} flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] transition-transform hover:-translate-y-0.5`}>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest">{metric.label}</p>
+              <div className={`text-3xl font-mono font-bold mt-1 ${metric.color} dark:text-white`}>{metric.value}</div>
+            </div>
+            <div className={`p-2 border-2 border-black dark:border-white ${metric.iconBg} text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]`}>
+              {metric.icon}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="renewal">Renewal</SelectItem>
-            <SelectItem value="upsell">Upsell</SelectItem>
-            <SelectItem value="cross_sell">Cross-sell</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex gap-2">
+        {(['all', 'renewal', 'upsell', 'cross_sell'] as const).map((filter) => (
+          <button
+            key={filter}
+            onClick={() => setTypeFilter(filter)}
+            className={`px-4 py-1.5 text-xs font-bold uppercase border-2 border-black dark:border-white transition-all duration-200
+              ${typeFilter === filter
+                ? 'bg-indigo-600 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]'
+                : 'bg-white dark:bg-gray-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px]'
+              }`}
+          >
+            {filter === 'all' ? 'ALL' : filter.replace('_', ' ')}
+          </button>
+        ))}
       </div>
 
       {/* Table */}
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Account</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Probability</TableHead>
-              <TableHead>Stage</TableHead>
-              <TableHead>Created</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="border-2 border-black dark:border-white bg-white dark:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
+        <table className="w-full text-sm">
+          <thead className="bg-indigo-600 border-b-2 border-black dark:border-white">
+            <tr className="text-xs uppercase text-white font-black tracking-wide">
+              <th className="text-left pl-4 py-3">Account</th>
+              <th className="text-center py-3">Type</th>
+              <th className="text-right py-3">Value</th>
+              <th className="text-center py-3">Probability</th>
+              <th className="text-center py-3">Stage</th>
+              <th className="text-center py-3 pr-4">Created</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-black/5 dark:divide-white/10">
             {filtered.map((opp) => (
-              <TableRow key={opp.id}>
-                <TableCell className="font-medium text-sm">{opp.accountName}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={`text-xs ${typeBadge[opp.type].class}`}>
+              <tr key={opp.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                <td className="pl-4 py-3 font-bold text-black dark:text-white">{opp.accountName}</td>
+                <td className="text-center py-3">
+                  <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase border-2 border-black ${typeBadge[opp.type].bgColor} ${typeBadge[opp.type].textColor} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
                     {typeBadge[opp.type].label}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono text-sm">{formatCurrency(opp.value)}</TableCell>
-                <TableCell className="font-mono text-sm">{opp.probability}%</TableCell>
-                <TableCell>
-                  <Select value={opp.stage} onValueChange={(v) => updateStage(opp.id, v)}>
-                    <SelectTrigger className="h-7 w-[140px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(stageLabels).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{opp.createdDate}</TableCell>
-              </TableRow>
+                  </span>
+                </td>
+                <td className="text-right py-3 font-mono text-gray-700 dark:text-gray-300">{formatCurrency(opp.value)}</td>
+                <td className="text-center py-3 font-mono text-gray-700 dark:text-gray-300">{opp.probability}%</td>
+                <td className="text-center py-3 text-xs uppercase font-bold text-gray-600 dark:text-gray-400">{opp.stage.replace('_', ' ')}</td>
+                <td className="text-center py-3 text-xs text-gray-600 dark:text-gray-400 pr-4">{opp.createdDate}</td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </Card>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
