@@ -1,0 +1,848 @@
+================================================================================
+FRONTEND UI/UX GENERATION PROMPT: S-007 AUTONOMOUS REVENUE AGENT DASHBOARD
+================================================================================
+
+PROJECT IDENTITY
+----------------
+Application Name: S-007 Revenue Command Center
+Target Users: Customer Success Managers (CSMs), Revenue Operations Teams
+Platform: Web Application (Desktop-first, Responsive)
+Design Philosophy: Data-Dense, Action-Oriented, Autonomous Intelligence
+
+DESIGN MISSION
+--------------
+Create a modern, premium dashboard that empowers CSMs to monitor 150+ accounts effortlessly by surfacing AI-driven insights and autonomous actions. The UI should feel like a "mission control center" for revenue operations - combining real-time intelligence with one-click interventions.
+
+================================================================================
+PART 1: DESIGN SYSTEM & VISUAL IDENTITY
+================================================================================
+
+1.1 COLOR PALETTE
+-----------------
+Primary Colors:
+- Brand Primary: #2563EB (Electric Blue) - Buttons, CTAs, Active states
+- Brand Secondary: #7C3AED (Purple) - Highlights, Premium features
+- Success: #10B981 (Emerald Green) - Positive metrics, Healthy accounts
+- Warning: #F59E0B (Amber) - Medium risk, Attention needed
+- Danger: #EF4444 (Red) - High churn risk, Urgent actions
+- Info: #06B6D4 (Cyan) - Informational badges, Neutral alerts
+
+Neutral Colors:
+- Background Primary: #0F172A (Slate 900) - Main background (Dark mode default)
+- Background Secondary: #1E293B (Slate 800) - Card backgrounds
+- Background Tertiary: #334155 (Slate 700) - Hover states
+- Text Primary: #F1F5F9 (Slate 100) - Main text
+- Text Secondary: #94A3B8 (Slate 400) - Secondary text
+- Border: #475569 (Slate 600) - Dividers, Card borders
+
+Light Mode Alternative:
+- Background Primary: #FFFFFF (White)
+- Background Secondary: #F8FAFC (Slate 50)
+- Text Primary: #0F172A (Slate 900)
+- Text Secondary: #64748B (Slate 500)
+
+1.2 TYPOGRAPHY
+--------------
+Font Family: 
+- Primary: 'Inter', sans-serif (Google Fonts)
+- Monospace: 'JetBrains Mono', monospace (for metrics, numbers)
+
+Font Sizes:
+- Headline 1: 32px / 2rem (Page titles)
+- Headline 2: 24px / 1.5rem (Section headers)
+- Headline 3: 20px / 1.25rem (Card titles)
+- Body Large: 16px / 1rem (Primary text)
+- Body Regular: 14px / 0.875rem (Secondary text)
+- Body Small: 12px / 0.75rem (Captions, labels)
+- Metric Display: 48px / 3rem (Large numbers, scores)
+
+Font Weights:
+- Regular: 400 (Body text)
+- Medium: 500 (Subheadings)
+- Semibold: 600 (Buttons, labels)
+- Bold: 700 (Headlines, emphasis)
+
+1.3 SPACING SYSTEM
+------------------
+Base Unit: 4px
+Scale: 4px, 8px, 12px, 16px, 24px, 32px, 48px, 64px
+
+Padding:
+- Card Padding: 24px
+- Button Padding: 12px 24px
+- Input Padding: 12px 16px
+- Section Spacing: 32px
+
+1.4 COMPONENT LIBRARY
+---------------------
+Buttons:
+- Primary: Solid background (#2563EB), white text, rounded-lg (8px), hover lift effect
+- Secondary: Outlined border, transparent background, hover fill
+- Danger: Solid red background (#EF4444), white text
+- Ghost: No border, transparent, hover background
+
+Cards:
+- Background: Slate 800 (dark mode) or White (light mode)
+- Border: 1px solid Slate 700
+- Border Radius: 12px
+- Shadow: 0 4px 6px rgba(0, 0, 0, 0.1)
+- Hover: Subtle lift (translateY(-2px)) + shadow increase
+
+Badges:
+- Pill-shaped (rounded-full)
+- Small padding: 4px 12px
+- Font size: 12px
+- Color-coded by status (Green/Yellow/Red)
+
+Icons:
+- Library: Heroicons or Lucide React
+- Size: 20px (default), 24px (large), 16px (small)
+- Stroke width: 2px
+
+1.5 ANIMATION & MICRO-INTERACTIONS
+----------------------------------
+Transitions:
+- Default: 200ms ease-in-out
+- Hover effects: 150ms ease-out
+- Page transitions: 300ms ease-in-out
+
+Micro-interactions:
+- Button click: Scale down (0.98) on active
+- Card hover: Lift effect (translateY(-2px))
+- Loading states: Skeleton screens with shimmer effect
+- Success actions: Checkmark animation + green flash
+- Error states: Shake animation + red border pulse
+
+================================================================================
+PART 2: PAGE LAYOUTS & NAVIGATION
+================================================================================
+
+2.1 MAIN NAVIGATION (Sidebar)
+------------------------------
+Layout: Fixed left sidebar (240px width)
+Background: Slate 900 (darker than main content)
+
+Navigation Items:
+1. 🏠 Dashboard (Default view)
+2. 👥 Accounts (Grid/List view)
+3. 📋 Renewal Pipeline (Kanban board)
+4. 📞 Voice Calls (Call log)
+5. 💰 Opportunities (Upsell tracker)
+6. 📊 Analytics (Reports)
+7. ⚙️ Settings
+
+Active State:
+- Left border: 3px solid Electric Blue
+- Background: Slate 800
+- Icon + Text: Electric Blue color
+
+User Profile Section (Bottom):
+- Avatar (32px circle)
+- Name + Role
+- Dropdown: Profile, Logout
+
+2.2 TOP BAR (Header)
+--------------------
+Layout: Fixed top bar (64px height)
+Background: Slate 800
+
+Left Section:
+- Logo + "S-007 Revenue Command Center"
+
+Center Section:
+- Global search bar (400px width)
+- Placeholder: "Search accounts, contracts, opportunities..."
+- Keyboard shortcut hint: "⌘K"
+
+Right Section:
+- Notification bell icon (with red badge for unread)
+- Theme toggle (Dark/Light mode)
+- User avatar + dropdown
+
+2.3 MAIN CONTENT AREA
+---------------------
+Layout: Flexbox, max-width 1440px, centered
+Padding: 32px
+Background: Slate 900 (dark mode)
+
+Breadcrumb Navigation:
+- Top of content area
+- Format: Dashboard > Accounts > Acme Corp
+- Clickable links with chevron separators
+
+================================================================================
+PART 3: KEY PAGES & VIEWS
+================================================================================
+
+3.1 DASHBOARD (HOME PAGE)
+--------------------------
+Page Aim: Provide at-a-glance overview of revenue health, urgent actions, and AI-driven insights.
+
+Layout: Grid (3 columns on desktop, 1 column on mobile)
+
+TOP SECTION - Key Metrics (4 Cards in Row)
+-------------------------------------------
+Card 1: Total ARR
+- Large number: $2.4M (48px, Semibold)
+- Trend indicator: ↑ 12% vs last month (Green)
+- Sparkline chart (last 30 days)
+
+Card 2: Churn Risk
+- Large number: 23 accounts (48px, Semibold, Red if >20)
+- Percentage: 8.5% of portfolio
+- Mini donut chart (Risk distribution: High/Medium/Low)
+
+Card 3: Renewal Rate
+- Large number: 87% (48px, Semibold, Green if >85%)
+- Target: 90% goal
+- Progress bar
+
+Card 4: Upsell Pipeline
+- Large number: $450K (48px, Semibold, Purple)
+- Count: 18 opportunities
+- Conversion rate: 15%
+
+MIDDLE SECTION - Urgent Actions (Priority List)
+------------------------------------------------
+Title: "⚡ Requires Immediate Attention"
+Layout: Vertical list of action cards
+
+Action Card Structure:
+- Left: Account name + ARR
+- Center: Issue description (e.g., "Contract expires in 15 days, no quote sent")
+- Right: Quick action buttons ("Send Quote", "Schedule Call")
+- Color-coded left border (Red = Urgent, Yellow = Soon, Blue = Info)
+
+Example Actions:
+1. 🔴 Acme Corp ($120K ARR) - Contract expires in 12 days - [Send Quote] [Call Now]
+2. 🟡 TechStart Inc ($45K ARR) - Risk score jumped to 85 - [View Details] [Email CSM]
+3. 🔵 Global Systems ($200K ARR) - 92% license utilization - [Upsell Quote] [Schedule Demo]
+
+BOTTOM SECTION - Two Column Layout
+-----------------------------------
+Left Column: Recent Voice Calls
+- Table with columns: Account | Date | Duration | Outcome | Transcript
+- Outcome badges: ✅ Picked Up (Green) | ❌ Missed (Red) | 🔄 Retry Scheduled (Yellow)
+- Click row to expand transcript
+
+Right Column: AI Insights
+- Title: "🤖 AI-Powered Recommendations"
+- Card list:
+  1. "3 accounts showing usage decline - Consider proactive outreach"
+  2. "5 high-value renewals in T-30 window - Auto-quotes sent"
+  3. "Sentiment drop detected in 2 accounts - Review support tickets"
+
+3.2 ACCOUNTS PAGE (Grid/List View)
+----------------------------------
+Page Aim: Browse all accounts with advanced filtering and sorting.
+
+TOP BAR - Filters & Search
+---------------------------
+Left: Search bar (full-width)
+Right: View toggle (Grid/List), Filter button, Sort dropdown
+
+Filter Panel (Slide-in from right):
+- Risk Score: Slider (0-100)
+- ARR Range: Min/Max inputs
+- Industry: Multi-select dropdown
+- Renewal Stage: Checkboxes (T-90, T-60, T-30, Renewed, Lost)
+- Health Score: Slider (0-100)
+- Apply Filters button (Primary blue)
+
+GRID VIEW
+---------
+Layout: CSS Grid, 3 columns (desktop), 2 (tablet), 1 (mobile)
+Gap: 24px
+
+Account Card Structure:
+┌─────────────────────────────────────┐
+│ [Health Score Badge]    [Risk Badge]│
+│                                     │
+│ Acme Corporation                    │
+│ $120,000 ARR                        │
+│                                     │
+│ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  │ (Health bar)
+│ 78/100 Health Score                 │
+│                                     │
+│ 📅 Renewal: 45 days                 │
+│ 😊 Sentiment: Positive              │
+│ 📈 Utilization: 67%                 │
+│                                     │
+│ [View Details] [Quick Actions ▼]   │
+└─────────────────────────────────────┘
+
+Color Coding:
+- Health Score Bar: Green (>70), Yellow (40-70), Red (<40)
+- Risk Badge: "🔴 High Risk" | "🟡 Medium" | "🟢 Low"
+
+Hover Effect:
+- Card lifts (translateY(-4px))
+- Shadow increases
+- Border glows (subtle blue)
+
+LIST VIEW
+---------
+Layout: Table with sortable columns
+
+Columns:
+1. Account Name (with avatar/logo)
+2. ARR (sortable, formatted with $)
+3. Health Score (with colored progress bar)
+4. Risk Score (with badge)
+5. Sentiment (emoji + label)
+6. Renewal Date (with countdown)
+7. Actions (3-dot menu)
+
+Row Hover:
+- Background: Slate 800
+- Actions menu appears
+
+3.3 ACCOUNT DETAIL PAGE (Flyout Panel)
+---------------------------------------
+Page Aim: Deep dive into single account with full interaction history and AI insights.
+
+Trigger: Click account card or "View Details" button
+Layout: Slide-in panel from right (600px width, full height)
+
+HEADER SECTION
+--------------
+- Account name (24px, Bold)
+- ARR (16px, Secondary text)
+- Close button (top right)
+
+TABS NAVIGATION
+---------------
+Tabs: Overview | Timeline | Insights | Actions
+Active tab: Blue underline (3px)
+
+TAB 1: OVERVIEW
+---------------
+Section 1: Key Metrics (3 columns)
+- Health Score: Large circular gauge (0-100)
+- Risk Score: Large circular gauge with color
+- Sentiment: Emoji + label + trend arrow
+
+Section 2: Contract Details
+- Start Date | End Date | Days to Renewal
+- Contract Value | Renewal Stage badge
+- Payment Link status (if T-30)
+
+Section 3: Usage Statistics
+- License Count: 50 total
+- Utilization: 67% (34/50 used)
+- Progress bar with threshold markers
+- Last Login: 2 hours ago
+
+Section 4: Quick Actions (Button Grid)
+- [Send Quote] [Schedule Call] [Email CSM]
+- [Mark as Renewed] [Flag for Review]
+
+TAB 2: TIMELINE
+---------------
+Vertical timeline (chronological, newest first)
+
+Timeline Item Structure:
+┌─────────────────────────────────────┐
+│ ● 2 hours ago                       │
+│   📧 Email Sent: Renewal Quote      │
+│   "Your contract renews in 30 days" │
+│   [View Email]                      │
+└─────────────────────────────────────┘
+┌─────────────────────────────────────┐
+│ ● Yesterday                         │
+│   📞 Voice Call: Picked Up          │
+│   Duration: 8m 34s                  │
+│   Sentiment: Positive               │
+│   [View Transcript]                 │
+└─────────────────────────────────────┘
+
+Icon Types:
+- 📧 Email
+- 📞 Voice Call
+- 🎫 Support Ticket
+- 💰 Payment
+- 📝 Note Added
+- 🤖 AI Analysis
+
+TAB 3: INSIGHTS
+---------------
+AI-Generated Insights Cards:
+
+Card 1: Churn Risk Analysis
+- Title: "🔴 High Churn Risk Detected"
+- Score: 85/100
+- Factors:
+  ✗ Usage declined 40% in last 14 days
+  ✗ 3 support tickets opened (vs avg 0.5)
+  ✗ Negative sentiment in last email
+  ✓ Payment history clean
+- Recommendation: "Schedule urgent call to address concerns"
+
+Card 2: Upsell Opportunity
+- Title: "💰 Upsell Potential Identified"
+- Score: 72/100
+- Factors:
+  ✓ License utilization at 92%
+  ✓ Using advanced features heavily
+  ✓ Team size grew 25% this quarter
+- Recommendation: "Propose 20-seat expansion ($24K ARR)"
+
+Card 3: Sentiment Trend
+- Line chart (last 30 days)
+- Current: Positive (↑ from Neutral)
+- Note: "Recent support resolution improved sentiment"
+
+TAB 4: ACTIONS
+--------------
+Action History Table:
+- Date | Action Type | Outcome | Owner
+- Filter by: All | Automated | Manual
+
+Scheduled Actions:
+- Upcoming voice call retry (in 3 hours)
+- T-30 quote email (in 5 days)
+- [Schedule New Action] button
+
+3.4 RENEWAL PIPELINE (KANBAN BOARD)
+------------------------------------
+Page Aim: Visual workflow management for renewals across T-90/60/30 stages.
+
+Layout: Horizontal Kanban board (4 columns)
+
+COLUMNS
+-------
+1. T-90 Days (Early Warning)
+2. T-60 Days (Adoption Check)
+3. T-30 Days (Urgent)
+4. Renewed ✅
+
+Column Header:
+- Stage name (18px, Semibold)
+- Total ARR in stage ($450K)
+- Account count (12 accounts)
+
+Kanban Card Structure:
+┌─────────────────────────────────────┐
+│ Acme Corporation                    │
+│ $120K ARR                           │
+│                                     │
+│ 🔴 Risk: 85/100                     │
+│ 📅 Expires: Feb 28                  │
+│                                     │
+│ Last Action: Quote sent (2d ago)   │
+│                                     │
+│ [View] [Call] [Email]               │
+└─────────────────────────────────────┘
+
+Drag & Drop:
+- Cards draggable between columns
+- Drop zone highlights on hover (blue border)
+- Auto-updates renewal_stage in database
+
+Column Actions (Top right of each column):
+- Filter by risk score
+- Sort by ARR / Renewal date
+- Bulk actions (Email all, Export list)
+
+3.5 VOICE CALLS PAGE
+--------------------
+Page Aim: Comprehensive log of all voice interactions with playback and transcripts.
+
+TOP FILTERS
+-----------
+- Date range picker
+- Outcome filter: All | Picked Up | Missed | Retry Scheduled
+- Account search
+
+CALL LOG TABLE
+--------------
+Columns:
+1. Account Name (with avatar)
+2. Date & Time
+3. Duration (MM:SS format)
+4. Outcome (badge with icon)
+5. Sentiment (if picked up)
+6. Retry Count
+7. Actions (Play, Transcript, Retry)
+
+Outcome Badges:
+- ✅ Picked Up (Green background)
+- ❌ Missed (Red background)
+- 🔄 Retry Scheduled (Yellow background)
+- ⏸️ Voicemail (Gray background)
+
+Row Expansion:
+Click row to expand inline transcript view:
+┌─────────────────────────────────────┐
+│ 📞 Call Transcript                  │
+│ Duration: 8m 34s                    │
+│ Sentiment: Positive                 │
+│                                     │
+│ [Agent]: Hi, this is Sarah from...  │
+│ [Customer]: Hi Sarah, thanks for... │
+│ [Agent]: I wanted to discuss your...│
+│                                     │
+│ [Download] [Copy] [Flag Issue]     │
+└─────────────────────────────────────┘
+
+Audio Player (if recording available):
+- Waveform visualization
+- Play/Pause, Speed control (1x, 1.5x, 2x)
+- Timestamp markers for key moments
+
+3.6 OPPORTUNITIES PAGE
+----------------------
+Page Aim: Track upsell and cross-sell opportunities through sales stages.
+
+TOP METRICS (4 Cards)
+---------------------
+1. Total Pipeline Value: $450K
+2. Weighted Value: $180K (by probability)
+3. Avg Deal Size: $25K
+4. Conversion Rate: 15%
+
+OPPORTUNITIES TABLE
+-------------------
+Columns:
+1. Account Name
+2. Opportunity Type (badge: Renewal | Upsell | Cross-sell)
+3. Value ($)
+4. Probability (%)
+5. Stage (dropdown: Identified → Quote Sent → Negotiation → Closed Won/Lost)
+6. Created Date
+7. Actions
+
+Stage Dropdown:
+- Click to change stage inline
+- Color-coded: Blue (early) → Green (won) / Red (lost)
+
+Filters:
+- Type: All | Renewal | Upsell | Cross-sell
+- Stage: Multi-select
+- Value range: Slider
+- Probability: >50% | >70% | >90%
+
+3.7 ANALYTICS PAGE
+------------------
+Page Aim: Executive-level reporting with charts and trend analysis.
+
+LAYOUT: Dashboard grid (2 columns)
+
+Chart 1: Revenue Trend (Line Chart)
+- X-axis: Last 12 months
+- Y-axis: ARR ($)
+- Lines: Total ARR, New ARR, Expansion ARR, Churned ARR
+- Interactive tooltips on hover
+
+Chart 2: Churn Analysis (Stacked Bar Chart)
+- X-axis: Months
+- Y-axis: Number of accounts
+- Segments: Renewed (Green), Churned (Red), At Risk (Yellow)
+
+Chart 3: Risk Distribution (Donut Chart)
+- Segments: Low Risk (Green), Medium Risk (Yellow), High Risk (Red)
+- Center: Total accounts count
+- Click segment to filter accounts table below
+
+Chart 4: Sentiment Over Time (Area Chart)
+- X-axis: Last 30 days
+- Y-axis: Sentiment score (-1 to 1)
+- Filled area with gradient (Red → Yellow → Green)
+
+Chart 5: Top 10 At-Risk Accounts (Horizontal Bar Chart)
+- Y-axis: Account names
+- X-axis: Risk score (0-100)
+- Color-coded bars (Red gradient)
+- Click bar to open account detail flyout
+
+Export Options:
+- [Download PDF Report] [Export to CSV] [Schedule Email]
+
+3.8 SETTINGS PAGE
+-----------------
+Page Aim: Configure system preferences, integrations, and notifications.
+
+TABS: General | Integrations | Notifications | Team
+
+TAB 1: GENERAL
+--------------
+- Theme: Dark Mode / Light Mode toggle
+- Language: Dropdown (English, Spanish, French)
+- Timezone: Dropdown
+- Date Format: MM/DD/YYYY | DD/MM/YYYY
+
+TAB 2: INTEGRATIONS
+-------------------
+Integration Cards:
+┌─────────────────────────────────────┐
+│ [Salesforce Logo]                   │
+│ Salesforce CRM                      │
+│ Status: ✅ Connected                │
+│ Last Sync: 5 minutes ago            │
+│                                     │
+│ [Configure] [Disconnect]            │
+└─────────────────────────────────────┘
+
+Available Integrations:
+- Salesforce (Connected)
+- Stripe (Connected)
+- Twilio (Connected)
+- HubSpot (Not Connected)
+- Zendesk (Not Connected)
+
+TAB 3: NOTIFICATIONS
+--------------------
+Notification Preferences (Toggle switches):
+- Email Notifications
+  ☑ High-risk account alerts
+  ☑ Renewal reminders (T-30, T-60, T-90)
+  ☐ Daily digest
+  ☑ Failed voice calls
+- In-App Notifications
+  ☑ Real-time alerts
+  ☑ AI insights
+  ☐ System updates
+
+TAB 4: TEAM
+-----------
+Team Members Table:
+- Name | Email | Role | Accounts Assigned | Actions
+- Roles: Admin | CSM | Viewer
+- [Invite Team Member] button
+
+================================================================================
+PART 4: RESPONSIVE DESIGN
+================================================================================
+
+4.1 BREAKPOINTS
+---------------
+- Mobile: < 768px
+- Tablet: 768px - 1024px
+- Desktop: > 1024px
+- Large Desktop: > 1440px
+
+4.2 MOBILE ADAPTATIONS
+----------------------
+Navigation:
+- Sidebar collapses to hamburger menu
+- Bottom tab bar for main sections
+
+Dashboard:
+- Metric cards stack vertically (1 column)
+- Charts resize to full width
+- Tables convert to card list view
+
+Account Detail:
+- Flyout becomes full-screen modal
+- Tabs convert to accordion sections
+
+Kanban Board:
+- Horizontal scroll with snap points
+- One column visible at a time
+- Swipe gestures for navigation
+
+================================================================================
+PART 5: ACCESSIBILITY (WCAG 2.1 AA)
+================================================================================
+
+5.1 COLOR CONTRAST
+------------------
+- Text on background: Minimum 4.5:1 ratio
+- Large text (18px+): Minimum 3:1 ratio
+- Interactive elements: Minimum 3:1 ratio
+
+5.2 KEYBOARD NAVIGATION
+-----------------------
+- All interactive elements focusable via Tab
+- Focus indicators: 2px blue outline
+- Keyboard shortcuts:
+  * ⌘K: Global search
+  * ⌘D: Dashboard
+  * ⌘A: Accounts
+  * Esc: Close modals/flyouts
+
+5.3 SCREEN READER SUPPORT
+--------------------------
+- Semantic HTML (header, nav, main, article)
+- ARIA labels for icons and buttons
+- Alt text for all images
+- Live regions for dynamic updates
+
+5.4 MOTION PREFERENCES
+----------------------
+- Respect prefers-reduced-motion
+- Disable animations if user preference set
+- Provide static alternatives for charts
+
+================================================================================
+PART 6: PERFORMANCE OPTIMIZATION
+================================================================================
+
+6.1 LOADING STATES
+------------------
+- Skeleton screens for initial load
+- Shimmer effect on loading cards
+- Spinner for button actions
+- Progress bar for file uploads
+
+6.2 LAZY LOADING
+----------------
+- Images: Lazy load below fold
+- Charts: Load on viewport intersection
+- Infinite scroll for long lists (accounts, calls)
+
+6.3 CACHING STRATEGY
+--------------------
+- Cache API responses (5 minutes)
+- Optimistic UI updates (update UI before API response)
+- Background refresh for stale data
+
+================================================================================
+PART 7: ERROR HANDLING & EMPTY STATES
+================================================================================
+
+7.1 ERROR MESSAGES
+------------------
+Toast Notifications (Top-right corner):
+- Success: Green background, checkmark icon, 3s auto-dismiss
+- Error: Red background, X icon, 5s auto-dismiss
+- Warning: Yellow background, ! icon, 4s auto-dismiss
+- Info: Blue background, i icon, 3s auto-dismiss
+
+Inline Errors (Forms):
+- Red border on input field
+- Error message below field (12px, Red text)
+- Icon indicator
+
+7.2 EMPTY STATES
+----------------
+No Accounts:
+- Illustration (empty folder icon)
+- Headline: "No accounts found"
+- Description: "Try adjusting your filters or add a new account"
+- [Add Account] button
+
+No Voice Calls:
+- Illustration (phone icon)
+- Headline: "No calls yet"
+- Description: "Voice calls will appear here once initiated"
+- [Learn More] link
+
+No Opportunities:
+- Illustration (target icon)
+- Headline: "No opportunities identified"
+- Description: "AI will automatically detect upsell opportunities"
+
+================================================================================
+PART 8: IMPLEMENTATION CHECKLIST
+================================================================================
+
+PHASE 1: Design System Setup (Week 1)
+☐ Define color palette and CSS variables
+☐ Set up typography scale
+☐ Create component library (Buttons, Cards, Badges, Inputs)
+☐ Implement dark/light mode toggle
+☐ Set up icon library (Heroicons/Lucide)
+
+PHASE 2: Layout & Navigation (Week 2)
+☐ Build sidebar navigation
+☐ Create top bar with search
+☐ Implement responsive breakpoints
+☐ Add breadcrumb navigation
+☐ Create page layout templates
+
+PHASE 3: Dashboard Page (Week 3)
+☐ Build metric cards with real-time data
+☐ Create urgent actions list
+☐ Implement recent calls table
+☐ Add AI insights panel
+☐ Integrate charts (Recharts/Chart.js)
+
+PHASE 4: Accounts Page (Week 4)
+☐ Build grid view with account cards
+☐ Create list view table
+☐ Implement filter panel
+☐ Add search functionality
+☐ Build account detail flyout
+
+PHASE 5: Renewal Pipeline (Week 5)
+☐ Create Kanban board layout
+☐ Implement drag-and-drop (react-beautiful-dnd)
+☐ Build kanban cards
+☐ Add column filters and sorting
+☐ Integrate with backend API
+
+PHASE 6: Voice Calls & Opportunities (Week 6)
+☐ Build voice calls table
+☐ Implement transcript viewer
+☐ Add audio player (if recordings available)
+☐ Create opportunities table
+☐ Build inline stage editor
+
+PHASE 7: Analytics & Settings (Week 7)
+☐ Implement all charts (Line, Bar, Donut, Area)
+☐ Add export functionality
+☐ Build settings page with tabs
+☐ Create integration cards
+☐ Implement notification preferences
+
+PHASE 8: Polish & Testing (Week 8)
+☐ Add loading states and skeletons
+☐ Implement error handling
+☐ Create empty states
+☐ Test accessibility (WCAG 2.1 AA)
+☐ Performance optimization
+☐ Cross-browser testing
+☐ Mobile responsiveness testing
+
+================================================================================
+DESIGN PRINCIPLES SUMMARY
+================================================================================
+
+1. **DATA DENSITY**: Show maximum relevant information without overwhelming
+2. **ACTION-ORIENTED**: Every insight should have a clear next action
+3. **AUTONOMOUS INTELLIGENCE**: Highlight AI-driven insights prominently
+4. **REAL-TIME UPDATES**: Use WebSockets for live data (risk scores, calls)
+5. **PROGRESSIVE DISCLOSURE**: Show summary first, details on demand (flyouts)
+6. **CONSISTENT PATTERNS**: Reuse components and layouts across pages
+7. **PERFORMANCE FIRST**: Optimize for speed (lazy loading, caching)
+8. **ACCESSIBLE**: WCAG 2.1 AA compliance for all users
+9. **MOBILE-READY**: Responsive design for tablet/mobile CSMs
+10. **PREMIUM FEEL**: Modern aesthetics that justify enterprise pricing
+
+================================================================================
+TECH STACK RECOMMENDATION
+================================================================================
+
+Framework: React 18 with TypeScript
+State Management: Redux Toolkit or Zustand
+Routing: React Router v6
+UI Components: Headless UI or Radix UI (for accessibility)
+Styling: Tailwind CSS (with custom design tokens)
+Charts: Recharts or Chart.js
+Drag & Drop: react-beautiful-dnd or dnd-kit
+Forms: React Hook Form + Zod validation
+API Client: Axios or React Query (for caching)
+Real-time: Socket.io-client (for WebSocket)
+Icons: Heroicons or Lucide React
+Date Handling: date-fns or Day.js
+Build Tool: Vite (for fast development)
+
+================================================================================
+FINAL NOTES
+================================================================================
+
+This UI/UX prompt is designed to create a world-class, enterprise-grade dashboard that CSMs will love using daily. The design balances information density with usability, ensuring that AI insights are actionable and autonomous workflows are transparent.
+
+Key differentiators from competitors:
+- Real-time AI insights (not just static reports)
+- Closed-loop voice call tracking (unique to S-007)
+- Autonomous action transparency (show what the AI did)
+- Premium dark mode aesthetic (modern, professional)
+- One-click interventions (reduce CSM friction)
+
+Use this prompt with AI design tools (v0.dev, Galileo AI) or share with frontend developers to build the S-007 Revenue Command Center.
+
+================================================================================
+END OF FRONTEND UI/UX PROMPT
+================================================================================

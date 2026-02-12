@@ -1,0 +1,1 @@
+# Quote Generation Logic
