@@ -13,7 +13,9 @@ import Calls from "./pages/Calls";
 import Opportunities from "./pages/Opportunities";
 import Analytics from "./pages/Analytics";
 import SettingsPage from "./pages/Settings";
+import AccountDetailPage from "./pages/AccountDetailPage";
 import NotFound from "./pages/NotFound";
+import "./styles/animations.css";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,7 @@ const App = () => (
             <Route path="calls" element={<Calls />} />
             <Route path="opportunities" element={<Opportunities />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="accounts/:accountId" element={<AccountDetailPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

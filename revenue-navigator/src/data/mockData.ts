@@ -1,3 +1,30 @@
+// ─── Historical Data Interfaces ───
+export interface SentimentHistory {
+  date: string;
+  score: number; // -1 to 1
+  source: 'email' | 'call' | 'support_ticket' | 'survey';
+  summary?: string;
+}
+
+export interface AccountActivity {
+  id: string;
+  date: string;
+  type: 'call' | 'email' | 'meeting' | 'support_ticket' | 'contract_change' | 'usage_spike' | 'usage_drop' | 'payment';
+  title: string;
+  description: string;
+  sentiment?: 'positive' | 'neutral' | 'negative';
+}
+
+export interface MetricsHistory {
+  date: string;
+  healthScore: number;
+  riskScore: number;
+  relationshipScore: number;
+  churnProbability: number; // Historical churn predictions
+  utilization: number;
+  sentimentScore: number;
+}
+
 // ─── Account Data ───
 export interface Account {
   id: string;
@@ -6,6 +33,9 @@ export interface Account {
   healthScore: number;
   riskScore: number;
   sentiment: "positive" | "neutral" | "negative";
+  relationshipScore: number; // 0-100: Strength of relationship with account
+  churnProbability: number; // 0-1: ML-predicted probability of churn
+  sentimentScore: number; // -1 to 1: Numeric sentiment analysis score
   utilization: number;
   licensesUsed: number;
   licensesTotal: number;
@@ -15,21 +45,25 @@ export interface Account {
   csm: string;
   lastContact: string;
   contractStart: string;
+  // Historical data
+  sentimentHistory?: SentimentHistory[];
+  activityTimeline?: AccountActivity[];
+  metricsHistory?: MetricsHistory[];
 }
 
 export const accounts: Account[] = [
-  { id: "1", name: "Acme Corporation", arr: 120000, healthScore: 78, riskScore: 85, sentiment: "negative", utilization: 67, licensesUsed: 34, licensesTotal: 50, renewalDate: "2026-02-24", renewalStage: "t30", industry: "Technology", csm: "Sarah Chen", lastContact: "2 hours ago", contractStart: "2025-02-24" },
-  { id: "2", name: "TechStart Inc", arr: 45000, healthScore: 42, riskScore: 72, sentiment: "neutral", utilization: 45, licensesUsed: 9, licensesTotal: 20, renewalDate: "2026-03-15", renewalStage: "t30", industry: "SaaS", csm: "James Wilson", lastContact: "Yesterday", contractStart: "2025-03-15" },
-  { id: "3", name: "Global Systems", arr: 200000, healthScore: 91, riskScore: 15, sentiment: "positive", utilization: 92, licensesUsed: 92, licensesTotal: 100, renewalDate: "2026-04-10", renewalStage: "t60", industry: "Enterprise", csm: "Sarah Chen", lastContact: "3 days ago", contractStart: "2025-04-10" },
-  { id: "4", name: "DataFlow Analytics", arr: 85000, healthScore: 65, riskScore: 55, sentiment: "neutral", utilization: 78, licensesUsed: 39, licensesTotal: 50, renewalDate: "2026-05-01", renewalStage: "t90", industry: "Analytics", csm: "Maria Lopez", lastContact: "1 week ago", contractStart: "2025-05-01" },
-  { id: "5", name: "CloudNine Solutions", arr: 150000, healthScore: 88, riskScore: 20, sentiment: "positive", utilization: 85, licensesUsed: 68, licensesTotal: 80, renewalDate: "2026-03-20", renewalStage: "t30", industry: "Cloud", csm: "James Wilson", lastContact: "4 hours ago", contractStart: "2025-03-20" },
-  { id: "6", name: "Nexus Enterprises", arr: 95000, healthScore: 55, riskScore: 68, sentiment: "negative", utilization: 35, licensesUsed: 7, licensesTotal: 20, renewalDate: "2026-04-25", renewalStage: "t90", industry: "Finance", csm: "Maria Lopez", lastContact: "2 weeks ago", contractStart: "2025-04-25" },
-  { id: "7", name: "Pinnacle Group", arr: 175000, healthScore: 82, riskScore: 30, sentiment: "positive", utilization: 76, licensesUsed: 57, licensesTotal: 75, renewalDate: "2026-03-05", renewalStage: "t30", industry: "Healthcare", csm: "Sarah Chen", lastContact: "Yesterday", contractStart: "2025-03-05" },
-  { id: "8", name: "Vertex Labs", arr: 62000, healthScore: 70, riskScore: 45, sentiment: "neutral", utilization: 60, licensesUsed: 18, licensesTotal: 30, renewalDate: "2026-05-15", renewalStage: "t90", industry: "Research", csm: "James Wilson", lastContact: "5 days ago", contractStart: "2025-05-15" },
-  { id: "9", name: "Horizon Media", arr: 110000, healthScore: 35, riskScore: 90, sentiment: "negative", utilization: 25, licensesUsed: 5, licensesTotal: 20, renewalDate: "2026-02-28", renewalStage: "t30", industry: "Media", csm: "Maria Lopez", lastContact: "3 weeks ago", contractStart: "2025-02-28" },
-  { id: "10", name: "Summit Financial", arr: 250000, healthScore: 95, riskScore: 5, sentiment: "positive", utilization: 88, licensesUsed: 176, licensesTotal: 200, renewalDate: "2026-04-15", renewalStage: "t60", industry: "Finance", csm: "Sarah Chen", lastContact: "1 hour ago", contractStart: "2025-04-15" },
-  { id: "11", name: "Rapid Dynamics", arr: 38000, healthScore: 48, riskScore: 78, sentiment: "negative", utilization: 30, licensesUsed: 3, licensesTotal: 10, renewalDate: "2026-03-28", renewalStage: "t60", industry: "Manufacturing", csm: "James Wilson", lastContact: "10 days ago", contractStart: "2025-03-28" },
-  { id: "12", name: "EcoTech Green", arr: 72000, healthScore: 80, riskScore: 25, sentiment: "positive", utilization: 70, licensesUsed: 28, licensesTotal: 40, renewalDate: "2026-06-01", renewalStage: "t90", industry: "CleanTech", csm: "Maria Lopez", lastContact: "2 days ago", contractStart: "2025-06-01" },
+  { id: "1", name: "Acme Corporation", arr: 120000, healthScore: 78, riskScore: 85, sentiment: "negative", relationshipScore: 45, churnProbability: 0.72, sentimentScore: -0.35, utilization: 67, licensesUsed: 34, licensesTotal: 50, renewalDate: "2026-02-24", renewalStage: "t30", industry: "Technology", csm: "Sarah Chen", lastContact: "2 hours ago", contractStart: "2025-02-24" },
+  { id: "2", name: "TechStart Inc", arr: 45000, healthScore: 42, riskScore: 72, sentiment: "neutral", relationshipScore: 52, churnProbability: 0.68, sentimentScore: 0.05, utilization: 45, licensesUsed: 9, licensesTotal: 20, renewalDate: "2026-03-15", renewalStage: "t30", industry: "SaaS", csm: "James Wilson", lastContact: "Yesterday", contractStart: "2025-03-15" },
+  { id: "3", name: "Global Systems", arr: 200000, healthScore: 91, riskScore: 15, sentiment: "positive", relationshipScore: 88, churnProbability: 0.12, sentimentScore: 0.78, utilization: 92, licensesUsed: 92, licensesTotal: 100, renewalDate: "2026-04-10", renewalStage: "t60", industry: "Enterprise", csm: "Sarah Chen", lastContact: "3 days ago", contractStart: "2025-04-10" },
+  { id: "4", name: "DataFlow Analytics", arr: 85000, healthScore: 65, riskScore: 55, sentiment: "neutral", relationshipScore: 62, churnProbability: 0.48, sentimentScore: 0.15, utilization: 78, licensesUsed: 39, licensesTotal: 50, renewalDate: "2026-05-01", renewalStage: "t90", industry: "Analytics", csm: "Maria Lopez", lastContact: "1 week ago", contractStart: "2025-05-01" },
+  { id: "5", name: "CloudNine Solutions", arr: 150000, healthScore: 88, riskScore: 20, sentiment: "positive", relationshipScore: 85, churnProbability: 0.18, sentimentScore: 0.72, utilization: 85, licensesUsed: 68, licensesTotal: 80, renewalDate: "2026-03-20", renewalStage: "t30", industry: "Cloud", csm: "James Wilson", lastContact: "4 hours ago", contractStart: "2025-03-20" },
+  { id: "6", name: "Nexus Enterprises", arr: 95000, healthScore: 55, riskScore: 68, sentiment: "negative", relationshipScore: 38, churnProbability: 0.65, sentimentScore: -0.42, utilization: 35, licensesUsed: 7, licensesTotal: 20, renewalDate: "2026-04-25", renewalStage: "t90", industry: "Finance", csm: "Maria Lopez", lastContact: "2 weeks ago", contractStart: "2025-04-25" },
+  { id: "7", name: "Pinnacle Group", arr: 175000, healthScore: 82, riskScore: 30, sentiment: "positive", relationshipScore: 79, churnProbability: 0.25, sentimentScore: 0.68, utilization: 76, licensesUsed: 57, licensesTotal: 75, renewalDate: "2026-03-05", renewalStage: "t30", industry: "Healthcare", csm: "Sarah Chen", lastContact: "Yesterday", contractStart: "2025-03-05" },
+  { id: "8", name: "Vertex Labs", arr: 62000, healthScore: 70, riskScore: 45, sentiment: "neutral", relationshipScore: 65, churnProbability: 0.38, sentimentScore: 0.22, utilization: 60, licensesUsed: 18, licensesTotal: 30, renewalDate: "2026-05-15", renewalStage: "t90", industry: "Research", csm: "James Wilson", lastContact: "5 days ago", contractStart: "2025-05-15" },
+  { id: "9", name: "Horizon Media", arr: 110000, healthScore: 35, riskScore: 90, sentiment: "negative", relationshipScore: 28, churnProbability: 0.85, sentimentScore: -0.58, utilization: 25, licensesUsed: 5, licensesTotal: 20, renewalDate: "2026-02-28", renewalStage: "t30", industry: "Media", csm: "Maria Lopez", lastContact: "3 weeks ago", contractStart: "2025-02-28" },
+  { id: "10", name: "Summit Financial", arr: 250000, healthScore: 95, riskScore: 5, sentiment: "positive", relationshipScore: 92, churnProbability: 0.05, sentimentScore: 0.88, utilization: 88, licensesUsed: 176, licensesTotal: 200, renewalDate: "2026-04-15", renewalStage: "t60", industry: "Finance", csm: "Sarah Chen", lastContact: "1 hour ago", contractStart: "2025-04-15" },
+  { id: "11", name: "Rapid Dynamics", arr: 38000, healthScore: 48, riskScore: 78, sentiment: "negative", relationshipScore: 35, churnProbability: 0.75, sentimentScore: -0.48, utilization: 30, licensesUsed: 3, licensesTotal: 10, renewalDate: "2026-03-28", renewalStage: "t60", industry: "Manufacturing", csm: "James Wilson", lastContact: "10 days ago", contractStart: "2025-03-28" },
+  { id: "12", name: "EcoTech Green", arr: 72000, healthScore: 80, riskScore: 25, sentiment: "positive", relationshipScore: 76, churnProbability: 0.22, sentimentScore: 0.65, utilization: 70, licensesUsed: 28, licensesTotal: 40, renewalDate: "2026-06-01", renewalStage: "t90", industry: "CleanTech", csm: "Maria Lopez", lastContact: "2 days ago", contractStart: "2025-06-01" },
 ];
 
 // ─── Voice Calls ───
@@ -109,8 +143,18 @@ export const sentimentData = [
 ];
 
 // ─── Helper Formatters ───
-export const formatCurrency = (value: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
+export const formatCurrency = (value: number) => {
+  if (value >= 1000000) {
+    // Millions: $1.4M
+    return `$${(value / 1000000).toFixed(1)}M`;
+  } else if (value >= 1000) {
+    // Thousands: $200K
+    return `$${Math.round(value / 1000)}K`;
+  } else {
+    // Less than 1K: $500
+    return `$${value}`;
+  }
+};
 
 export const getRiskColor = (score: number) =>
   score >= 70 ? "destructive" : score >= 40 ? "warning" : "success";

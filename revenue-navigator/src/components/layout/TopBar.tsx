@@ -1,15 +1,23 @@
 import { Search, Bell, User, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function TopBar() {
   const { theme, toggle } = useTheme();
 
   return (
-    <header className="sticky top-0 z-30 h-16 flex items-center justify-between border-b-2 border-black dark:border-white bg-white dark:bg-gray-900 px-6 shadow-[0_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[0_2px_0px_0px_rgba(255,255,255,0.3)]">
+    <motion.header
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+      className="sticky top-0 z-30 h-16 flex items-center justify-between border-b-2 border-black dark:border-white bg-white dark:bg-gray-900 px-6 shadow-[0_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[0_2px_0px_0px_rgba(255,255,255,0.3)]"
+    >
       {/* Search */}
       <div className="relative w-full max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
+        <motion.input
+          whileFocus={{ scale: 1.01 }}
+          transition={{ duration: 0.2 }}
           type="text"
           placeholder="Search accounts, contracts... ⌘K"
           className="h-9 w-full border-2 border-black dark:border-white bg-white dark:bg-gray-800 pl-10 pr-4 text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]"
@@ -18,23 +26,58 @@ export function TopBar() {
 
       {/* Right actions */}
       <div className="flex items-center gap-3">
-        <button className="relative h-9 w-9 flex items-center justify-center border-2 border-black dark:border-white bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all">
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="relative h-9 w-9 flex items-center justify-center border-2 border-black dark:border-white bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+        >
           <Bell className="h-4 w-4 text-black dark:text-white" />
-          <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-red-600 border border-white dark:border-gray-900" />
-        </button>
+          <motion.span
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-red-600 border border-white dark:border-gray-900"
+          />
+        </motion.button>
 
-        <button
+        <motion.button
           onClick={toggle}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95, rotate: 180 }}
           className="h-9 w-9 flex items-center justify-center border-2 border-black dark:border-white bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
           title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          {theme === "dark" ? <Sun className="h-4 w-4 text-white" /> : <Moon className="h-4 w-4 text-black" />}
-        </button>
+          <AnimatePresence mode="wait">
+            {theme === "dark" ? (
+              <motion.div
+                key="sun"
+                initial={{ rotate: -180, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 180, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Sun className="h-4 w-4 text-white" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="moon"
+                initial={{ rotate: 180, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -180, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Moon className="h-4 w-4 text-black" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
 
-        <div className="h-9 w-9 flex items-center justify-center bg-indigo-600 border-2 border-black dark:border-white text-xs font-bold text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]">
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          className="h-9 w-9 flex items-center justify-center bg-indigo-600 border-2 border-black dark:border-white text-xs font-bold text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] cursor-pointer"
+        >
           <User className="h-4 w-4" />
-        </div>
+        </motion.div>
       </div>
-    </header>
+    </motion.header>
   );
 }
