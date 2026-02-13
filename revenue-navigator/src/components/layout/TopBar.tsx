@@ -1,6 +1,7 @@
-import { Search, Bell, User, Sun, Moon } from "lucide-react";
+import { Bell, User, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
+import { SearchDropdown } from "@/components/SearchDropdown";
 
 export function TopBar() {
   const { theme, toggle } = useTheme();
@@ -13,16 +14,7 @@ export function TopBar() {
       className="sticky top-0 z-30 h-16 flex items-center justify-between border-b-2 border-black dark:border-white bg-white dark:bg-gray-900 px-6 shadow-[0_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[0_2px_0px_0px_rgba(255,255,255,0.3)]"
     >
       {/* Search */}
-      <div className="relative w-full max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <motion.input
-          whileFocus={{ scale: 1.01 }}
-          transition={{ duration: 0.2 }}
-          type="text"
-          placeholder="Search accounts, contracts... ⌘K"
-          className="h-9 w-full border-2 border-black dark:border-white bg-white dark:bg-gray-800 pl-10 pr-4 text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]"
-        />
-      </div>
+      <SearchDropdown />
 
       {/* Right actions */}
       <div className="flex items-center gap-3">

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TrendingUp, AlertTriangle, Users, Building2, Clock, BarChart3, ArrowLeft } from "lucide-react";
+import { TrendingUp, AlertTriangle, Users, Building2, Clock, BarChart3, ArrowLeft, Mail, Phone, Edit2 } from "lucide-react";
 import { accounts, formatCurrency, getDaysUntil } from "@/data/mockData";
 import { generateHistoricalData } from "@/data/historicalDataGenerator";
 import MetricsHistoryChart from "@/components/charts/MetricsHistoryChart";
@@ -90,8 +90,8 @@ export default function AccountDetailPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex-1 px-6 py-4 text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 border-r-2 border-black dark:border-white last:border-r-0 ${activeTab === tab.id
-                                    ? 'bg-white dark:bg-gray-800 text-black dark:text-white shadow-[inset_0_4px_0_0_rgba(99,102,241,1)]'
-                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                                ? 'bg-white dark:bg-gray-800 text-black dark:text-white shadow-[inset_0_4px_0_0_rgba(99,102,241,1)]'
+                                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
                                 }`}
                         >
                             {tab.icon}
@@ -230,10 +230,19 @@ export default function AccountDetailPage() {
                             </div>
                         </div>
 
-                        {/* Contact Information */}
-                        <div className="mb-6">
+                        {/* Primary Contact Information */}
+                        <div className="mb-8">
                             <h3 className="text-lg font-black uppercase tracking-wider text-black dark:text-white mb-4 flex items-center gap-2">
                                 <Users className="w-5 h-5" />
+                                Primary Contact
+                            </h3>
+                            <ContactInfoSection account={account} />
+                        </div>
+
+                        {/* Account Information */}
+                        <div className="mb-6">
+                            <h3 className="text-lg font-black uppercase tracking-wider text-black dark:text-white mb-4 flex items-center gap-2">
+                                <Building2 className="w-5 h-5" />
                                 Account Information
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -268,6 +277,129 @@ export default function AccountDetailPage() {
                         <SentimentTrendChart data={history.sentiment} />
                     </div>
                 )}
+            </div>
+        </div>
+    );
+}
+
+// Contact Information Section with Editing
+function ContactInfoSection({ account }: { account: any }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [contactName, setContactName] = useState(account.contactName || "");
+    const [contactEmail, setContactEmail] = useState(account.contactEmail || "");
+    const [contactPhone, setContactPhone] = useState(account.contactPhone || "");
+
+    const handleSave = () => {
+        // In real app, this would call an API
+        console.log("Saving contact:", { contactName, contactEmail, contactPhone });
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setContactName(account.contactName || "");
+        setContactEmail(account.contactEmail || "");
+        setContactPhone(account.contactPhone || "");
+        setIsEditing(false);
+    };
+
+    if (!account.contactName && !account.contactEmail && !account.contactPhone) {
+        return (
+            <div className="p-8 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <Users className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                <p className="text-base text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">No primary contact information available</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]">
+            <div className="flex items-center justify-between mb-6">
+                <h4 className="text-sm font-black uppercase text-blue-800 dark:text-blue-300 tracking-widest">Contact Details</h4>
+                {!isEditing ? (
+                    <button
+                        onClick={() => setIsEditing(true)}
+                        className="px-4 py-2 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-white text-xs font-black uppercase transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px]"
+                    >
+                        <span className="flex items-center gap-2">
+                            <Edit2 size={14} />
+                            Edit
+                        </span>
+                    </button>
+                ) : (
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleCancel}
+                            className="px-4 py-2 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-white text-xs font-black uppercase transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            className="px-4 py-2 bg-indigo-600 text-white border-2 border-black dark:border-white text-xs font-black uppercase transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                        >
+                            Save Changes
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Name */}
+                <div className="p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white">
+                    <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2 block">Primary Contact Name</label>
+                    {isEditing ? (
+                        <input
+                            type="text"
+                            value={contactName}
+                            onChange={(e) => setContactName(e.target.value)}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                        />
+                    ) : (
+                        <p className="text-base font-black text-black dark:text-white">{contactName || "—"}</p>
+                    )}
+                </div>
+
+                {/* Email */}
+                <div className="p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white">
+                    <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2 block">Email Address</label>
+                    {isEditing ? (
+                        <input
+                            type="email"
+                            value={contactEmail}
+                            onChange={(e) => setContactEmail(e.target.value)}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                        />
+                    ) : (
+                        <a
+                            href={`mailto:${contactEmail}`}
+                            className="text-base font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-2"
+                        >
+                            <Mail size={16} />
+                            {contactEmail || "—"}
+                        </a>
+                    )}
+                </div>
+
+                {/* Phone */}
+                <div className="p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white">
+                    <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2 block">Phone Number</label>
+                    {isEditing ? (
+                        <input
+                            type="tel"
+                            value={contactPhone}
+                            onChange={(e) => setContactPhone(e.target.value)}
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                        />
+                    ) : (
+                        <a
+                            href={`tel:${contactPhone}`}
+                            className="text-base font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-2 font-mono"
+                        >
+                            <Phone size={16} />
+                            {contactPhone || "—"}
+                        </a>
+                    )}
+                </div>
             </div>
         </div>
     );

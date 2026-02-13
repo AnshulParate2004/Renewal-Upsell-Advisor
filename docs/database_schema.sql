@@ -32,9 +32,42 @@ CREATE TABLE accounts (
     renewal_date DATE,
     status VARCHAR(50) DEFAULT 'active', -- active, churned, at_risk, renewed
     health_score INTEGER CHECK (health_score >= 0 AND health_score <= 100),
+    
+    -- NEW: UI-required fields
+    relationship_score INTEGER CHECK (relationship_score >= 0 AND relationship_score <= 100),
+    licenses_total INTEGER DEFAULT 0,
+    licenses_used INTEGER DEFAULT 0,
+    renewal_stage VARCHAR(50), -- t90, t60, t30, renewed, lost
+    last_contact_date TIMESTAMP,
+    
+    -- NEW: Denormalized ML metrics for performance (synced from separate tables)
+    risk_score INTEGER CHECK (risk_score >= 0 AND risk_score <= 100),
+    churn_probability DECIMAL(5, 4) CHECK (churn_probability >= 0 AND churn_probability <= 1),
+    sentiment_score DECIMAL(5, 4) CHECK (sentiment_score >= -1 AND sentiment_score <= 1),
+    sentiment_category VARCHAR(50), -- very_negative, negative, neutral, positive, very_positive
+    utilization_percentage DECIMAL(5, 2),
+    csm_email VARCHAR(500), -- Denormalized from contacts table for quick access
+    
+    -- NEW: Primary customer contact (denormalized for quick access)
+    primary_contact_id UUID REFERENCES contacts(id) ON DELETE SET NULL,
+    primary_contact_name VARCHAR(500),
+    primary_contact_email VARCHAR(500),
+    primary_contact_phone VARCHAR(50),
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Indexes for accounts table
+CREATE INDEX idx_accounts_renewal_date ON accounts(renewal_date);
+CREATE INDEX idx_accounts_renewal_stage ON accounts(renewal_stage);
+CREATE INDEX idx_accounts_risk_score ON accounts(risk_score DESC);
+CREATE INDEX idx_accounts_health_score ON accounts(health_score DESC);
+CREATE INDEX idx_accounts_relationship_score ON accounts(relationship_score DESC);
+CREATE INDEX idx_accounts_last_contact_date ON accounts(last_contact_date DESC);
+CREATE INDEX idx_accounts_status ON accounts(status);
+CREATE INDEX idx_accounts_industry ON accounts(industry);
+CREATE INDEX idx_accounts_primary_contact_id ON accounts(primary_contact_id);
 
 -- Contacts Table (CSM, AE, Customer contacts)
 CREATE TABLE contacts (
@@ -50,149 +83,6 @@ CREATE TABLE contacts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Users Table (Internal team members)
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(500) UNIQUE NOT NULL,
-    password_hash VARCHAR(500) NOT NULL,
-    first_name VARCHAR(255),
-    last_name VARCHAR(255),
-    role VARCHAR(50) NOT NULL, -- admin, csm, ae, analyst
-    is_active BOOLEAN DEFAULT TRUE,
-    email_verified BOOLEAN DEFAULT FALSE,
-    last_login TIMESTAMP,
-    failed_login_attempts INTEGER DEFAULT 0,
-    locked_until TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================================================
--- AUTHENTICATION & SECURITY
--- ============================================================================
-
--- JWT Refresh Tokens
-CREATE TABLE refresh_tokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    token_hash VARCHAR(500) NOT NULL UNIQUE,
-    device_info VARCHAR(500), -- Browser, OS, Device name
-    ip_address INET,
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_used_at TIMESTAMP,
-    revoked_at TIMESTAMP,
-    is_revoked BOOLEAN DEFAULT FALSE,
-    revoke_reason VARCHAR(255) -- logout, security_breach, expired, replaced
-);
-
-CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
-CREATE INDEX idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
-CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
-
--- Password Reset Tokens
-CREATE TABLE password_reset_tokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    token_hash VARCHAR(500) NOT NULL UNIQUE,
-    expires_at TIMESTAMP NOT NULL,
-    used_at TIMESTAMP,
-    ip_address INET,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
-CREATE INDEX idx_password_reset_tokens_token_hash ON password_reset_tokens(token_hash);
-CREATE INDEX idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
-
--- Email Verification Tokens
-CREATE TABLE email_verification_tokens (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    token_hash VARCHAR(500) NOT NULL UNIQUE,
-    email VARCHAR(500) NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    verified_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_email_verification_tokens_user_id ON email_verification_tokens(user_id);
-CREATE INDEX idx_email_verification_tokens_token_hash ON email_verification_tokens(token_hash);
-
--- Authentication Events (Security Audit Trail)
-CREATE TABLE auth_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    email VARCHAR(500), -- Store email even if user is deleted
-    event_type VARCHAR(50) NOT NULL, -- login_success, login_failed, logout, token_refresh, password_reset, email_verified, account_locked
-    ip_address INET,
-    user_agent TEXT,
-    device_info VARCHAR(500),
-    location VARCHAR(255), -- City, Country (if using IP geolocation)
-    success BOOLEAN DEFAULT TRUE,
-    failure_reason VARCHAR(500), -- invalid_credentials, account_locked, account_inactive, etc.
-    metadata JSONB, -- Additional context
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_auth_events_user_id ON auth_events(user_id);
-CREATE INDEX idx_auth_events_email ON auth_events(email);
-CREATE INDEX idx_auth_events_event_type ON auth_events(event_type);
-CREATE INDEX idx_auth_events_created_at ON auth_events(created_at DESC);
-CREATE INDEX idx_auth_events_ip_address ON auth_events(ip_address);
-
--- API Keys (for programmatic access)
-CREATE TABLE api_keys (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    key_name VARCHAR(255) NOT NULL,
-    key_hash VARCHAR(500) NOT NULL UNIQUE,
-    key_prefix VARCHAR(20) NOT NULL, -- First few chars for identification (e.g., "sk_live_abc...")
-    scopes JSONB, -- ["read:accounts", "write:contacts", ...]
-    last_used_at TIMESTAMP,
-    expires_at TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    revoked_at TIMESTAMP
-);
-
-CREATE INDEX idx_api_keys_user_id ON api_keys(user_id);
-CREATE INDEX idx_api_keys_key_hash ON api_keys(key_hash);
-CREATE INDEX idx_api_keys_key_prefix ON api_keys(key_prefix);
-
--- Two-Factor Authentication (2FA)
-CREATE TABLE two_factor_auth (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
-    secret_key VARCHAR(500) NOT NULL, -- Encrypted TOTP secret
-    is_enabled BOOLEAN DEFAULT FALSE,
-    backup_codes JSONB, -- Array of hashed backup codes
-    enabled_at TIMESTAMP,
-    last_verified_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_two_factor_auth_user_id ON two_factor_auth(user_id);
-
--- Session Management (Optional - for tracking active sessions)
-CREATE TABLE user_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    session_token_hash VARCHAR(500) NOT NULL UNIQUE,
-    refresh_token_id UUID REFERENCES refresh_tokens(id) ON DELETE CASCADE,
-    ip_address INET,
-    user_agent TEXT,
-    device_info VARCHAR(500),
-    last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    terminated_at TIMESTAMP
-);
-
-CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
-CREATE INDEX idx_user_sessions_session_token_hash ON user_sessions(session_token_hash);
-CREATE INDEX idx_user_sessions_expires_at ON user_sessions(expires_at);
 
 -- ============================================================================
 -- USAGE & ENGAGEMENT DATA
@@ -390,9 +280,8 @@ CREATE TABLE salesforce_sync_log (
 -- System Activity Logs
 CREATE TABLE activity_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
-    action VARCHAR(255) NOT NULL, -- login, view_account, send_email, make_call, etc.
+    action VARCHAR(255) NOT NULL, -- view_account, send_email, make_call, etc.
     entity_type VARCHAR(100), -- account, contact, opportunity, etc.
     entity_id UUID,
     details JSONB, -- flexible JSON for any additional context
@@ -403,6 +292,33 @@ CREATE TABLE activity_logs (
 
 -- Create index for faster log queries
 CREATE INDEX idx_activity_logs_created_at ON activity_logs(created_at DESC);
+
+-- ============================================================================
+-- TRIGGERS FOR DATA SYNCHRONIZATION
+-- ============================================================================
+
+-- Trigger to sync primary contact from contacts to accounts
+CREATE OR REPLACE FUNCTION sync_primary_contact_to_accounts()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Only sync if this is marked as primary contact
+    IF NEW.is_primary = TRUE THEN
+        UPDATE accounts 
+        SET primary_contact_id = NEW.id,
+            primary_contact_name = CONCAT(NEW.first_name, ' ', NEW.last_name),
+            primary_contact_email = NEW.email,
+            primary_contact_phone = NEW.phone,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = NEW.account_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_sync_primary_contact
+AFTER INSERT OR UPDATE ON contacts
+FOR EACH ROW
+EXECUTE FUNCTION sync_primary_contact_to_accounts();
 CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
 CREATE INDEX idx_activity_logs_account_id ON activity_logs(account_id);
 CREATE INDEX idx_activity_logs_action ON activity_logs(action);
