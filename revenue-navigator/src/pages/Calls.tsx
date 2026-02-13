@@ -13,12 +13,12 @@ export default function Calls() {
   return (
     <div className="p-8 max-w-[1600px] mx-auto min-h-screen flex flex-col space-y-8">
       {/* Header */}
-      <div className="flex items-end justify-between border-b border-gray-200 pb-6">
+      <div className="flex items-end justify-between border-b-4 border-foreground pb-6">
         <div>
-          <h1 className="text-5xl font-bold text-foreground tracking-tight leading-none">
+          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
             Voice <span className="text-primary">Operations</span>
           </h1>
-          <p className="text-sm font-medium text-gray-500 mt-2">
+          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
             Asynchronous Voice Path Intelligence & Sentiment Analysis
           </p>
         </div>
@@ -32,25 +32,25 @@ export default function Calls() {
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-between gap-6 bg-white p-4 rounded-xl border border-purple-100 shadow-sm shadow-purple-900/5">
+      <div className="flex items-center justify-between gap-6 bg-white p-4 border-4 border-foreground rounded-lg">
         <div className="flex items-center gap-6 flex-1">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by account..."
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-foreground rounded-lg text-sm font-black focus:outline-none focus:bg-primary/5 transition-all uppercase tracking-wider"
             />
           </div>
-          <div className="h-8 w-px bg-gray-100" />
+          <div className="h-8 w-1 bg-foreground rounded-full" />
           <div className="flex gap-2">
             {(['all', 'picked_up', 'missed', 'retry'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setOutcomeFilter(filter)}
-                className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all ${outcomeFilter === filter ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                className={`px-4 py-2 text-xs font-black border-2 border-foreground rounded-lg transition-all uppercase tracking-wider ${outcomeFilter === filter ? 'bg-primary text-white' : 'bg-white text-foreground hover:bg-accent/10'}`}
               >
                 {filter === 'all' ? 'All Calls' : filter.replace('_', ' ').toUpperCase()}
               </button>
@@ -60,11 +60,11 @@ export default function Calls() {
       </div>
 
       {/* Table Container */}
-      <div className="paper-card flex-1 overflow-hidden flex flex-col bg-white border border-gray-200 p-0 shadow-xl shadow-purple-900/5">
+      <div className="paper-card table-container flex-1 overflow-hidden flex flex-col bg-white p-0">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-primary/5 border-b border-gray-100">
-              <tr className="text-[10px] uppercase text-gray-500 font-bold tracking-widest text-left">
+            <thead className="sticky top-0 z-10 bg-accent border-b-4 border-foreground">
+              <tr className="text-[10px] uppercase text-white font-black tracking-widest text-left">
                 <th className="pl-8 py-4">Account</th>
                 <th className="py-4">Time</th>
                 <th className="text-center py-4">Duration</th>
@@ -73,31 +73,31 @@ export default function Calls() {
                 <th className="text-center py-4 pr-8">Retries</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y-2 divide-foreground">
               {filtered.map((call) => (
-                <tr key={call.id} className="hover:bg-purple-50/50 transition-colors group">
-                  <td className="pl-8 py-4 font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-3">
-                    <div className="p-2 bg-purple-50 rounded-lg group-hover:bg-primary/10 transition-colors">
+                <tr key={call.id} className="hover:bg-primary/10 transition-colors group">
+                  <td className="pl-8 py-4 font-black text-foreground group-hover:text-primary transition-colors flex items-center gap-3">
+                    <div className="p-2 bg-purple-50 border-2 border-foreground rounded-lg group-hover:bg-primary/10 transition-colors" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                       <Phone size={14} className="text-primary" />
                     </div>
-                    {call.accountName}
+                    <span className="uppercase tracking-wide">{call.accountName}</span>
                   </td>
-                  <td className="py-4 text-[10px] text-gray-500 font-semibold">{call.date}</td>
-                  <td className="text-center py-4 font-semibold text-gray-700">{call.duration}</td>
+                  <td className="py-4 text-[10px] text-foreground/60 font-black uppercase">{call.date}</td>
+                  <td className="text-center py-4 font-black text-foreground">{call.duration}</td>
                   <td className="text-center py-4">
-                    <div className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${call.outcome === 'picked_up' ? 'bg-success/10 text-success' : call.outcome === 'missed' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                    <div className={`px-2.5 py-1 border-2 border-foreground rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex ${call.outcome === 'picked_up' ? 'bg-success/10 text-success' : call.outcome === 'missed' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                       {call.outcome.replace('_', ' ').toUpperCase()}
                     </div>
                   </td>
                   <td className="text-center py-4">
                     {call.sentiment ? (
-                      <div className="flex items-center justify-center gap-2 bg-background/50 py-1 px-2 rounded-lg border border-purple-50 inline-flex mx-auto">
+                      <div className="flex items-center justify-center gap-2 bg-white py-1 px-2 border-2 border-foreground rounded-lg inline-flex mx-auto" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                         <span className="text-lg">{call.sentiment === "positive" ? "😊" : call.sentiment === "neutral" ? "😐" : "😟"}</span>
-                        <span className={`text-[10px] font-bold uppercase tracking-widest ${call.sentiment === 'positive' ? 'text-success' : call.sentiment === 'neutral' ? 'text-gray-400' : 'text-red-600'}`}>{call.sentiment}</span>
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${call.sentiment === 'positive' ? 'text-success' : call.sentiment === 'neutral' ? 'text-foreground/60' : 'text-red-600'}`}>{call.sentiment}</span>
                       </div>
-                    ) : <span className="text-gray-300 font-bold text-xs">N/A</span>}
+                    ) : <span className="text-foreground/40 font-black text-xs uppercase">N/A</span>}
                   </td>
-                  <td className="text-center py-4 font-bold text-xs pr-8 text-gray-400">{call.retryCount}</td>
+                  <td className="text-center py-4 font-black text-xs pr-8 text-foreground">{call.retryCount}</td>
                 </tr>
               ))}
             </tbody>
@@ -105,9 +105,9 @@ export default function Calls() {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+        <div className="p-4 bg-accent border-t-4 border-foreground flex justify-between items-center text-[10px] font-black text-white uppercase tracking-widest rounded-b-lg">
           <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
+            <span className="w-2 h-2 bg-success border border-foreground rounded-full animate-pulse" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}></span>
             SYNC STATUS: {filtered.length} / {voiceCalls.length} AUDIT LOGS
           </div>
           <div className="flex items-center gap-4">
@@ -115,7 +115,7 @@ export default function Calls() {
               <History size={12} />
               <span>Retention 90d</span>
             </div>
-            <div className="px-3 py-1 bg-white border border-gray-200 rounded text-gray-500 shadow-sm">Sorted by Recency</div>
+            <div className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-foreground font-black" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>Sorted by Recency</div>
           </div>
         </div>
       </div>

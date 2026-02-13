@@ -22,21 +22,22 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex h-screen flex-col bg-white border-r border-gray-200 transition-all duration-200",
+        "fixed left-0 top-0 z-40 flex h-screen flex-col bg-white border-r-4 border-foreground transition-all duration-200",
         collapsed ? "w-20" : "w-64"
       )}
+      style={{ boxShadow: "3px 0px 0px 0px hsl(var(--foreground))" }}
     >
       {/* Logo Section */}
-      <div className="h-20 flex items-center gap-3 px-4 border-b border-gray-200 bg-primary">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-white rounded shadow-sm">
+      <div className="h-20 flex items-center gap-3 px-4 border-b-4 border-foreground bg-primary">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-white border-2 border-foreground rounded-lg" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
           <Zap className="h-6 w-6 text-primary fill-primary" />
         </div>
         {!collapsed && (
           <div className="flex flex-col">
-            <span className="text-xl font-bold text-white tracking-tight leading-none">
+            <span className="text-xl font-black text-white tracking-tight leading-none uppercase">
               REVENUE
             </span>
-            <span className="text-xs font-medium text-white/90 tracking-wider leading-none">
+            <span className="text-xs font-black text-white tracking-wider leading-none uppercase">
               NAVIGATOR
             </span>
           </div>
@@ -44,17 +45,18 @@ export function AppSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1.5 px-3 py-6">
+      <nav className="flex-1 space-y-2 px-3 py-6">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             end={item.path === "/app"}
             className={cn(
-              "flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-all rounded-lg hover:bg-gray-100 hover:text-foreground",
+              "flex items-center gap-3 px-4 py-2.5 text-sm font-black text-foreground transition-all border-2 border-foreground rounded-lg uppercase tracking-wider",
               collapsed && "justify-center px-0"
             )}
-            activeClassName="bg-primary text-white shadow-sm"
+            style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
+            activeClassName="bg-primary text-white"
           >
             <item.icon className="h-5 w-5 shrink-0" />
             {!collapsed && <span>{item.title}</span>}
@@ -63,15 +65,15 @@ export function AppSidebar() {
       </nav>
 
       {/* Status Footer */}
-      <div className="border-t border-gray-200 bg-gray-50 p-4">
+      <div className="border-t-4 border-foreground bg-secondary p-4">
         {!collapsed ? (
           <div className="flex items-center gap-3">
-            <div className="h-2.5 w-2.5 bg-primary rounded-full animate-pulse shadow-sm"></div>
-            <span className="text-xs font-medium text-gray-600">System Ready</span>
+            <div className="h-3 w-3 bg-primary border-2 border-foreground animate-pulse" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}></div>
+            <span className="text-xs font-black text-foreground uppercase tracking-wider">System Ready</span>
           </div>
         ) : (
           <div className="flex justify-center">
-            <div className="h-2.5 w-2.5 bg-primary rounded-full animate-pulse"></div>
+            <div className="h-3 w-3 bg-primary border-2 border-foreground animate-pulse" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}></div>
           </div>
         )}
       </div>

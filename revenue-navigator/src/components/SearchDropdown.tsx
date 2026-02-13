@@ -53,7 +53,7 @@ export function SearchDropdown() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsOpen(true)}
-                className="h-10 w-full border-4 border-foreground bg-white pl-10 pr-12 text-xs font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[4px_4px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all uppercase tracking-widest"
+                className="h-10 w-full border-4 border-foreground bg-white pl-10 pr-12 text-xs font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[2px_2px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all uppercase tracking-widest"
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 border-2 border-foreground bg-secondary text-[8px] font-black pointer-events-none">
                 <Command size={8} />
@@ -68,7 +68,7 @@ export function SearchDropdown() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute top-full mt-4 w-full max-h-[500px] overflow-y-auto bg-white border-4 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))] z-50 custom-scrollbar paper-card"
+                        className="absolute top-full mt-4 w-full max-h-[500px] overflow-y-auto bg-white border-4 border-foreground shadow-[3px_3px_0px_0px_hsl(var(--foreground))] z-50 custom-scrollbar paper-card"
                     >
                         {searchQuery === "" ? (
                             // Show recent/suggested when no search query
@@ -85,7 +85,7 @@ export function SearchDropdown() {
                                                 onClick={() => handleAccountClick(account.id)}
                                                 className="flex items-center gap-4 p-3 hover:bg-secondary/20 cursor-pointer border-b-2 border-foreground/5 last:border-0 group/item transition-colors"
                                             >
-                                                <div className="h-10 w-10 flex items-center justify-center bg-white border-2 border-foreground shadow-[2px_2px_0_0_hsl(var(--foreground))] group-hover/item:shadow-none group-hover/item:translate-x-[1px] group-hover/item:translate-y-[1px] transition-all">
+                                                <div className="h-10 w-10 flex items-center justify-center bg-white border-2 border-foreground shadow-[1px_1px_0_0_hsl(var(--foreground))] group-hover/item:shadow-none group-hover/item:translate-x-[1px] group-hover/item:translate-y-[1px] transition-all">
                                                     <Building2 className="h-5 w-5 text-primary" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -122,7 +122,7 @@ export function SearchDropdown() {
                                                 onClick={() => handleAccountClick(account.id)}
                                                 className="flex items-center gap-4 p-3 hover:bg-secondary/20 cursor-pointer border-b-2 border-foreground/5 last:border-0 group/item transition-colors"
                                             >
-                                                <div className="h-10 w-10 flex items-center justify-center bg-white border-2 border-foreground shadow-[2px_2px_0_0_hsl(var(--foreground))] group-hover/item:shadow-none group-hover/item:translate-x-[1px] group-hover/item:translate-y-[1px] transition-all">
+                                                <div className="h-10 w-10 flex items-center justify-center bg-white border-2 border-foreground shadow-[1px_1px_0_0_hsl(var(--foreground))] group-hover/item:shadow-none group-hover/item:translate-x-[1px] group-hover/item:translate-y-[1px] transition-all">
                                                     <Building2 className="h-5 w-5 text-primary" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
@@ -161,13 +161,13 @@ export function SearchDropdown() {
                         <div className="border-t-4 border-foreground p-4 bg-secondary">
                             <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
                                 <span className="flex items-center gap-2">
-                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[2px_2px_0_0_hsl(var(--foreground))]">↑↓</kbd> NAV_INDEX
+                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[1px_1px_0_0_hsl(var(--foreground))]">↑↓</kbd> NAV_INDEX
                                 </span>
                                 <span className="flex items-center gap-2">
-                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[2px_2px_0_0_hsl(var(--foreground))]">↵</kbd> EXEC_LINK
+                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[1px_1px_0_0_hsl(var(--foreground))]">↵</kbd> EXEC_LINK
                                 </span>
                                 <span className="flex items-center gap-2">
-                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[2px_2px_0_0_hsl(var(--foreground))]">ESC</kbd> ABORT
+                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[1px_1px_0_0_hsl(var(--foreground))]">ESC</kbd> ABORT
                                 </span>
                             </div>
                         </div>

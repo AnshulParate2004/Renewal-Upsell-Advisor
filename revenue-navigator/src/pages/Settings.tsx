@@ -24,10 +24,10 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex items-end justify-between border-b border-gray-200 pb-6">
         <div>
-          <h1 className="text-5xl font-bold text-foreground tracking-tight leading-none">
+          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
             System <span className="text-primary">Configuration</span>
           </h1>
-          <p className="text-sm font-medium text-gray-500 mt-2">
+          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
             Operational Parameter Registry & Security Vault
           </p>
         </div>

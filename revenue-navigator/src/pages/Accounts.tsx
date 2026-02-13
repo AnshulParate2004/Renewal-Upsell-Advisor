@@ -50,28 +50,29 @@ export default function Accounts() {
   return (
     <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col gap-6">
       {/* Header & Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 pb-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-4 border-foreground pb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-5xl font-bold text-foreground tracking-tight">
+            <h1 className="text-5xl font-black text-foreground tracking-tight uppercase">
               Account <span className="text-primary">Navigator</span>
             </h1>
             <div className="sticker-outline px-3 py-1 text-xs">LIVE PORTFOLIO</div>
           </div>
-          <p className="text-sm font-medium text-gray-500 mt-2">
+          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
             {filteredClients.length} High-Stakes Accounts Under Management
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
             <input
               type="text"
               placeholder="Search accounts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-64 transition-all"
+              className="pl-10 pr-4 py-2.5 text-sm bg-white border-2 border-foreground rounded-lg focus:outline-none focus:bg-primary/5 w-64 transition-all font-black uppercase tracking-wider"
+              style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
             />
           </div>
 
@@ -80,11 +81,12 @@ export default function Accounts() {
               <button
                 key={filter}
                 onClick={() => setFilterRisk(filter)}
-                className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all
+                className={`px-4 py-2 text-xs font-black border-2 border-foreground rounded-lg transition-all uppercase tracking-wider
                   ${filterRisk === filter
-                    ? 'bg-primary text-white border-primary shadow-sm'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    ? 'bg-primary text-white'
+                    : 'bg-white text-foreground hover:bg-accent/10'
                   }`}
+                style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
               >
                 {filter === 'all' ? 'All' : filter.toUpperCase()}
               </button>
@@ -93,14 +95,16 @@ export default function Accounts() {
 
           <button
             onClick={handleExportCSV}
-            className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg font-bold text-sm shadow-sm hover:bg-gray-50 transition-all flex items-center"
+            className="px-4 py-2 bg-white text-foreground border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider"
+            style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
           >
             <Download className="w-4 h-4 mr-2" />
             Export
           </button>
 
           <button
-            className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-sm hover:translate-y-[-1px] transition-all flex items-center"
+            className="px-4 py-2 bg-primary text-white border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider"
+            style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Account
@@ -109,11 +113,11 @@ export default function Accounts() {
       </div>
 
       {/* Data Grid */}
-      <div className="paper-card flex-1 overflow-hidden flex flex-col p-0 border border-gray-200 shadow-xl shadow-purple-900/5">
+      <div className="paper-card table-container flex-1 overflow-hidden flex flex-col p-0">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-primary/5 border-b border-gray-100">
-              <tr className="text-[10px] uppercase text-gray-500 font-bold tracking-widest text-left">
+            <thead className="sticky top-0 z-10 bg-accent border-b-4 border-foreground">
+              <tr className="text-[10px] uppercase text-white font-black tracking-widest text-left">
                 <th className="pl-6 py-4 w-[250px]">Account Entity</th>
                 <th className="text-right py-4">ARR Portfolio</th>
                 <th className="text-center py-4">Renewal</th>
@@ -125,12 +129,12 @@ export default function Accounts() {
                 <th className="w-[100px] text-center py-4 pr-6">Audit</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y-2 divide-foreground">
               {filteredClients.map((client) => (
                 <tr
                   key={client.id}
                   onClick={() => navigate(`/app/accounts/${client.id}`)}
-                  className="group cursor-pointer hover:bg-purple-50/50 transition-colors"
+                  className="group cursor-pointer hover:bg-primary/10 transition-colors"
                 >
                   <td className="pl-6 py-4">
                     <div className="flex flex-col">
@@ -146,7 +150,7 @@ export default function Accounts() {
                     {formatCurrency(client.arr)}
                   </td>
                   <td className="text-center">
-                    <div className={`px-2 py-0.5 rounded text-[10px] font-bold text-white inline-flex ${getDaysUntil(client.renewalDate) <= 30 ? 'bg-red-500' : 'bg-primary'}`}>
+                    <div className={`px-2 py-0.5 border-2 border-foreground text-[10px] font-black text-white inline-flex uppercase ${getDaysUntil(client.renewalDate) <= 30 ? 'bg-red-500' : 'bg-primary'}`} style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>
                       {getDaysUntil(client.renewalDate)}D
                     </div>
                   </td>
@@ -162,30 +166,30 @@ export default function Accounts() {
                     </div>
                   </td>
                   <td className="text-center">
-                    <span className="font-bold text-sm px-2 py-1 bg-purple-50 text-primary border border-primary/10 rounded-lg">
+                    <span className="font-black text-sm px-2 py-1 bg-accent/20 text-primary border-2 border-foreground uppercase" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>
                       {client.relationshipScore}
                     </span>
                   </td>
                   <td className="text-center">
-                    <span className={`font-bold text-sm ${client.churnProbability >= 0.7 ? 'text-red-600' : client.churnProbability >= 0.4 ? 'text-accent' : 'text-success'}`}>
+                    <span className={`font-black text-sm uppercase ${client.churnProbability >= 0.7 ? 'text-red-600' : client.churnProbability >= 0.4 ? 'text-accent' : 'text-success'}`}>
                       {Math.round(client.churnProbability * 100)}%
                     </span>
                   </td>
                   <td className="text-center">
-                    <div className="inline-flex items-center gap-2 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                    <div className="inline-flex items-center gap-2 px-2 py-1 bg-white border-2 border-foreground" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>
                       <span className="text-lg">
                         {client.sentimentScore > 0.5 ? '🔥' : client.sentimentScore > 0 ? '👍' : client.sentimentScore > -0.5 ? '😐' : '⚠️'}
                       </span>
-                      <span className="font-bold text-xs text-gray-600">
+                      <span className="font-black text-xs text-foreground">
                         {client.sentimentScore > 0 ? '+' : ''}{client.sentimentScore.toFixed(2)}
                       </span>
                     </div>
                   </td>
                   <td className="text-center">
                     {client.riskScore >= 70 ? (
-                      <span className="px-2 py-1 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-100">High Risk</span>
+                      <span className="px-2 py-1 border-2 border-foreground text-[10px] font-black bg-red-50 text-red-600 uppercase" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>High Risk</span>
                     ) : (
-                      <span className="px-2 py-1 rounded text-[10px] font-bold bg-success/10 text-success border border-success/10">Target Safe</span>
+                      <span className="px-2 py-1 border-2 border-foreground text-[10px] font-black bg-success/10 text-success uppercase" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>Target Safe</span>
                     )}
                   </td>
                   <td className="text-center pr-6">
@@ -194,7 +198,8 @@ export default function Accounts() {
                         e.stopPropagation();
                         navigate(`/app/accounts/${client.id}`);
                       }}
-                      className="px-3 py-1 text-[10px] font-bold uppercase rounded-lg bg-gray-50 text-gray-400 hover:bg-primary/10 hover:text-primary transition-all border border-gray-200"
+                      className="px-3 py-1 text-[10px] font-black uppercase bg-white text-foreground hover:bg-primary/10 hover:text-primary transition-all border-2 border-foreground"
+                      style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}
                     >
                       Audit
                     </button>
@@ -205,7 +210,7 @@ export default function Accounts() {
           </table>
         </div>
         {/* Table Footer */}
-        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+        <div className="p-4 bg-accent border-t-4 border-foreground flex justify-between items-center text-[10px] font-black text-white uppercase tracking-widest">
           <div className="flex gap-6">
             <span>ACTIVE ACCOUNTS: <span className="text-gray-600">{filteredClients.length}</span></span>
             <span>TOTAL ARR: <span className="text-gray-600">{formatCurrency(filteredClients.reduce((acc, c) => acc + c.arr, 0))}</span></span>

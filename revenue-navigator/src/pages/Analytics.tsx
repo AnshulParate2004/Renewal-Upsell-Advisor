@@ -15,21 +15,21 @@ export default function Analytics() {
   return (
     <div className="p-8 max-w-[1600px] mx-auto min-h-screen flex flex-col space-y-8">
       {/* Header */}
-      <div className="flex items-end justify-between border-b border-gray-200 pb-6">
+      <div className="flex items-end justify-between border-b-4 border-foreground pb-6">
         <div>
-          <h1 className="text-5xl font-bold text-foreground tracking-tight leading-none">
+          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
             Strategic <span className="text-primary">Analytics</span>
           </h1>
-          <p className="text-sm font-medium text-gray-500 mt-2">
+          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
             Advanced Metric Aggregation & Predictive Intelligence
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg font-bold text-sm shadow-sm hover:bg-gray-50 transition-all flex items-center group">
+          <button className="px-4 py-2 bg-white text-foreground border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
             <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
             PDF Export
           </button>
-          <button className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-sm hover:translate-y-[-1px] transition-all flex items-center group">
+          <button className="px-4 py-2 bg-primary text-white border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
             <FileText className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
             CSV Sync
           </button>
@@ -38,9 +38,9 @@ export default function Analytics() {
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         {/* Revenue Trend */}
-        <div className="lg:col-span-12 paper-card overflow-hidden bg-white p-0 border border-gray-200 shadow-xl shadow-purple-900/5">
-          <div className="p-6 border-b border-gray-100 bg-primary/5 flex items-center justify-between">
-            <h3 className="text-xl font-bold text-foreground">Revenue Persistence Trend</h3>
+        <div className="lg:col-span-12 paper-card overflow-hidden bg-white p-0">
+          <div className="p-6 border-b-4 border-foreground bg-primary/10 flex items-center justify-between">
+            <h3 className="text-xl font-black text-foreground uppercase">Revenue Persistence Trend</h3>
             <div className="sticker-outline px-3 py-1 text-xs">Live Feed</div>
           </div>
           <div className="p-8">
@@ -71,10 +71,10 @@ export default function Analytics() {
         </div>
 
         {/* Churn Analysis */}
-        <div className="lg:col-span-7 paper-card overflow-hidden bg-white p-0 border border-gray-200 shadow-xl shadow-purple-900/5">
-          <div className="p-6 border-b border-gray-100 bg-accent/5 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-accent" />
-            <h3 className="text-xl font-bold text-foreground">Retention Flow Matrix</h3>
+        <div className="lg:col-span-7 paper-card table-container overflow-hidden bg-white p-0">
+          <div className="p-6 border-b-4 border-foreground bg-accent/10 flex items-center gap-3">
+            <div className="w-2 h-2 bg-accent border border-foreground rounded-full" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }} />
+            <h3 className="text-xl font-black text-foreground uppercase">Retention Flow Matrix</h3>
           </div>
           <div className="p-8">
             <ResponsiveContainer width="100%" height={300}>
@@ -101,9 +101,9 @@ export default function Analytics() {
         </div>
 
         {/* Risk Distribution */}
-        <div className="lg:col-span-5 paper-card overflow-hidden bg-white p-0 border border-gray-200 shadow-xl shadow-purple-900/5">
-          <div className="p-6 border-b border-gray-100 bg-purple-50">
-            <h3 className="text-xl font-bold text-foreground">Portfolio Volatility Index</h3>
+        <div className="lg:col-span-5 paper-card table-container overflow-hidden bg-white p-0">
+          <div className="p-6 border-b-4 border-foreground bg-accent/10">
+            <h3 className="text-xl font-black text-foreground uppercase tracking-wider">Portfolio Volatility Index</h3>
           </div>
           <div className="p-8 flex justify-center">
             <ResponsiveContainer width="100%" height={300}>
@@ -117,13 +117,40 @@ export default function Analytics() {
                   outerRadius={100}
                   strokeWidth={0}
                   paddingAngle={8}
-                  label={({ name, value }) => `${name}: ${value}`}
+                  label={({ name, value, cx, cy, midAngle, innerRadius, outerRadius }) => {
+                    const RADIAN = Math.PI / 180;
+                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                    const entry = riskDistribution.find(r => r.name === name);
+                    
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        fill={entry?.color || "#000"}
+                        textAnchor={x > cx ? 'start' : 'end'}
+                        dominantBaseline="central"
+                        className="text-xs font-black uppercase"
+                        style={{ fontSize: '11px', fontWeight: '900' }}
+                      >
+                        {`${name}: ${value}`}
+                      </text>
+                    );
+                  }}
                 >
                   {riskDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{ backgroundColor: "#fff", border: '1px solid #f1f5f9', borderRadius: '12px' }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: "#fff", 
+                    border: '2px solid hsl(var(--foreground))', 
+                    borderRadius: '0.5rem',
+                    boxShadow: "1px 1px 0px 0px hsl(var(--foreground))"
+                  }} 
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>

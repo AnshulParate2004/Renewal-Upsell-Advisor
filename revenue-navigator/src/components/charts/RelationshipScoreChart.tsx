@@ -1,5 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import { accounts } from '@/data/mockData';
+import { BarChart3 } from 'lucide-react';
 
 export default function RelationshipTrendChart() {
     // Generate 6 months of historical data for average relationship score
@@ -37,12 +38,12 @@ export default function RelationshipTrendChart() {
     const CustomTooltip = ({ active, payload, label }: any) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-white dark:bg-gray-800 p-3 border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                    <p className="text-xs font-black uppercase text-black dark:text-white mb-1">{label} 2025/2026</p>
-                    <p className="text-sm font-bold text-purple-600">
+                <div className="bg-white p-3 border-2 border-foreground rounded-lg" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+                    <p className="text-xs font-black uppercase text-foreground mb-1">{label} 2025/2026</p>
+                    <p className="text-sm font-black text-primary uppercase">
                         Avg Score: {payload[0].value}%
                     </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                    <p className="text-xs font-black text-foreground/60 uppercase tracking-wider">
                         Across {accounts.length} accounts
                     </p>
                 </div>
@@ -52,19 +53,22 @@ export default function RelationshipTrendChart() {
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] p-4 h-full flex flex-col">
+        <div className="paper-card h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
-                <div>
-                    <h3 className="text-sm font-black uppercase tracking-wider text-black dark:text-white">
-                        📈 Average Relationship Score Trend
-                    </h3>
-                    <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 mt-1">
-                        Portfolio-wide average across all {accounts.length} accounts
-                    </p>
+                <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-accent" />
+                    <div>
+                        <h3 className="text-sm font-black uppercase tracking-wider text-foreground">
+                            AVERAGE RELATIONSHIP SCORE TREND
+                        </h3>
+                        <p className="text-[10px] font-black text-foreground/60 uppercase tracking-wider mt-1">
+                            Portfolio-wide average across all {accounts.length} accounts
+                        </p>
+                    </div>
                 </div>
                 <div className="text-right">
-                    <div className="text-3xl font-black font-mono text-purple-600">{currentAvg}%</div>
-                    <div className={`text-xs font-bold ${trendDirection === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className="text-3xl font-black font-mono text-primary">{currentAvg}%</div>
+                    <div className={`text-xs font-black uppercase tracking-wider ${trendDirection === 'up' ? 'text-success' : 'text-destructive'}`}>
                         {trendDirection === 'up' ? '↗' : '↘'} {trendChange}% vs 6mo ago
                     </div>
                 </div>
@@ -106,23 +110,26 @@ export default function RelationshipTrendChart() {
             </div>
 
             {/* Insight Summary */}
-            <div className="mt-3 pt-3 border-t-2 border-black/10 dark:border-white/10">
+            <div className="mt-3 pt-3 border-t-2 border-foreground/20">
                 <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="p-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-600 rounded">
-                        <p className="font-black text-purple-700 dark:text-purple-400">Current Avg</p>
-                        <p className="text-lg font-black font-mono text-black dark:text-white">{currentAvg}%</p>
+                    <div className="p-3 bg-white border-2 border-primary rounded-lg" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+                        <p className="font-black text-primary uppercase tracking-wider text-[10px] mb-1">Current Avg</p>
+                        <p className="text-lg font-black font-mono text-foreground">{currentAvg}%</p>
                     </div>
-                    <div className={`p-2 border rounded ${trendDirection === 'up' ? 'bg-green-50 dark:bg-green-950/30 border-green-600' : 'bg-red-50 dark:bg-red-950/30 border-red-600'}`}>
-                        <p className={`font-black ${trendDirection === 'up' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                            {trendDirection === 'up' ? '📈 Trend' : '📉 Trend'}
-                        </p>
-                        <p className="text-lg font-black font-mono text-black dark:text-white">
+                    <div className={`p-3 bg-white border-2 rounded-lg ${trendDirection === 'up' ? 'border-success' : 'border-destructive'}`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+                        <div className="flex items-center gap-1 mb-1">
+                            <BarChart3 className={`h-3 w-3 ${trendDirection === 'up' ? 'text-success' : 'text-destructive'}`} />
+                            <p className={`font-black uppercase tracking-wider text-[10px] ${trendDirection === 'up' ? 'text-success' : 'text-destructive'}`}>
+                                Trend
+                            </p>
+                        </div>
+                        <p className="text-lg font-black font-mono text-foreground">
                             {trendDirection === 'up' ? '+' : '-'}{trendChange}%
                         </p>
                     </div>
-                    <div className="p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-600 rounded">
-                        <p className="font-black text-blue-700 dark:text-blue-400">Total Accounts</p>
-                        <p className="text-lg font-black font-mono text-black dark:text-white">{accounts.length}</p>
+                    <div className="p-3 bg-white border-2 border-accent rounded-lg" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+                        <p className="font-black text-accent uppercase tracking-wider text-[10px] mb-1">Total Accounts</p>
+                        <p className="text-lg font-black font-mono text-foreground">{accounts.length}</p>
                     </div>
                 </div>
             </div>

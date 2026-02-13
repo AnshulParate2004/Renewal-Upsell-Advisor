@@ -24,12 +24,12 @@ export default function Opportunities() {
   return (
     <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-end justify-between border-b border-gray-200 pb-6">
+      <div className="flex items-end justify-between border-b-4 border-foreground pb-6">
         <div>
-          <h1 className="text-5xl font-bold text-foreground tracking-tight leading-none">
+          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
             Growth <span className="text-primary">Pipeline</span>
           </h1>
-          <p className="text-sm font-medium text-gray-500 mt-2">
+          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
             Strategic Opportunity Management
           </p>
         </div>
@@ -56,12 +56,12 @@ export default function Opportunities() {
             className={`paper-card p-5 flex flex-col justify-between group bg-white`}
           >
             <div className="flex justify-between items-start mb-4">
-              <p className="text-xs font-semibold text-gray-500 uppercase">{metric.label}</p>
-              <div className={`p-2 rounded-lg ${metric.iconBg} ${metric.iconBg === 'bg-white' ? 'text-foreground border border-gray-200' : 'text-white'} shadow-sm`}>
+              <p className="text-xs font-black text-foreground/60 uppercase tracking-wider">{metric.label}</p>
+              <div className={`w-10 h-10 p-2 border-2 border-foreground rounded-lg ${metric.iconBg} ${metric.iconBg === 'bg-white' ? 'text-foreground' : 'text-white'} flex items-center justify-center shrink-0`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                 {metric.icon}
               </div>
             </div>
-            <div className="text-3xl font-bold tracking-tight text-foreground">
+            <div className="text-3xl font-black tracking-tight text-foreground">
               {metric.value}
             </div>
           </AnimatedCard>
@@ -75,23 +75,24 @@ export default function Opportunities() {
             <button
               key={filter}
               onClick={() => setTypeFilter(filter)}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${typeFilter === filter ? 'bg-primary text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}`}
+              className={`px-4 py-2 text-sm font-black border-2 border-foreground rounded-lg transition-all uppercase tracking-wider ${typeFilter === filter ? 'bg-primary text-white' : 'bg-white text-foreground hover:bg-accent/10'}`}
+              style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
             >
               {filter === 'all' ? 'All Types' : filter.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
             </button>
           ))}
         </div>
-        <button className="px-4 py-2 bg-accent text-white rounded-lg font-semibold text-sm shadow-sm hover:shadow-md transition-all flex items-center gap-2 group">
+        <button className="px-4 py-2 bg-accent text-white border-2 border-foreground rounded-lg font-black text-sm uppercase tracking-wider transition-all flex items-center gap-2 group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
           <Briefcase size={16} className="group-hover:scale-110 transition-transform" />
           New Opportunity
         </button>
       </div>
 
       {/* Table */}
-      <div className="paper-card overflow-hidden bg-white border border-gray-200">
+      <div className="paper-card table-container overflow-hidden bg-white p-0">
         <table className="w-full text-sm">
-          <thead className="bg-primary border-b border-gray-200">
-            <tr className="text-xs uppercase text-white font-semibold text-left">
+          <thead className="bg-accent border-b-4 border-foreground">
+            <tr className="text-xs uppercase text-white font-black tracking-widest text-left">
               <th className="pl-6 py-4">Account</th>
               <th className="text-center py-4">Type</th>
               <th className="text-right py-4">Value</th>
@@ -100,27 +101,27 @@ export default function Opportunities() {
               <th className="text-center py-4 pr-6">Created Date</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y-2 divide-foreground">
             {filtered.map((opp) => (
-              <tr key={opp.id} className="hover:bg-purple-50 transition-colors group">
-                <td className="pl-6 py-4 font-bold text-foreground group-hover:text-primary transition-colors">{opp.accountName}</td>
+              <tr key={opp.id} className="hover:bg-primary/10 transition-colors group">
+                <td className="pl-6 py-4 font-black text-foreground uppercase tracking-wide group-hover:text-primary transition-colors">{opp.accountName}</td>
                 <td className="text-center py-4">
-                  <div className={`sticker inline-flex py-1 px-3 text-xs text-white ${typeBadge[opp.type].bgColor} shadow-sm`}>
+                  <div className={`inline-flex py-1 px-3 text-xs text-white border-2 border-foreground rounded-lg font-black uppercase tracking-wider ${typeBadge[opp.type].bgColor}`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                     {typeBadge[opp.type].label}
                   </div>
                 </td>
-                <td className="text-right py-4 font-semibold text-foreground">{formatCurrency(opp.value)}</td>
+                <td className="text-right py-4 font-black text-foreground uppercase">{formatCurrency(opp.value)}</td>
                 <td className="text-center py-4">
-                  <div className="w-24 h-3 border border-gray-200 bg-gray-100 rounded-full inline-block relative overflow-hidden">
+                  <div className="w-24 h-3 border-2 border-foreground bg-gray-100 rounded-lg inline-block relative overflow-hidden" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                     <div
-                      className="h-full bg-primary rounded-full"
+                      className="h-full bg-primary"
                       style={{ width: `${opp.probability}%` }}
                     ></div>
-                    <span className="absolute -top-5 right-0 text-xs font-semibold text-gray-600">{opp.probability}%</span>
+                    <span className="absolute -top-5 right-0 text-xs font-black text-foreground uppercase">{opp.probability}%</span>
                   </div>
                 </td>
-                <td className="text-center py-4 text-xs font-medium uppercase text-gray-600">{opp.stage.replace('_', ' ')}</td>
-                <td className="text-center py-4 text-xs text-gray-500 pr-6">{opp.createdDate}</td>
+                <td className="text-center py-4 text-xs font-black uppercase text-foreground">{opp.stage.replace('_', ' ')}</td>
+                <td className="text-center py-4 text-xs font-black text-foreground uppercase pr-6">{opp.createdDate}</td>
               </tr>
             ))}
           </tbody>

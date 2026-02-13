@@ -57,7 +57,7 @@ export default function SignIn() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="OPERATOR@SYSTEM.COM"
-                                    className="w-full pl-12 pr-4 py-4 bg-white border-4 border-foreground text-sm font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[4px_4px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all"
+                                    className="w-[67%] pl-12 pr-4 py-4 bg-white border-4 border-foreground text-sm font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[4px_4px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all"
                                     required
                                 />
                             </div>
@@ -75,7 +75,7 @@ export default function SignIn() {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-full pl-12 pr-4 py-4 bg-white border-4 border-foreground text-sm font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[4px_4px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all"
+                                    className="w-[67%] pl-12 pr-4 py-4 bg-white border-4 border-foreground text-sm font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[4px_4px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all"
                                     required
                                 />
                             </div>

@@ -6,26 +6,26 @@ export default function Landing() {
     return (
         <div className="min-h-screen bg-white font-sans selection:bg-primary/20 selection:text-primary relative overflow-hidden">
             {/* Ambient Background Elements */}
-            <div className="absolute top-0 left-0 w-full h-[100vh] bg-gradient-to-b from-purple-50/50 to-transparent pointer-events-none -z-10" />
-            <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px] -z-10" />
-            <div className="absolute bottom-[20%] left-[-5%] w-[30%] h-[30%] bg-purple-200/20 rounded-full blur-[100px] -z-10" />
+            <div className="absolute top-0 left-0 w-full h-[100vh] bg-gradient-to-b from-red-50/30 to-transparent pointer-events-none -z-10" />
+            <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] -z-10" />
+            <div className="absolute bottom-[20%] left-[-5%] w-[30%] h-[30%] bg-accent/10 blur-[100px] -z-10" />
 
             {/* Top Navigation Bar */}
-            <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 py-5 px-8">
+            <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b-4 border-foreground py-5 px-8" style={{ boxShadow: "0px 4px 0px 0px hsl(var(--foreground))" }}>
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-3 group cursor-pointer">
-                        <div className="h-10 w-10 flex items-center justify-center bg-primary rounded-xl shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                        <div className="h-10 w-10 flex items-center justify-center bg-primary border-2 border-foreground group-hover:scale-110 transition-transform" style={{ boxShadow: "3px 3px 0px 0px hsl(var(--foreground))" }}>
                             <Zap className="h-5 w-5 text-white fill-white" />
                         </div>
-                        <span className="text-xl font-extrabold text-foreground tracking-tight">Revenue Navigator</span>
+                        <span className="text-xl font-black text-foreground tracking-tight uppercase">Revenue Navigator</span>
                     </div>
                     <div className="hidden md:flex items-center gap-10">
                         {['Features', 'Pricing', 'Case Studies', 'Resources'].map((item) => (
-                            <a key={item} href="#" className="text-sm font-bold text-gray-400 hover:text-primary transition-colors tracking-wide uppercase text-[11px]">
+                            <a key={item} href="#" className="text-sm font-black text-foreground/60 hover:text-primary transition-colors tracking-wide uppercase text-[11px]">
                                 {item}
                             </a>
                         ))}
-                        <Link to="/signin" className="px-6 py-2.5 bg-primary/5 hover:bg-primary/10 rounded-xl text-primary text-[11px] font-black uppercase tracking-widest transition-all">
+                        <Link to="/signin" className="px-6 py-2.5 bg-white border-2 border-foreground text-primary text-[11px] font-black uppercase tracking-widest transition-all" style={{ boxShadow: "3px 3px 0px 0px hsl(var(--foreground))" }}>
                             Sign In
                         </Link>
                     </div>
@@ -33,12 +33,12 @@ export default function Landing() {
             </nav>
 
             {/* Announcement Badge */}
-            <div className="bg-primary/[0.03] border-b border-primary/5 overflow-hidden">
+            <div className="bg-accent border-b-4 border-foreground overflow-hidden">
                 <motion.div
                     initial={{ x: "100%" }}
                     animate={{ x: "-100%" }}
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="whitespace-nowrap py-3 px-8 text-[10px] font-black uppercase tracking-[0.4em] text-primary/60"
+                    className="whitespace-nowrap py-3 px-8 text-[10px] font-black uppercase tracking-[0.4em] text-white"
                 >
                     🚀 NEXT-GEN AI RENEWAL INTELLIGENCE IS HERE • MAXIMIZE EVERY UPSELL OPPORTUNITY • TRUSTED BY 500+ REVENUE TEAMS • PREDICT CHURN WITH 98% ACCURACY •
                 </motion.div>
@@ -53,9 +53,10 @@ export default function Landing() {
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="inline-flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-full border border-primary/10 mb-8"
+                                className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 border-2 border-foreground mb-8"
+                                style={{ boxShadow: "3px 3px 0px 0px hsl(var(--foreground))" }}
                             >
-                                <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                <span className="flex h-2 w-2 bg-primary animate-pulse border border-foreground" />
                                 <span className="text-[10px] font-black text-primary uppercase tracking-widest">Revenue Intelligence v2.0</span>
                             </motion.div>
 
@@ -63,16 +64,16 @@ export default function Landing() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.1 }}
-                                className="text-6xl lg:text-7xl font-extrabold text-foreground mb-8 leading-[1.05] tracking-tight"
+                                className="text-6xl lg:text-7xl font-black text-foreground mb-8 leading-[1.05] tracking-tight uppercase"
                             >
-                                Never miss a <span className="text-primary italic">renewal</span> again.
+                                Never miss a <span className="text-primary">renewal</span> again.
                             </motion.h1>
 
                             <motion.p
                                 initial={{ opacity: 0, y: 15 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.2 }}
-                                className="text-xl text-gray-500 mb-10 max-w-xl leading-relaxed font-medium"
+                                className="text-xl text-foreground/70 mb-10 max-w-xl leading-relaxed font-bold uppercase tracking-wide"
                             >
                                 AI-powered insights that predict churn, identify expansion opportunities, and automate outreach—all in one elegant platform.
                             </motion.p>
@@ -85,11 +86,12 @@ export default function Landing() {
                             >
                                 <Link
                                     to="/signin"
-                                    className="px-10 py-5 bg-primary text-white rounded-[1.25rem] font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-3 shadow-2xl shadow-primary/30"
+                                    className="px-10 py-5 bg-primary text-white border-2 border-foreground font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3"
+                                    style={{ boxShadow: "6px 6px 0px 0px hsl(var(--foreground))" }}
                                 >
                                     Start Free Trial <ArrowRight size={18} />
                                 </Link>
-                                <button className="px-10 py-5 bg-white text-foreground border border-gray-100 rounded-[1.25rem] font-black text-[11px] uppercase tracking-widest hover:bg-gray-50 transition-all shadow-xl shadow-purple-900/5">
+                                <button className="px-10 py-5 bg-white text-foreground border-2 border-foreground font-black text-[11px] uppercase tracking-widest transition-all" style={{ boxShadow: "6px 6px 0px 0px hsl(var(--foreground))" }}>
                                     Watch Demo
                                 </button>
                             </motion.div>
@@ -121,62 +123,62 @@ export default function Landing() {
                                 <div className="absolute -inset-10 bg-gradient-to-tr from-primary/20 to-purple-400/20 blur-3xl opacity-30 -z-10 animate-pulse" />
 
                                 {/* Main Card */}
-                                <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 relative shadow-[0_32px_64px_-16px_rgba(88,28,135,0.1)]">
+                                <div className="bg-white border-4 border-foreground p-10 relative" style={{ boxShadow: "8px 8px 0px 0px hsl(var(--foreground))" }}>
                                     {/* Top Badge */}
-                                    <div className="absolute -top-4 -right-4 bg-primary text-white rounded-2xl px-5 py-2.5 rotate-6 shadow-xl shadow-primary/30">
-                                        <span className="font-black text-[10px] tracking-widest">AI_CORE_ACTIVE</span>
+                                    <div className="absolute -top-4 -right-4 bg-primary text-white border-2 border-foreground px-5 py-2.5 rotate-6" style={{ boxShadow: "4px 4px 0px 0px hsl(var(--foreground))" }}>
+                                        <span className="font-black text-[10px] tracking-widest uppercase">AI_CORE_ACTIVE</span>
                                     </div>
 
                                     {/* Account Icon */}
                                     <div className="flex items-center gap-5 mb-8">
-                                        <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10">
+                                        <div className="w-16 h-16 bg-primary/10 flex items-center justify-center border-2 border-foreground" style={{ boxShadow: "3px 3px 0px 0px hsl(var(--foreground))" }}>
                                             <TrendingUp className="h-8 w-8 text-primary" />
                                         </div>
                                         <div>
-                                            <div className="text-xl font-extrabold text-foreground tracking-tight">Acme Corp Renewal</div>
-                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Enterprise Cluster • $180K ARR</div>
+                                            <div className="text-xl font-black text-foreground tracking-tight uppercase">Acme Corp Renewal</div>
+                                            <div className="text-[10px] text-foreground/60 font-black uppercase tracking-widest mt-1">Enterprise Cluster • $180K ARR</div>
                                         </div>
                                     </div>
 
                                     {/* Progress Bars */}
                                     <div className="space-y-4 mb-10">
-                                        <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden p-[2px]">
+                                        <div className="h-3 bg-gray-100 border-2 border-foreground overflow-hidden">
                                             <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: "95%" }}
-                                                className="h-full bg-red-400 rounded-full"
+                                                className="h-full bg-primary border-r-2 border-foreground"
                                             />
                                         </div>
-                                        <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden p-[2px]">
+                                        <div className="h-3 bg-gray-100 border-2 border-foreground overflow-hidden">
                                             <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: "80%" }}
-                                                className="h-full bg-amber-400 rounded-full"
+                                                className="h-full bg-accent border-r-2 border-foreground"
                                             />
                                         </div>
-                                        <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden p-[2px]">
+                                        <div className="h-3 bg-gray-100 border-2 border-foreground overflow-hidden">
                                             <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: "60%" }}
-                                                className="h-full bg-emerald-400 rounded-full"
+                                                className="h-full bg-success border-r-2 border-foreground"
                                             />
                                         </div>
                                     </div>
 
                                     {/* Stats */}
-                                    <div className="flex items-center justify-between pt-8 border-t border-gray-50">
+                                    <div className="flex items-center justify-between pt-8 border-t-4 border-foreground">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
+                                            <div className="h-10 w-10 bg-red-50 border-2 border-foreground flex items-center justify-center" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>
                                                 <Bell size={16} className="text-red-500" />
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">RISK_LEVEL</p>
-                                                <span className="text-sm font-extrabold text-red-500">CRITICAL_FLAG</span>
+                                                <p className="text-[9px] font-black uppercase text-foreground/60 tracking-widest">RISK_LEVEL</p>
+                                                <span className="text-sm font-black text-red-500 uppercase">CRITICAL_FLAG</span>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">DEADLINE</p>
-                                            <span className="text-sm font-extrabold text-foreground">14_DAYS</span>
+                                            <p className="text-[9px] font-black uppercase text-foreground/60 tracking-widest">DEADLINE</p>
+                                            <span className="text-sm font-black text-foreground uppercase">14_DAYS</span>
                                         </div>
                                     </div>
                                 </div>
@@ -185,14 +187,16 @@ export default function Landing() {
                                 <motion.div
                                     animate={{ y: [0, -10, 0] }}
                                     transition={{ duration: 4, repeat: Infinity }}
-                                    className="absolute -top-12 -left-12 bg-white border border-gray-50 rounded-2xl p-4 shadow-xl shadow-purple-900/5"
+                                    className="absolute -top-12 -left-12 bg-white border-2 border-foreground p-4"
+                                    style={{ boxShadow: "4px 4px 0px 0px hsl(var(--foreground))" }}
                                 >
                                     <span className="text-3xl">🎯</span>
                                 </motion.div>
                                 <motion.div
                                     animate={{ y: [0, 10, 0] }}
                                     transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
-                                    className="absolute top-1/2 -right-12 bg-white border border-gray-50 rounded-2xl p-4 shadow-xl shadow-purple-900/5 rotate-12"
+                                    className="absolute top-1/2 -right-12 bg-white border-2 border-foreground p-4 rotate-12"
+                                    style={{ boxShadow: "4px 4px 0px 0px hsl(var(--foreground))" }}
                                 >
                                     <span className="text-3xl">💰</span>
                                 </motion.div>

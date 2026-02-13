@@ -73,7 +73,8 @@ export default function AccountDetailPage() {
                     <div>
                         <button
                             onClick={() => navigate(-1)}
-                            className="group px-4 py-2 bg-gray-50 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all"
+                            className="group px-4 py-2 bg-white text-foreground/60 hover:text-primary hover:bg-primary/5 border-2 border-foreground rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all"
+                            style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
                         >
                             <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
                             BACK_TO_COMMAND_CENTER
@@ -82,26 +83,25 @@ export default function AccountDetailPage() {
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
                         <div className="flex items-center gap-8">
-                            <div className="h-24 w-24 flex items-center justify-center bg-white border border-gray-100 shadow-2xl shadow-purple-900/10 rounded-3xl relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
-                                <Building2 className="h-10 w-10 text-primary relative z-10" />
+                            <div className="w-24 h-24 flex items-center justify-center bg-primary border-2 border-foreground rounded-lg relative overflow-hidden group shrink-0" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+                                <Building2 className="h-10 w-10 text-white relative z-10" />
                             </div>
                             <div>
                                 <div className="flex items-center gap-4 mb-3">
-                                    <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-none">
+                                    <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
                                         {account.name}
                                     </h1>
-                                    <div className="sticker-outline bg-emerald-50 text-emerald-600 border-emerald-100 px-3 py-1 font-bold text-[10px] tracking-widest">
+                                    <div className="px-3 py-1 bg-success text-white border-2 border-foreground rounded-lg font-black text-[10px] uppercase tracking-widest" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                                         ACTIVE_ENTITY
                                     </div>
                                 </div>
-                                <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em]">
-                                    {account.industry} <span className="mx-3 text-gray-200">/</span> ID: {account.id}
+                                <p className="text-sm font-black text-foreground/60 uppercase tracking-wider">
+                                    {account.industry.toUpperCase()} <span className="mx-3 text-foreground/30">/</span> ID: {account.id}
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <button className="btn-punch px-8 py-4 bg-primary text-white shadow-lg shadow-primary/20 flex items-center gap-3 group">
+                            <button className="btn-punch px-8 py-4 bg-primary text-white flex items-center gap-3 group">
                                 <Edit2 size={18} />
                                 MODIFY_DATA
                             </button>
@@ -111,23 +111,23 @@ export default function AccountDetailPage() {
             </div>
 
             {/* Tabs */}
-            <div className="bg-white border-b border-gray-50 sticky top-0 z-30 px-8">
+            <div className="bg-white border-b-2 border-foreground/20 sticky top-0 z-30 px-8">
                 <div className="max-w-7xl mx-auto flex">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-8 py-6 text-xs font-extrabold uppercase tracking-[0.2em] transition-all flex items-center gap-3 relative group ${activeTab === tab.id
+                            className={`px-8 py-6 text-xs font-black uppercase tracking-wider transition-all flex items-center gap-3 relative group ${activeTab === tab.id
                                 ? 'text-primary'
-                                : 'text-gray-400 hover:text-gray-600'
+                                : 'text-foreground/40 hover:text-foreground/60'
                                 }`}
                         >
-                            <span className={activeTab === tab.id ? 'text-primary' : 'text-gray-300'}>{tab.icon}</span>
+                            <span className={activeTab === tab.id ? 'text-primary' : 'text-foreground/30'}>{tab.icon}</span>
                             {tab.label}
                             {activeTab === tab.id && (
                                 <motion.div
                                     layoutId="activeTab"
-                                    className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full"
+                                    className="absolute bottom-0 left-0 right-0 h-1 bg-primary"
                                 />
                             )}
                         </button>
@@ -142,19 +142,21 @@ export default function AccountDetailPage() {
                         {/* Key Metrics Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {[
-                                { label: 'ANNUAL_REVENUE', value: formatCurrency(account.arr), icon: <TrendingUp size={20} /> },
-                                { label: 'RENEWAL_HORIZON', value: `T-${getDaysUntil(account.renewalDate)}D`, alert: getDaysUntil(account.renewalDate) <= 30, icon: <Clock size={20} /> },
-                                { label: 'UTILIZATION_INDEX', value: `${account.licensesUsed}/${account.licensesTotal}`, icon: <Users size={20} /> },
-                                { label: 'DEPLOYMENT_STAGE', value: account.renewalStage.toUpperCase(), icon: <BarChart3 size={20} /> }
+                                { label: 'ANNUAL_REVENUE', value: formatCurrency(account.arr), icon: <TrendingUp size={20} />, iconColor: 'text-foreground' },
+                                { label: 'RENEWAL_HORIZON', value: `T-${getDaysUntil(account.renewalDate)}D`, alert: getDaysUntil(account.renewalDate) <= 30, icon: <Clock size={20} />, iconColor: 'text-foreground' },
+                                { label: 'UTILIZATION_INDEX', value: `${account.licensesUsed}/${account.licensesTotal}`, icon: <Users size={20} />, iconColor: 'text-foreground' },
+                                { label: 'DEPLOYMENT_STAGE', value: account.renewalStage.toUpperCase(), icon: <BarChart3 size={20} />, iconColor: 'text-foreground' }
                             ].map((m, i) => (
-                                <div key={i} className="paper-card p-6 bg-white border border-gray-100 shadow-xl shadow-purple-900/5 group hover:border-primary/20 transition-all">
+                                <div key={i} className="paper-card p-6 bg-white group">
                                     <div className="flex items-center justify-between mb-6">
-                                        <div className="p-2.5 bg-gray-50 text-gray-400 group-hover:text-primary group-hover:bg-primary/5 rounded-xl transition-colors">
-                                            {m.icon}
+                                        <div className="w-10 h-10 p-2 bg-white border-2 border-foreground rounded-lg flex items-center justify-center shrink-0" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+                                            <div className={m.iconColor}>
+                                                {m.icon}
+                                            </div>
                                         </div>
-                                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">{m.label}</p>
+                                        <p className="text-[10px] uppercase font-black text-foreground/60 tracking-widest">{m.label}</p>
                                     </div>
-                                    <p className={`text-4xl font-extrabold tracking-tight ${m.alert ? 'text-red-500' : 'text-foreground'}`}>
+                                    <p className={`text-4xl font-black tracking-tight ${m.alert ? 'text-red-600' : 'text-foreground'}`}>
                                         {m.value}
                                     </p>
                                 </div>
@@ -166,36 +168,35 @@ export default function AccountDetailPage() {
                             {/* Health & Risk */}
                             <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {/* Health Score */}
-                                <div className="paper-card p-8 bg-white border border-gray-100 shadow-xl shadow-purple-900/5">
+                                <div className="paper-card p-8 bg-white">
                                     <div className="flex items-center justify-between mb-8">
-                                        <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400">HEALTH_INDEX</h3>
-                                        <span className={`text-3xl font-extrabold tracking-tight ${account.healthScore >= 70 ? 'text-emerald-500' : account.healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+                                        <h3 className="text-[11px] font-black tracking-widest uppercase text-foreground/60">HEALTH_INDEX</h3>
+                                        <span className={`text-3xl font-black tracking-tight ${account.healthScore >= 70 ? 'text-success' : account.healthScore >= 40 ? 'text-warning' : 'text-destructive'}`}>
                                             {account.healthScore}%
                                         </span>
                                     </div>
-                                    <div className="w-full h-2.5 bg-gray-50 rounded-full overflow-hidden">
+                                    <div className="w-full h-2.5 bg-gray-50 rounded-lg overflow-hidden border border-foreground/20">
                                         <div
-                                            className={`h-full transition-all duration-500 ${account.healthScore >= 70 ? 'bg-emerald-500' : account.healthScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                            className={`h-full transition-all duration-500 ${account.healthScore >= 70 ? 'bg-success' : account.healthScore >= 40 ? 'bg-warning' : 'bg-destructive'}`}
                                             style={{ width: `${account.healthScore}%` }}
                                         />
                                     </div>
-                                    <p className="text-[10px] font-bold text-gray-400 mt-4 uppercase tracking-widest">STABILITY_METRIC: NOMINAL</p>
+                                    <p className="text-[10px] font-black text-foreground/60 mt-4 uppercase tracking-widest">STABILITY_METRIC: NOMINAL</p>
                                 </div>
 
                                 {/* Churn Risk */}
-                                <div className="paper-card p-8 bg-foreground text-white border-none shadow-2xl shadow-purple-900/20 relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
+                                <div className="paper-card p-8 bg-foreground text-white relative overflow-hidden">
                                     <div className="relative z-10">
                                         <div className="flex items-center justify-between mb-8">
-                                            <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-white/40">RISK_ARCHITECTURE</h3>
-                                            <AlertTriangle className={`w-5 h-5 ${account.churnProbability >= 0.7 ? 'text-red-500' : 'text-primary'}`} />
+                                            <h3 className="text-[11px] font-black tracking-widest uppercase text-white/60">RISK_ARCHITECTURE</h3>
+                                            <AlertTriangle className={`w-5 h-5 ${account.churnProbability >= 0.7 ? 'text-destructive' : 'text-primary'}`} />
                                         </div>
                                         <div className="flex items-end justify-between">
                                             <div>
-                                                <p className="text-4xl font-extrabold tracking-tight mb-1">{Math.round(account.churnProbability * 100)}%</p>
-                                                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">CHURN_PROBABILITY</p>
+                                                <p className="text-4xl font-black tracking-tight mb-1">{Math.round(account.churnProbability * 100)}%</p>
+                                                <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">CHURN_PROBABILITY</p>
                                             </div>
-                                            <div className="px-3 py-1 bg-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest">
+                                            <div className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-[10px] font-black text-foreground uppercase tracking-widest" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                                                 {account.riskScore >= 70 ? 'CRITICAL' : 'STABLE'}
                                             </div>
                                         </div>
@@ -203,20 +204,20 @@ export default function AccountDetailPage() {
                                 </div>
 
                                 {/* Sentiment Audit */}
-                                <div className="md:col-span-2 paper-card p-8 bg-white border border-gray-100 shadow-xl shadow-purple-900/5">
+                                <div className="md:col-span-2 paper-card p-8 bg-white">
                                     <div className="flex items-center justify-between mb-8">
-                                        <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400">SENTIMENT_AUDIT_STREAM</h3>
-                                        <span className="px-3 py-1 bg-gray-50 border border-gray-100 rounded-lg text-[10px] font-bold text-gray-400">P_IDX: {account.sentimentScore.toFixed(2)}</span>
+                                        <h3 className="text-[11px] font-black tracking-widest uppercase text-foreground/60">SENTIMENT_AUDIT_STREAM</h3>
+                                        <span className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-[10px] font-black text-foreground/60 uppercase tracking-wider" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>P_IDX: {account.sentimentScore.toFixed(2)}</span>
                                     </div>
                                     <div className="flex items-center gap-8">
-                                        <div className="h-20 w-20 flex items-center justify-center bg-gray-50 rounded-3xl text-5xl">
+                                        <div className="w-10 h-10 flex items-center justify-center bg-white border-2 border-foreground rounded-lg text-5xl shrink-0" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                                             {getSentimentEmoji(account.sentimentScore)}
                                         </div>
                                         <div>
-                                            <h4 className={`text-3xl font-extrabold tracking-tight mb-2 uppercase ${getSentimentColor(account.sentimentScore)}`}>
+                                            <h4 className={`text-3xl font-black tracking-tight mb-2 uppercase ${getSentimentColor(account.sentimentScore)}`}>
                                                 {getSentimentLabel(account.sentimentScore)}
                                             </h4>
-                                            <p className="text-sm font-medium text-gray-500">
+                                            <p className="text-sm font-black text-foreground/60 uppercase tracking-wider">
                                                 Linguistic patterns indicate a {getSentimentLabel(account.sentimentScore).toLowerCase()} trajectory for the fiscal quarter.
                                             </p>
                                         </div>
@@ -225,20 +226,20 @@ export default function AccountDetailPage() {
                             </div>
 
                             {/* Relationship Pulse */}
-                            <div className="paper-card p-8 bg-primary/5 border border-primary/10 shadow-xl shadow-purple-900/5 flex flex-col justify-between">
+                            <div className="paper-card p-8 bg-primary/5 flex flex-col justify-between">
                                 <div>
-                                    <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-primary/60 mb-8">RELATIONSHIP_PULSE</h3>
+                                    <h3 className="text-[11px] font-black tracking-widest uppercase text-primary/60 mb-8">RELATIONSHIP_PULSE</h3>
                                     <div className="flex items-baseline gap-2 mb-1">
-                                        <span className="text-5xl font-extrabold text-primary tracking-tight">{account.relationshipScore}%</span>
-                                        <span className="text-sm font-bold text-primary/40 uppercase tracking-widest">CORE</span>
+                                        <span className="text-5xl font-black text-primary tracking-tight">{account.relationshipScore}%</span>
+                                        <span className="text-sm font-black text-primary/40 uppercase tracking-widest">CORE</span>
                                     </div>
-                                    <p className="text-[10px] font-bold text-primary/40 uppercase tracking-widest mb-10">Engagement Matrix Alpha</p>
+                                    <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest mb-10">ENGAGEMENT MATRIX ALPHA</p>
                                 </div>
                                 <div className="space-y-4">
-                                    <div className="h-1 bg-primary/10 rounded-full w-full">
-                                        <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${account.relationshipScore}%` }} />
+                                    <div className="h-1 bg-primary/10 rounded-lg w-full border border-foreground/20">
+                                        <div className="h-full bg-primary rounded-lg transition-all duration-1000" style={{ width: `${account.relationshipScore}%` }} />
                                     </div>
-                                    <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">SYNC_STATUS: ESTABLISHED</p>
+                                    <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest">SYNC_STATUS: ESTABLISHED</p>
                                 </div>
                             </div>
                         </div>
@@ -266,9 +267,9 @@ export default function AccountDetailPage() {
                                     { label: 'CONTRACT_ROOT', value: account.contractStart, mono: true },
                                     { label: 'RENEWAL_NODE', value: account.renewalDate, mono: true }
                                 ].map((field, i) => (
-                                    <div key={i} className="paper-card p-6 bg-white border border-gray-100">
-                                        <p className="text-[9px] uppercase font-bold text-gray-400 tracking-widest mb-3">{field.label}</p>
-                                        <p className={`text-lg font-bold text-foreground tracking-tight ${field.mono ? 'font-mono' : ''}`}>
+                                    <div key={i} className="paper-card p-6 bg-white">
+                                        <p className="text-[9px] uppercase font-black text-foreground/60 tracking-widest mb-3">{field.label}</p>
+                                        <p className={`text-lg font-black text-foreground tracking-tight uppercase ${field.mono ? 'font-mono' : ''}`}>
                                             {field.value}
                                         </p>
                                     </div>
@@ -329,32 +330,32 @@ function ContactInfoSection({ account }: { account: any }) {
     }
 
     return (
-        <div className="paper-card p-10 bg-white border border-gray-100 shadow-xl shadow-purple-900/5 rounded-3xl relative overflow-hidden">
+        <div className="paper-card p-10 bg-white relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
 
             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
                 <div className="flex items-center gap-6">
-                    <div className="h-16 w-16 flex items-center justify-center bg-primary/5 rounded-2xl border border-primary/10">
-                        <Users className="w-8 h-8 text-primary" />
+                    <div className="w-16 h-16 flex items-center justify-center bg-primary border-2 border-foreground rounded-lg shrink-0" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+                        <Users className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                        <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400 mb-1">PRIMARY_STAKEHOLDER</h4>
-                        <p className="text-2xl font-extrabold tracking-tight text-foreground">{contactName || "UNASSIGNED"}</p>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-foreground/60 mb-1">PRIMARY_STAKEHOLDER</h4>
+                        <p className="text-2xl font-black tracking-tight text-foreground uppercase">{contactName || "UNASSIGNED"}</p>
                     </div>
                 </div>
                 {!isEditing ? (
                     <button
                         onClick={() => setIsEditing(true)}
-                        className="btn-punch px-6 py-3 bg-gray-50 text-gray-500 hover:text-primary hover:bg-primary/5 text-[10px] font-black uppercase tracking-widest"
+                        className="btn-punch px-6 py-3 bg-foreground text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
                     >
-                        <Edit2 size={14} className="mr-2" />
+                        <Edit2 size={14} />
                         MODIFY_RECORD
                     </button>
                 ) : (
                     <div className="flex gap-4">
                         <button
                             onClick={handleCancel}
-                            className="btn-punch px-6 py-3 bg-white text-gray-400 text-[10px] font-black uppercase tracking-widest"
+                            className="btn-punch px-6 py-3 bg-white text-foreground text-[10px] font-black uppercase tracking-widest"
                         >
                             ABORT
                         </button>
@@ -378,7 +379,8 @@ function ContactInfoSection({ account }: { account: any }) {
                                 type="text"
                                 value={contactName}
                                 onChange={(e) => setContactName(e.target.value)}
-                                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-inner"
+                                className="w-[67%] px-6 py-4 bg-white border-2 border-foreground rounded-lg text-sm font-black text-foreground uppercase tracking-wide focus:outline-none focus:bg-primary/5 transition-all"
+                                style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
                             />
                         </div>
                     )}
@@ -391,15 +393,16 @@ function ContactInfoSection({ account }: { account: any }) {
                                 type="email"
                                 value={contactEmail}
                                 onChange={(e) => setContactEmail(e.target.value)}
-                                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-inner"
+                                className="w-[67%] px-6 py-4 bg-white border-2 border-foreground rounded-lg text-sm font-black text-foreground uppercase tracking-wide focus:outline-none focus:bg-primary/5 transition-all"
+                                style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
                             />
                         ) : (
-                            <div className="paper-card bg-gray-50/50 p-6 rounded-2xl border border-gray-100 group hover:border-primary/20 transition-all">
+                            <div className="paper-card bg-white p-6 group">
                                 <a
                                     href={`mailto:${contactEmail}`}
-                                    className="text-lg font-bold text-foreground hover:text-primary transition-colors flex items-center gap-4"
+                                    className="text-lg font-black text-foreground hover:text-primary transition-colors flex items-center gap-4 uppercase tracking-wide"
                                 >
-                                    <div className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 group-hover:text-primary transition-colors">
+                                    <div className="w-10 h-10 p-2 bg-white border-2 border-foreground rounded-lg text-foreground/60 flex items-center justify-center shrink-0 group-hover:text-primary transition-colors" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                                         <Mail size={18} />
                                     </div>
                                     {contactEmail || "NOT_DEFINED"}
@@ -418,15 +421,16 @@ function ContactInfoSection({ account }: { account: any }) {
                                 type="tel"
                                 value={contactPhone}
                                 onChange={(e) => setContactPhone(e.target.value)}
-                                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-inner"
+                                className="w-[67%] px-6 py-4 bg-white border-2 border-foreground rounded-lg text-sm font-black text-foreground uppercase tracking-wide focus:outline-none focus:bg-primary/5 transition-all"
+                                style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
                             />
                         ) : (
-                            <div className="paper-card bg-gray-50/50 p-6 rounded-2xl border border-gray-100 group hover:border-primary/20 transition-all">
+                            <div className="paper-card bg-white p-6 group">
                                 <a
                                     href={`tel:${contactPhone}`}
-                                    className="text-lg font-bold text-foreground hover:text-primary transition-colors flex items-center gap-4"
+                                    className="text-lg font-black text-foreground hover:text-primary transition-colors flex items-center gap-4 uppercase tracking-wide"
                                 >
-                                    <div className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 group-hover:text-primary transition-colors">
+                                    <div className="w-10 h-10 p-2 bg-white border-2 border-foreground rounded-lg text-foreground/60 flex items-center justify-center shrink-0 group-hover:text-primary transition-colors" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                                         <Phone size={18} />
                                     </div>
                                     <span className="font-mono">{contactPhone || "NOT_DEFINED"}</span>
@@ -435,12 +439,12 @@ function ContactInfoSection({ account }: { account: any }) {
                         )}
                     </div>
 
-                    <div className="p-6 bg-primary/[0.03] border border-primary/5 rounded-2xl flex items-center gap-6">
-                        <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center text-xl shadow-sm border border-gray-100">
+                    <div className="paper-card p-6 bg-white flex items-center gap-6">
+                        <div className="w-12 h-12 bg-white border-2 border-foreground rounded-lg flex items-center justify-center text-xl shrink-0" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                             💡
                         </div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase leading-relaxed tracking-wider">
-                            Last interaction recorded <span className="text-primary">3 DAYS AGO</span> via Automated Voice Path.
+                        <p className="text-[10px] font-black text-foreground/60 uppercase leading-relaxed tracking-wider">
+                            Last interaction recorded <span className="text-primary font-black">3 DAYS AGO</span> via Automated Voice Path.
                         </p>
                     </div>
                 </div>
