@@ -1,230 +1,353 @@
-import { ArrowRight, Zap, BarChart3, Users, TrendingUp, Shield, Target, Bell, CheckCircle } from "lucide-react";
+import { ArrowRight, Zap, BarChart3, Users, TrendingUp, Shield, Target, Bell, CheckCircle, Globe, Cpu, RefreshCw, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
 export default function Landing() {
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-white font-sans selection:bg-primary/20 selection:text-primary relative overflow-hidden">
+            {/* Ambient Background Elements */}
+            <div className="absolute top-0 left-0 w-full h-[100vh] bg-gradient-to-b from-purple-50/50 to-transparent pointer-events-none -z-10" />
+            <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px] -z-10" />
+            <div className="absolute bottom-[20%] left-[-5%] w-[30%] h-[30%] bg-purple-200/20 rounded-full blur-[100px] -z-10" />
+
+            {/* Top Navigation Bar */}
+            <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 py-5 px-8">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-3 group cursor-pointer">
+                        <div className="h-10 w-10 flex items-center justify-center bg-primary rounded-xl shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+                            <Zap className="h-5 w-5 text-white fill-white" />
+                        </div>
+                        <span className="text-xl font-extrabold text-foreground tracking-tight">Revenue Navigator</span>
+                    </div>
+                    <div className="hidden md:flex items-center gap-10">
+                        {['Features', 'Pricing', 'Case Studies', 'Resources'].map((item) => (
+                            <a key={item} href="#" className="text-sm font-bold text-gray-400 hover:text-primary transition-colors tracking-wide uppercase text-[11px]">
+                                {item}
+                            </a>
+                        ))}
+                        <Link to="/signin" className="px-6 py-2.5 bg-primary/5 hover:bg-primary/10 rounded-xl text-primary text-[11px] font-black uppercase tracking-widest transition-all">
+                            Sign In
+                        </Link>
+                    </div>
+                </div>
+            </nav>
+
+            {/* Announcement Badge */}
+            <div className="bg-primary/[0.03] border-b border-primary/5 overflow-hidden">
+                <motion.div
+                    initial={{ x: "100%" }}
+                    animate={{ x: "-100%" }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="whitespace-nowrap py-3 px-8 text-[10px] font-black uppercase tracking-[0.4em] text-primary/60"
+                >
+                    🚀 NEXT-GEN AI RENEWAL INTELLIGENCE IS HERE • MAXIMIZE EVERY UPSELL OPPORTUNITY • TRUSTED BY 500+ REVENUE TEAMS • PREDICT CHURN WITH 98% ACCURACY •
+                </motion.div>
+            </div>
+
             {/* Hero Section */}
-            <div className="relative overflow-hidden bg-white border-b-4 border-black">
-                <div className="max-w-7xl mx-auto px-6 py-16 lg:py-24">
-                    <div className="text-center">
-                        <motion.div
-                            initial={{ scale: 0, rotate: -180 }}
-                            animate={{ scale: 1, rotate: 0 }}
-                            transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
-                            className="inline-flex items-center gap-2 mb-6"
-                        >
-                            <div className="h-12 w-12 flex items-center justify-center bg-indigo-600 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                <Zap className="h-6 w-6 text-white" />
-                            </div>
-                            <div className="flex flex-col items-start">
-                                <span className="text-2xl font-black text-black tracking-tight uppercase leading-tight">
-                                    Revenue
-                                </span>
-                                <span className="text-sm font-bold text-indigo-600 tracking-wider uppercase leading-tight">
-                                    Navigator
-                                </span>
-                            </div>
-                        </motion.div>
-
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.3, duration: 0.6 }}
-                            className="text-5xl lg:text-6xl font-black text-black mb-6 uppercase tracking-tight"
-                        >
-                            Navigate Your Revenue
-                            <br />
-                            <span className="text-indigo-600">With Precision</span>
-                        </motion.h1>
-
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.5, duration: 0.6 }}
-                            className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto font-medium"
-                        >
-                            AI-powered renewal management and upsell intelligence for modern revenue teams.
-                            Predict churn, identify opportunities, and automate outreach—all in one platform.
-                        </motion.p>
-
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.7, duration: 0.6 }}
-                            className="flex gap-4 justify-center"
-                        >
-                            <Link
-                                to="/signin"
-                                className="px-8 py-4 bg-black text-white border-2 border-black font-black uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all inline-flex items-center gap-2"
+            <div className="relative py-20 lg:py-32">
+                <div className="max-w-7xl mx-auto px-8 relative z-10">
+                    <div className="grid lg:grid-cols-2 gap-24 items-center">
+                        {/* Left Content */}
+                        <div className="text-left">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="inline-flex items-center gap-2 px-3 py-1 bg-primary/5 rounded-full border border-primary/10 mb-8"
                             >
-                                Get Started <ArrowRight className="h-5 w-5" />
-                            </Link>
-                            <button className="px-8 py-4 bg-white text-black border-2 border-black font-black uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
-                                Watch Demo
-                            </button>
-                        </motion.div>
+                                <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest">Revenue Intelligence v2.0</span>
+                            </motion.div>
+
+                            <motion.h1
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                                className="text-6xl lg:text-7xl font-extrabold text-foreground mb-8 leading-[1.05] tracking-tight"
+                            >
+                                Never miss a <span className="text-primary italic">renewal</span> again.
+                            </motion.h1>
+
+                            <motion.p
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="text-xl text-gray-500 mb-10 max-w-xl leading-relaxed font-medium"
+                            >
+                                AI-powered insights that predict churn, identify expansion opportunities, and automate outreach—all in one elegant platform.
+                            </motion.p>
+
+                            <motion.div
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.3 }}
+                                className="flex flex-wrap gap-4 mb-16"
+                            >
+                                <Link
+                                    to="/signin"
+                                    className="px-10 py-5 bg-primary text-white rounded-[1.25rem] font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-all flex items-center gap-3 shadow-2xl shadow-primary/30"
+                                >
+                                    Start Free Trial <ArrowRight size={18} />
+                                </Link>
+                                <button className="px-10 py-5 bg-white text-foreground border border-gray-100 rounded-[1.25rem] font-black text-[11px] uppercase tracking-widest hover:bg-gray-50 transition-all shadow-xl shadow-purple-900/5">
+                                    Watch Demo
+                                </button>
+                            </motion.div>
+
+                            {/* Stats Cards */}
+                            <div className="grid grid-cols-3 gap-6">
+                                {[
+                                    { label: 'CHURN_PREDICTION', value: '98.4%', color: 'text-primary' },
+                                    { label: 'AVG_REVENUE_SAVED', value: '$2.4M', color: 'text-indigo-600' },
+                                    { label: 'ACTIVE_TEAMS', value: '500+', color: 'text-foreground' }
+                                ].map((stat, i) => (
+                                    <div key={i} className="group">
+                                        <div className="text-3xl font-extrabold text-foreground mb-1 group-hover:text-primary transition-colors">{stat.value}</div>
+                                        <div className="text-[9px] text-gray-400 font-black uppercase tracking-widest">{stat.label}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Right Visual - Dashboard Preview Card */}
+                        <div className="relative hidden lg:block">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.4 }}
+                                className="relative"
+                            >
+                                {/* Background Decorative Element */}
+                                <div className="absolute -inset-10 bg-gradient-to-tr from-primary/20 to-purple-400/20 blur-3xl opacity-30 -z-10 animate-pulse" />
+
+                                {/* Main Card */}
+                                <div className="bg-white border border-gray-100 rounded-[2.5rem] p-10 relative shadow-[0_32px_64px_-16px_rgba(88,28,135,0.1)]">
+                                    {/* Top Badge */}
+                                    <div className="absolute -top-4 -right-4 bg-primary text-white rounded-2xl px-5 py-2.5 rotate-6 shadow-xl shadow-primary/30">
+                                        <span className="font-black text-[10px] tracking-widest">AI_CORE_ACTIVE</span>
+                                    </div>
+
+                                    {/* Account Icon */}
+                                    <div className="flex items-center gap-5 mb-8">
+                                        <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10">
+                                            <TrendingUp className="h-8 w-8 text-primary" />
+                                        </div>
+                                        <div>
+                                            <div className="text-xl font-extrabold text-foreground tracking-tight">Acme Corp Renewal</div>
+                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Enterprise Cluster • $180K ARR</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Progress Bars */}
+                                    <div className="space-y-4 mb-10">
+                                        <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden p-[2px]">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: "95%" }}
+                                                className="h-full bg-red-400 rounded-full"
+                                            />
+                                        </div>
+                                        <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden p-[2px]">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: "80%" }}
+                                                className="h-full bg-amber-400 rounded-full"
+                                            />
+                                        </div>
+                                        <div className="h-2.5 bg-gray-50 rounded-full overflow-hidden p-[2px]">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: "60%" }}
+                                                className="h-full bg-emerald-400 rounded-full"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Stats */}
+                                    <div className="flex items-center justify-between pt-8 border-t border-gray-50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
+                                                <Bell size={16} className="text-red-500" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">RISK_LEVEL</p>
+                                                <span className="text-sm font-extrabold text-red-500">CRITICAL_FLAG</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">DEADLINE</p>
+                                            <span className="text-sm font-extrabold text-foreground">14_DAYS</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Floating Elements */}
+                                <motion.div
+                                    animate={{ y: [0, -10, 0] }}
+                                    transition={{ duration: 4, repeat: Infinity }}
+                                    className="absolute -top-12 -left-12 bg-white border border-gray-50 rounded-2xl p-4 shadow-xl shadow-purple-900/5"
+                                >
+                                    <span className="text-3xl">🎯</span>
+                                </motion.div>
+                                <motion.div
+                                    animate={{ y: [0, 10, 0] }}
+                                    transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+                                    className="absolute top-1/2 -right-12 bg-white border border-gray-50 rounded-2xl p-4 shadow-xl shadow-purple-900/5 rotate-12"
+                                >
+                                    <span className="text-3xl">💰</span>
+                                </motion.div>
+                            </motion.div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* How It Works Section */}
-            <div className="bg-gradient-to-b from-indigo-50 to-white py-16 border-b-4 border-black">
-                <div className="max-w-7xl mx-auto px-6">
-                    <motion.h2
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.6 }}
-                        className="text-3xl font-black text-black mb-4 uppercase text-center"
-                    >
-                        How It Works
-                    </motion.h2>
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: 0.2, duration: 0.6 }}
-                        className="text-center text-gray-600 mb-12 max-w-3xl mx-auto font-medium"
-                    >
-                        Revenue Navigator uses AI to analyze your customer data, predict risks, and automate renewal workflows—saving time and increasing revenue.
-                    </motion.p>
+            {/* Trusted By Section */}
+            <div className="bg-white py-16">
+                <div className="max-w-7xl mx-auto px-8">
+                    <p className="text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.4em] mb-12">
+                        SYNERGIZED WITH THE WORLD'S BEST REVENUE TEAMS
+                    </p>
+                    <div className="flex items-center justify-center gap-16 flex-wrap opacity-30 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-700">
+                        {['Salesforce', 'HubSpot', 'Stripe', 'Zendesk', 'Atlassian', 'Intercom', 'Zoom', 'Slack'].map((brand) => (
+                            <div key={brand} className="text-xl font-black text-foreground tracking-tighter uppercase font-display italic">
+                                {brand}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Feature Cards Section */}
+            <div className="bg-gray-50/50 py-32 border-y border-gray-50">
+                <div className="max-w-7xl mx-auto px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {[
                             {
-                                step: "1",
-                                icon: Target,
-                                title: "Connect Data",
-                                desc: "Integrate with Salesforce, Stripe, and your product analytics",
-                                color: "bg-blue-600"
+                                icon: <Target className="w-8 h-8 text-primary" />,
+                                title: "CHURN_PREDICTION",
+                                description: "AI models analyze usage patterns, engagement metrics, and customer health to flag at-risk accounts 90 days in advance."
                             },
                             {
-                                step: "2",
-                                icon: BarChart3,
-                                title: "AI Analysis",
-                                desc: "ML models predict churn risk, sentiment, and upsell opportunities",
-                                color: "bg-purple-600"
+                                icon: <BarChart3 className="w-8 h-8 text-indigo-500" />,
+                                title: "EXPANSION_NODE",
+                                description: "Automatically surface upsell and cross-sell opportunities based on product usage, team growth, and feature adoption."
                             },
                             {
-                                step: "3",
-                                icon: Bell,
-                                title: "Auto Outreach",
-                                desc: "Automated emails and calls at T-90, T-60, T-30 days before renewal",
-                                color: "bg-emerald-600"
+                                icon: <RefreshCw className="w-8 h-8 text-emerald-500" />,
+                                title: "AUTO_OUTREACH",
+                                description: "Multi-channel campaigns triggered at critical lifecycle moments—email, Slack, and in-app notifications."
                             },
                             {
-                                step: "4",
-                                icon: CheckCircle,
-                                title: "Close Deals",
-                                desc: "Track outcomes, update CRM, and optimize your renewal strategy",
-                                color: "bg-indigo-600"
-                            },
-                        ].map((step, idx) => (
+                                icon: <Cpu className="w-8 h-8 text-amber-500" />,
+                                title: "REVENUE_INTEL",
+                                description: "Live dashboards showing pipeline health, renewal forecasts, and expansion metrics—all synced with your CRM."
+                            }
+                        ].map((feature, idx) => (
                             <motion.div
                                 key={idx}
-                                initial={{ opacity: 0, y: 30 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                viewport={{ once: true }}
-                                transition={{ delay: idx * 0.15, duration: 0.5 }}
-                                whileHover={{ y: -8, scale: 1.02 }}
-                                className="relative p-6 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
+                                whileHover={{ y: -8 }}
+                                className="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-xl shadow-purple-900/[0.03] hover:shadow-primary/5 transition-all group"
                             >
-                                <div className="absolute -top-4 -left-4 h-10 w-10 flex items-center justify-center bg-black border-2 border-black text-white font-black text-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                                    {step.step}
+                                <div className="h-16 w-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-8 group-hover:bg-primary/5 transition-colors">
+                                    {feature.icon}
                                 </div>
-                                <div className={`h-12 w-12 flex items-center justify-center ${step.color} border-2 border-black mb-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
-                                    <step.icon className="h-6 w-6 text-white" />
-                                </div>
-                                <h3 className="text-lg font-black text-black mb-2 uppercase">{step.title}</h3>
-                                <p className="text-gray-600 font-medium text-sm">{step.desc}</p>
+                                <h3 className="text-xs font-black text-foreground mb-4 uppercase tracking-[0.2em]">{feature.title}</h3>
+                                <p className="text-[13px] text-gray-500 leading-relaxed font-medium">{feature.description}</p>
                             </motion.div>
                         ))}
                     </div>
                 </div>
             </div>
 
-            {/* Features Section */}
-            <div className="max-w-7xl mx-auto px-6 py-16">
-                <motion.h2
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6 }}
-                    className="text-3xl font-black text-black mb-12 uppercase text-center"
-                >
-                    Powerful Features
-                </motion.h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[
-                        { icon: BarChart3, title: "Analytics Dashboard", desc: "Real-time insights into your revenue pipeline", color: "bg-blue-600" },
-                        { icon: Users, title: "Account Management", desc: "Track and manage all customer accounts", color: "bg-purple-600" },
-                        { icon: TrendingUp, title: "Upsell Intelligence", desc: "AI-powered upsell recommendations", color: "bg-emerald-600" },
-                        { icon: Shield, title: "Risk Detection", desc: "Identify at-risk accounts early", color: "bg-red-600" },
-                        { icon: Zap, title: "Automated Workflows", desc: "Streamline renewal processes", color: "bg-yellow-600" },
-                        { icon: BarChart3, title: "Revenue Forecasting", desc: "Predict future revenue accurately", color: "bg-indigo-600" },
-                    ].map((feature, idx) => (
-                        <motion.div
-                            key={idx}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            whileInView={{ opacity: 1, scale: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: idx * 0.1, duration: 0.4 }}
-                            whileHover={{ y: -6, scale: 1.02 }}
-                            className="p-6 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all"
-                        >
-                            <motion.div
-                                whileHover={{ rotate: 360 }}
-                                transition={{ duration: 0.6 }}
-                                className={`h-12 w-12 flex items-center justify-center ${feature.color} border-2 border-black mb-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}
-                            >
-                                <feature.icon className="h-6 w-6 text-white" />
-                            </motion.div>
-                            <h3 className="text-lg font-black text-black mb-2 uppercase">{feature.title}</h3>
-                            <p className="text-gray-600 font-medium">{feature.desc}</p>
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
-
             {/* CTA Section */}
-            <div className="bg-black border-t-4 border-black py-16">
-                <div className="max-w-4xl mx-auto text-center px-6">
-                    <motion.h2
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ duration: 0.6 }}
-                        className="text-4xl font-black text-white mb-6 uppercase"
-                    >
-                        Ready to Transform Your Revenue?
-                    </motion.h2>
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: 0.2, duration: 0.6 }}
-                        className="text-xl text-gray-300 mb-8 font-medium"
-                    >
-                        Join leading companies using Revenue Navigator to drive growth
-                    </motion.p>
+            <div className="bg-white py-32 relative overflow-hidden">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] -z-10" />
+                <div className="max-w-4xl mx-auto text-center px-8 relative z-10">
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
-                        transition={{ delay: 0.4, duration: 0.6 }}
                     >
-                        <Link
-                            to="/signin"
-                            className="px-8 py-4 bg-indigo-600 text-white border-2 border-white font-black uppercase tracking-wider shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all inline-flex items-center gap-2"
-                        >
-                            Start Free Trial <ArrowRight className="h-5 w-5" />
-                        </Link>
+                        <h2 className="text-5xl lg:text-6xl font-extrabold text-foreground mb-10 leading-tight tracking-tight">
+                            Ready to <span className="text-primary underline decoration-primary/20 decoration-8 underline-offset-8">maximize</span> your revenue?
+                        </h2>
+                        <div className="flex justify-center flex-col sm:flex-row gap-6">
+                            <Link
+                                to="/signin"
+                                className="px-12 py-5 bg-primary text-white rounded-[1.25rem] font-black text-[11px] uppercase tracking-widest hover:scale-105 transition-all shadow-2xl shadow-primary/30"
+                            >
+                                Start Free Trial
+                            </Link>
+                            <button className="px-12 py-5 bg-white text-foreground border border-gray-100 rounded-[1.25rem] font-black text-[11px] uppercase tracking-widest hover:bg-gray-50 transition-all shadow-xl shadow-purple-900/5 flex items-center justify-center gap-3">
+                                Talk to Sales <ArrowRight size={18} />
+                            </button>
+                        </div>
                     </motion.div>
                 </div>
             </div>
+
+            {/* Footer */}
+            <footer className="bg-gray-50 py-20 px-8 border-t border-gray-100">
+                <div className="max-w-7xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20">
+                        {/* Brand Column */}
+                        <div className="col-span-1 md:col-span-1">
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="h-9 w-9 flex items-center justify-center bg-primary rounded-xl shadow-lg shadow-primary/20">
+                                    <Zap className="h-4 w-4 text-white fill-white" />
+                                </div>
+                                <span className="text-lg font-extrabold text-foreground tracking-tight">Revenue Navigator</span>
+                            </div>
+                            <p className="text-sm text-gray-500 mb-8 leading-relaxed font-medium">
+                                AI-powered renewal intelligence and upsell automation for modern revenue teams.
+                            </p>
+                            <div className="flex gap-4">
+                                {[Globe, Shield, Heart].map((Icon, i) => (
+                                    <div key={i} className="h-10 w-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary/20 transition-all cursor-pointer">
+                                        <Icon size={18} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Link Columns */}
+                        {[
+                            { title: 'PRODUCT', links: ['Features', 'Integrations', 'API Docs', 'Pricing'] },
+                            { title: 'SOLUTIONS', links: ['Renewals', 'Upsells', 'Churn Prevention', 'Expansion'] },
+                            { title: 'COMPANY', links: ['About', 'Blog', 'Careers', 'Contact'] }
+                        ].map((col) => (
+                            <div key={col.title}>
+                                <h4 className="text-[10px] font-black text-foreground mb-8 uppercase tracking-widest">{col.title}</h4>
+                                <ul className="space-y-4">
+                                    {col.links.map((link) => (
+                                        <li key={link}>
+                                            <a href="#" className="text-sm text-gray-400 font-bold hover:text-primary transition-colors">
+                                                {link}
+                                            </a>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Bottom Bar */}
+                    <div className="pt-10 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
+                        <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
+                            © 2026 REVENUE NAVIGATOR • BUILT FOR SCALE
+                        </p>
+                        <div className="flex items-center gap-3 px-4 py-2 bg-white border border-gray-100 rounded-full">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Global Status:</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest uppercase">System Operational</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 }
+

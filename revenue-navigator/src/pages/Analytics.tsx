@@ -13,87 +13,117 @@ const riskDistribution = [
 
 export default function Analytics() {
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Analytics Dashboard</h1>
-        <div className="flex gap-2">
-          <button className="h-8 px-3 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-white text-xs font-bold uppercase flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px]">
-            <Download className="h-3 w-3" /> PDF
+    <div className="p-8 max-w-[1600px] mx-auto min-h-screen flex flex-col space-y-8">
+      {/* Header */}
+      <div className="flex items-end justify-between border-b border-gray-200 pb-6">
+        <div>
+          <h1 className="text-5xl font-bold text-foreground tracking-tight leading-none">
+            Strategic <span className="text-primary">Analytics</span>
+          </h1>
+          <p className="text-sm font-medium text-gray-500 mt-2">
+            Advanced Metric Aggregation & Predictive Intelligence
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg font-bold text-sm shadow-sm hover:bg-gray-50 transition-all flex items-center group">
+            <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+            PDF Export
           </button>
-          <button className="h-8 px-3 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-white text-xs font-bold uppercase flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px]">
-            <FileText className="h-3 w-3" /> CSV
+          <button className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-sm hover:translate-y-[-1px] transition-all flex items-center group">
+            <FileText className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+            CSV Sync
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         {/* Revenue Trend */}
-        <div className="lg:col-span-2 border-2 border-black dark:border-white bg-white dark:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
-          <div className="p-3 border-b-2 border-black dark:border-white bg-indigo-600">
-            <h3 className="text-sm font-black uppercase tracking-wider text-white">Revenue Trend</h3>
+        <div className="lg:col-span-12 paper-card overflow-hidden bg-white p-0 border border-gray-200 shadow-xl shadow-purple-900/5">
+          <div className="p-6 border-b border-gray-100 bg-primary/5 flex items-center justify-between">
+            <h3 className="text-xl font-bold text-foreground">Revenue Persistence Trend</h3>
+            <div className="sticker-outline px-3 py-1 text-xs">Live Feed</div>
           </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={300}>
+          <div className="p-8">
+            <ResponsiveContainer width="100%" height={350}>
               <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fill: "#6b7280", fontSize: 12 }} />
-                <YAxis tick={{ fill: "#6b7280", fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={2} name="Total ARR ($K)" />
-                <Line type="monotone" dataKey="new" stroke="#10b981" strokeWidth={2} name="New ARR" />
-                <Line type="monotone" dataKey="expansion" stroke="#8b5cf6" strokeWidth={2} name="Expansion" />
-                <Line type="monotone" dataKey="churned" stroke="#ef4444" strokeWidth={2} name="Churned" />
+                <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }}
+                  axisLine={{ stroke: "#f1f5f9" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }}
+                  axisLine={{ stroke: "#f1f5f9" }}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#fff", border: '1px solid #f1f5f9', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  itemStyle={{ fontWeight: "700" }}
+                />
+                <Legend iconType="circle" verticalAlign="top" height={36} />
+                <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 0 }} name="Total ARR" />
+                <Line type="monotone" dataKey="churned" stroke="hsl(var(--accent))" strokeWidth={3} dot={{ r: 4, fill: "hsl(var(--accent))", strokeWidth: 0 }} name="Churned" />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Churn Analysis */}
-        <div className="border-2 border-black dark:border-white bg-white dark:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
-          <div className="p-3 border-b-2 border-black dark:border-white bg-indigo-600">
-            <h3 className="text-sm font-black uppercase tracking-wider text-white">Churn Analysis</h3>
+        <div className="lg:col-span-7 paper-card overflow-hidden bg-white p-0 border border-gray-200 shadow-xl shadow-purple-900/5">
+          <div className="p-6 border-b border-gray-100 bg-accent/5 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-accent" />
+            <h3 className="text-xl font-bold text-foreground">Retention Flow Matrix</h3>
           </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={250}>
+          <div className="p-8">
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={churnData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fill: "#6b7280", fontSize: 12 }} />
-                <YAxis tick={{ fill: "#6b7280", fontSize: 12 }} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="renewed" stackId="a" fill="#10b981" name="Renewed" />
-                <Bar dataKey="atRisk" stackId="a" fill="#f59e0b" name="At Risk" />
-                <Bar dataKey="churned" stackId="a" fill="#ef4444" name="Churned" />
+                <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }}
+                  axisLine={{ stroke: "#f1f5f9" }}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }}
+                  axisLine={{ stroke: "#f1f5f9" }}
+                  tickLine={false}
+                />
+                <Tooltip contentStyle={{ backgroundColor: "#fff", border: '1px solid #f1f5f9', borderRadius: '12px' }} />
+                <Legend iconType="circle" />
+                <Bar dataKey="renewed" stackId="a" fill="hsl(var(--primary))" radius={[0, 0, 0, 0]} name="Renewed" />
+                <Bar dataKey="atRisk" stackId="a" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="At Risk" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Risk Distribution */}
-        <div className="border-2 border-black dark:border-white bg-white dark:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
-          <div className="p-3 border-b-2 border-black dark:border-white bg-indigo-600">
-            <h3 className="text-sm font-black uppercase tracking-wider text-white">Risk Distribution</h3>
+        <div className="lg:col-span-5 paper-card overflow-hidden bg-white p-0 border border-gray-200 shadow-xl shadow-purple-900/5">
+          <div className="p-6 border-b border-gray-100 bg-purple-50">
+            <h3 className="text-xl font-bold text-foreground">Portfolio Volatility Index</h3>
           </div>
-          <div className="p-4 flex justify-center">
-            <ResponsiveContainer width="100%" height={250}>
+          <div className="p-8 flex justify-center">
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
                   data={riskDistribution}
                   dataKey="value"
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  strokeWidth={2}
-                  stroke="#000"
+                  innerRadius={70}
+                  outerRadius={100}
+                  strokeWidth={0}
+                  paddingAngle={8}
                   label={({ name, value }) => `${name}: ${value}`}
                 >
-                  {riskDistribution.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
+                  {riskDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ backgroundColor: "#fff", border: '1px solid #f1f5f9', borderRadius: '12px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>

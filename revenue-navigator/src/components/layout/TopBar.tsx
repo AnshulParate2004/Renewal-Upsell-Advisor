@@ -1,4 +1,4 @@
-import { Bell, User, Sun, Moon } from "lucide-react";
+import { Bell, User, Sun, Moon, Database } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { motion, AnimatePresence } from "framer-motion";
 import { SearchDropdown } from "@/components/SearchDropdown";
@@ -11,23 +11,31 @@ export function TopBar() {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-      className="sticky top-0 z-30 h-16 flex items-center justify-between border-b-2 border-black dark:border-white bg-white dark:bg-gray-900 px-6 shadow-[0_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[0_2px_0px_0px_rgba(255,255,255,0.3)]"
+      className="sticky top-0 z-30 h-16 flex items-center justify-between border-b-4 border-foreground bg-white px-8 overflow-hidden"
     >
-      {/* Search */}
-      <SearchDropdown />
+      {/* Search & Meta */}
+      <div className="flex items-center gap-6">
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-foreground text-white border-2 border-foreground text-[9px] font-black uppercase tracking-widest italic overflow-hidden w-48">
+          <div className="flex animate-marquee gap-4 bg-foreground">
+            <span className="whitespace-nowrap">★ SYSTEM_CORE: ONLINE // ENCRYPTION: ACTIVE ★</span>
+            <span className="whitespace-nowrap">★ SYSTEM_CORE: ONLINE // ENCRYPTION: ACTIVE ★</span>
+          </div>
+        </div>
+        <SearchDropdown />
+      </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="relative h-9 w-9 flex items-center justify-center border-2 border-black dark:border-white bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+          className="relative btn-punch h-10 w-10 flex items-center justify-center bg-white"
         >
-          <Bell className="h-4 w-4 text-black dark:text-white" />
+          <Bell className="h-5 w-5 text-foreground" />
           <motion.span
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-red-600 border border-white dark:border-gray-900"
+            className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-destructive border-2 border-foreground shadow-[1px_1px_0px_0px_hsl(var(--foreground))]"
           />
         </motion.button>
 
@@ -35,7 +43,7 @@ export function TopBar() {
           onClick={toggle}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95, rotate: 180 }}
-          className="h-9 w-9 flex items-center justify-center border-2 border-black dark:border-white bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+          className="btn-punch h-10 w-10 flex items-center justify-center bg-white"
           title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
           <AnimatePresence mode="wait">
@@ -47,7 +55,7 @@ export function TopBar() {
                 exit={{ rotate: 180, opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <Sun className="h-4 w-4 text-white" />
+                <Sun className="h-5 w-5 text-foreground" />
               </motion.div>
             ) : (
               <motion.div
@@ -57,7 +65,7 @@ export function TopBar() {
                 exit={{ rotate: -180, opacity: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <Moon className="h-4 w-4 text-black" />
+                <Moon className="h-5 w-5 text-foreground" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -65,9 +73,9 @@ export function TopBar() {
 
         <motion.div
           whileHover={{ scale: 1.05 }}
-          className="h-9 w-9 flex items-center justify-center bg-indigo-600 border-2 border-black dark:border-white text-xs font-bold text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] cursor-pointer"
+          className="h-10 w-10 flex items-center justify-center bg-primary border-4 border-foreground text-xs font-black text-white shadow-[3px_3px_0px_0px_hsl(var(--foreground))] cursor-pointer hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all"
         >
-          <User className="h-4 w-4" />
+          <User className="h-5 w-5" />
         </motion.div>
       </div>
     </motion.header>

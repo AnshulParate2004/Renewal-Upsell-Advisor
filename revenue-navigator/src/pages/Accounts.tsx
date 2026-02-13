@@ -48,161 +48,155 @@ export default function Accounts() {
   };
 
   return (
-    <div className="p-4 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col">
+    <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col gap-6">
       {/* Header & Toolbar */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 pb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Account Management</h1>
-          <p className="text-xs text-muted-foreground font-mono mt-1">
-            PORTFOLIO: {filteredClients.length} ACCOUNTS
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-5xl font-bold text-foreground tracking-tight">
+              Account <span className="text-primary">Navigator</span>
+            </h1>
+            <div className="sticker-outline px-3 py-1 text-xs">LIVE PORTFOLIO</div>
+          </div>
+          <p className="text-sm font-medium text-gray-500 mt-2">
+            {filteredClients.length} High-Stakes Accounts Under Management
           </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder="Search accounts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-8 pr-3 py-1.5 h-8 text-xs rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary w-64"
+              className="pl-10 pr-4 py-2.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-64 transition-all"
             />
           </div>
-          <div className="h-8 w-[1px] bg-border mx-1" />
+
           <div className="flex gap-2">
             {(['all', 'high', 'safe'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setFilterRisk(filter)}
-                className={`px-4 py-1.5 text-xs font-bold uppercase border-2 border-black dark:border-white transition-all duration-200
+                className={`px-4 py-2 text-xs font-bold rounded-lg border transition-all
                   ${filterRisk === filter
-                    ? 'bg-indigo-600 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]'
-                    : 'bg-white dark:bg-gray-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px]'
+                    ? 'bg-primary text-white border-primary shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
               >
-                {filter}
+                {filter === 'all' ? 'All' : filter.toUpperCase()}
               </button>
             ))}
           </div>
-          <div className="h-8 w-[1px] bg-black/10 mx-2" />
+
           <button
             onClick={handleExportCSV}
-            className="h-10 px-4 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all duration-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[2px] hover:translate-y-[2px]"
+            className="px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-lg font-bold text-sm shadow-sm hover:bg-gray-50 transition-all flex items-center"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4 mr-2" />
             Export
           </button>
+
           <button
-            className="h-10 px-4 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all duration-200 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white"
+            className="px-4 py-2 bg-primary text-white rounded-lg font-bold text-sm shadow-sm hover:translate-y-[-1px] transition-all flex items-center"
           >
-            <Plus className="w-4 h-4" />
-            Add
+            <Plus className="w-4 h-4 mr-2" />
+            Add Account
           </button>
         </div>
       </div>
 
       {/* Data Grid */}
-      <div className="border-2 border-black dark:border-white flex-1 overflow-hidden flex flex-col shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] bg-white dark:bg-gray-800">
+      <div className="paper-card flex-1 overflow-hidden flex flex-col p-0 border border-gray-200 shadow-xl shadow-purple-900/5">
         <div className="overflow-auto flex-1 relative custom-scrollbar">
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 bg-indigo-600 border-b-2 border-black dark:border-white shadow-sm">
-              <tr className="text-xs uppercase text-white font-black tracking-wide">
-                <th className="pl-4 py-3 w-[200px]">Account Name</th>
-                <th className="text-right py-3">ARR</th>
-                <th className="text-center py-3">Renewal</th>
-                <th className="text-center py-3">Health</th>
-                <th className="text-center py-3">Utilization</th>
-                <th className="text-center py-3">Relationship</th>
-                <th className="text-center py-3">Churn %</th>
-                <th className="text-center py-3">Sentiment</th>
-                <th className="text-center py-3">Risk Status</th>
-                <th className="w-[100px] text-center">Actions</th>
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-primary/5 border-b border-gray-100">
+              <tr className="text-[10px] uppercase text-gray-500 font-bold tracking-widest text-left">
+                <th className="pl-6 py-4 w-[250px]">Account Entity</th>
+                <th className="text-right py-4">ARR Portfolio</th>
+                <th className="text-center py-4">Renewal</th>
+                <th className="text-center py-4">Utilization</th>
+                <th className="text-center py-4">Rel. Score</th>
+                <th className="text-center py-4">Churn Pr.</th>
+                <th className="text-center py-4">Sentiment</th>
+                <th className="text-center py-4">Status</th>
+                <th className="w-[100px] text-center py-4 pr-6">Audit</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-black/5 dark:divide-white/10">
+            <tbody className="divide-y divide-gray-100">
               {filteredClients.map((client) => (
                 <tr
                   key={client.id}
                   onClick={() => navigate(`/app/accounts/${client.id}`)}
-                  className="hover:bg-black/5 dark:hover:bg-white/5 group transition-colors cursor-pointer"
+                  className="group cursor-pointer hover:bg-purple-50/50 transition-colors"
                 >
-                  <td className="pl-4 py-3 font-bold text-black dark:text-white group-hover:underline decoration-2">{client.name}</td>
-                  <td className="text-right py-3 font-mono text-gray-700 dark:text-gray-300">{formatCurrency(client.arr)}</td>
-                  <td className="text-center py-3">
-                    <span className={`font-mono font-bold ${getDaysUntil(client.renewalDate) <= 30 ? 'text-red-600' : 'text-black dark:text-white'}`}>
-                      {getDaysUntil(client.renewalDate)}d
-                    </span>
-                  </td>
-                  <td className="text-center py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="w-8 text-right font-mono text-xs text-black dark:text-white">{client.healthScore}%</span>
-                      <div className="w-16 h-2 bg-gray-100 dark:bg-gray-700 border border-black/10 dark:border-white/10 rounded-sm overflow-hidden">
-                        <div
-                          className={`h-full ${client.healthScore >= 70 ? 'bg-emerald-500' : client.healthScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                          style={{ width: `${client.healthScore}%` }}
-                        />
-                      </div>
+                  <td className="pl-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-base group-hover:text-primary transition-colors">
+                        {client.name}
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-medium tracking-wider">
+                        UID: {client.id.substring(0, 8)}
+                      </span>
                     </div>
                   </td>
-                  <td className="text-center py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="w-8 text-right font-mono text-xs text-black dark:text-white">{client.utilization}%</span>
-                      <div className="w-16 h-2 bg-gray-100 dark:bg-gray-700 border border-black/10 dark:border-white/10 rounded-sm overflow-hidden">
+                  <td className="text-right font-bold text-gray-700">
+                    {formatCurrency(client.arr)}
+                  </td>
+                  <td className="text-center">
+                    <div className={`px-2 py-0.5 rounded text-[10px] font-bold text-white inline-flex ${getDaysUntil(client.renewalDate) <= 30 ? 'bg-red-500' : 'bg-primary'}`}>
+                      {getDaysUntil(client.renewalDate)}D
+                    </div>
+                  </td>
+                  <td className="text-center">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <span className="font-bold text-xs text-gray-600">{client.utilization}%</span>
+                      <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
                         <div
-                          className={`h-full ${client.utilization > 80 ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                          className={`h-full rounded-full transition-all duration-500 ${client.utilization > 80 ? 'bg-primary' : 'bg-accent'}`}
                           style={{ width: `${client.utilization}%` }}
                         />
                       </div>
                     </div>
                   </td>
-                  {/* Relationship Score - NEW */}
-                  <td className="text-center py-3">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="w-8 text-right font-mono text-xs text-black dark:text-white">{client.relationshipScore}%</span>
-                      <div className="w-16 h-2 bg-gray-100 dark:bg-gray-700 border border-black/10 dark:border-white/10 rounded-sm overflow-hidden">
-                        <div
-                          className={`h-full ${client.relationshipScore >= 70 ? 'bg-purple-600' : client.relationshipScore >= 40 ? 'bg-purple-400' : 'bg-purple-300'}`}
-                          style={{ width: `${client.relationshipScore}%` }}
-                        />
-                      </div>
-                    </div>
+                  <td className="text-center">
+                    <span className="font-bold text-sm px-2 py-1 bg-purple-50 text-primary border border-primary/10 rounded-lg">
+                      {client.relationshipScore}
+                    </span>
                   </td>
-                  {/* Churn Probability - NEW */}
-                  <td className="text-center py-3">
-                    <span className={`font-mono font-bold ${client.churnProbability >= 0.7 ? 'text-red-600' : client.churnProbability >= 0.4 ? 'text-yellow-600' : 'text-green-600'}`}>
+                  <td className="text-center">
+                    <span className={`font-bold text-sm ${client.churnProbability >= 0.7 ? 'text-red-600' : client.churnProbability >= 0.4 ? 'text-accent' : 'text-success'}`}>
                       {Math.round(client.churnProbability * 100)}%
                     </span>
                   </td>
-                  {/* Sentiment Score - NEW */}
-                  <td className="text-center py-3">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-sm">
-                        {client.sentimentScore > 0.5 ? '😊' : client.sentimentScore > 0 ? '🙂' : client.sentimentScore > -0.5 ? '😐' : '😟'}
+                  <td className="text-center">
+                    <div className="inline-flex items-center gap-2 px-2 py-1 bg-gray-50 rounded-lg border border-gray-100">
+                      <span className="text-lg">
+                        {client.sentimentScore > 0.5 ? '🔥' : client.sentimentScore > 0 ? '👍' : client.sentimentScore > -0.5 ? '😐' : '⚠️'}
                       </span>
-                      <span className={`font-mono text-xs ${client.sentimentScore > 0.5 ? 'text-emerald-600' : client.sentimentScore > 0 ? 'text-blue-600' : client.sentimentScore > -0.5 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      <span className="font-bold text-xs text-gray-600">
                         {client.sentimentScore > 0 ? '+' : ''}{client.sentimentScore.toFixed(2)}
                       </span>
                     </div>
                   </td>
-                  <td className="text-center py-3">{client.riskScore >= 70 ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                      RISK
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-white text-green-700 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
-                      SAFE
-                    </span>
-                  )}
+                  <td className="text-center">
+                    {client.riskScore >= 70 ? (
+                      <span className="px-2 py-1 rounded text-[10px] font-bold bg-red-50 text-red-600 border border-red-100">High Risk</span>
+                    ) : (
+                      <span className="px-2 py-1 rounded text-[10px] font-bold bg-success/10 text-success border border-success/10">Target Safe</span>
+                    )}
                   </td>
-                  <td className="text-center py-3">
+                  <td className="text-center pr-6">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/app/accounts/${client.id}`);
                       }}
-                      className="text-black dark:text-white text-[10px] font-black uppercase hover:underline opacity-0 group-hover:opacity-100 transition-opacity decoration-2 underline-offset-2"
+                      className="px-3 py-1 text-[10px] font-bold uppercase rounded-lg bg-gray-50 text-gray-400 hover:bg-primary/10 hover:text-primary transition-all border border-gray-200"
                     >
-                      View
+                      Audit
                     </button>
                   </td>
                 </tr>
@@ -211,9 +205,11 @@ export default function Accounts() {
           </table>
         </div>
         {/* Table Footer */}
-        <div className="border-t-2 border-black dark:border-white p-2 bg-gray-50 dark:bg-gray-900 flex justify-between items-center text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">
-          <span>Showing {filteredClients.length} of {accounts.length} accounts</span>
-          <span>Sorted by Risk (Default)</span>
+        <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+          <div className="flex gap-6">
+            <span>ACTIVE ACCOUNTS: <span className="text-gray-600">{filteredClients.length}</span></span>
+            <span>TOTAL ARR: <span className="text-gray-600">{formatCurrency(filteredClients.reduce((acc, c) => acc + c.arr, 0))}</span></span>
+          </div>
         </div>
       </div>
     </div>

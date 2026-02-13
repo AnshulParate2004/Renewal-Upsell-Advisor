@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, Building2, User, TrendingUp, TrendingDown } from "lucide-react";
+import { Search, Building2, TrendingUp, TrendingDown, Command } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { accounts } from "@/data/mockData";
@@ -35,9 +35,9 @@ export function SearchDropdown() {
     };
 
     const getRiskColor = (riskScore: number) => {
-        if (riskScore >= 70) return "text-red-600";
+        if (riskScore >= 70) return "text-destructive";
         if (riskScore >= 40) return "text-orange-500";
-        return "text-green-600";
+        return "text-primary";
     };
 
     const getRiskIcon = (riskScore: number) => {
@@ -45,130 +45,132 @@ export function SearchDropdown() {
     };
 
     return (
-        <div ref={searchRef} className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 z-10" />
-            <motion.input
-                whileFocus={{ scale: 1.01 }}
-                transition={{ duration: 0.2 }}
+        <div ref={searchRef} className="relative w-full max-w-md group">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/40 z-10 group-focus-within:text-primary transition-colors" />
+            <input
                 type="text"
-                placeholder="Search accounts, contracts... ⌘K"
+                placeholder="PROBE_SYSTEM_INDEX... ⌘K"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => setIsOpen(true)}
-                className="h-9 w-full border-2 border-black dark:border-white bg-white dark:bg-gray-800 pl-10 pr-4 text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]"
+                className="h-10 w-full border-4 border-foreground bg-white pl-10 pr-12 text-xs font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[4px_4px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all uppercase tracking-widest"
             />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 px-1.5 py-0.5 border-2 border-foreground bg-secondary text-[8px] font-black pointer-events-none">
+                <Command size={8} />
+                <span>K</span>
+            </div>
 
             {/* Dropdown */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: -10 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
+                        exit={{ opacity: 0, y: 10 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute top-full mt-2 w-full max-h-[500px] overflow-y-auto bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] z-50 custom-scrollbar"
+                        className="absolute top-full mt-4 w-full max-h-[500px] overflow-y-auto bg-white border-4 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))] z-50 custom-scrollbar paper-card"
                     >
                         {searchQuery === "" ? (
                             // Show recent/suggested when no search query
-                            <div className="p-3">
-                                <p className="text-xs font-black uppercase text-gray-500 dark:text-gray-400 mb-2">
-                                    Recent Accounts
+                            <div className="p-4">
+                                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em] mb-4 italic">
+                                    // RECENT_NODES
                                 </p>
-                                {accounts.slice(0, 5).map((account) => {
-                                    const RiskIcon = getRiskIcon(account.riskScore);
-                                    return (
-                                        <motion.div
-                                            key={account.id}
-                                            whileHover={{ x: 4 }}
-                                            onClick={() => handleAccountClick(account.id)}
-                                            className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0"
-                                        >
-                                            <div className="h-8 w-8 flex items-center justify-center bg-indigo-100 dark:bg-indigo-900 border border-black dark:border-white">
-                                                <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                <div className="space-y-1">
+                                    {accounts.slice(0, 5).map((account) => {
+                                        const RiskIcon = getRiskIcon(account.riskScore);
+                                        return (
+                                            <div
+                                                key={account.id}
+                                                onClick={() => handleAccountClick(account.id)}
+                                                className="flex items-center gap-4 p-3 hover:bg-secondary/20 cursor-pointer border-b-2 border-foreground/5 last:border-0 group/item transition-colors"
+                                            >
+                                                <div className="h-10 w-10 flex items-center justify-center bg-white border-2 border-foreground shadow-[2px_2px_0_0_hsl(var(--foreground))] group-hover/item:shadow-none group-hover/item:translate-x-[1px] group-hover/item:translate-y-[1px] transition-all">
+                                                    <Building2 className="h-5 w-5 text-primary" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-black text-foreground uppercase tracking-tight font-display italic group-hover/item:text-primary transition-colors">
+                                                        {account.name}
+                                                    </p>
+                                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                                                        {account.industry} // {account.csm}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <RiskIcon className={`h-4 w-4 ${getRiskColor(account.riskScore)}`} />
+                                                    <span className="text-xs font-black text-foreground tracking-widest">
+                                                        ${(account.arr / 1000).toFixed(0)}K
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-black dark:text-white truncate">
-                                                    {account.name}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {account.industry} • {account.csm}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <RiskIcon className={`h-4 w-4 ${getRiskColor(account.riskScore)}`} />
-                                                <span className="text-xs font-mono font-bold text-gray-600 dark:text-gray-300">
-                                                    ${(account.arr / 1000).toFixed(0)}K
-                                                </span>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
                         ) : filteredAccounts.length > 0 ? (
                             // Show search results
-                            <div className="p-3">
-                                <p className="text-xs font-black uppercase text-gray-500 dark:text-gray-400 mb-2">
-                                    {filteredAccounts.length} Result{filteredAccounts.length !== 1 ? 's' : ''}
+                            <div className="p-4">
+                                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.3em] mb-4 italic">
+                                    // {filteredAccounts.length} SIGNAL{filteredAccounts.length !== 1 ? 'S' : ''}_DETECTED
                                 </p>
-                                {filteredAccounts.map((account) => {
-                                    const RiskIcon = getRiskIcon(account.riskScore);
-                                    return (
-                                        <motion.div
-                                            key={account.id}
-                                            whileHover={{ x: 4 }}
-                                            onClick={() => handleAccountClick(account.id)}
-                                            className="flex items-center gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-200 dark:border-gray-700 last:border-0"
-                                        >
-                                            <div className="h-8 w-8 flex items-center justify-center bg-indigo-100 dark:bg-indigo-900 border border-black dark:border-white">
-                                                <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                <div className="space-y-1">
+                                    {filteredAccounts.map((account) => {
+                                        const RiskIcon = getRiskIcon(account.riskScore);
+                                        return (
+                                            <div
+                                                key={account.id}
+                                                onClick={() => handleAccountClick(account.id)}
+                                                className="flex items-center gap-4 p-3 hover:bg-secondary/20 cursor-pointer border-b-2 border-foreground/5 last:border-0 group/item transition-colors"
+                                            >
+                                                <div className="h-10 w-10 flex items-center justify-center bg-white border-2 border-foreground shadow-[2px_2px_0_0_hsl(var(--foreground))] group-hover/item:shadow-none group-hover/item:translate-x-[1px] group-hover/item:translate-y-[1px] transition-all">
+                                                    <Building2 className="h-5 w-5 text-primary" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-black text-foreground uppercase tracking-tight font-display italic group-hover/item:text-primary transition-colors">
+                                                        {account.name}
+                                                    </p>
+                                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                                                        {account.industry} // {account.csm}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <RiskIcon className={`h-4 w-4 ${getRiskColor(account.riskScore)}`} />
+                                                    <span className="text-xs font-black text-foreground tracking-widest">
+                                                        ${(account.arr / 1000).toFixed(0)}K
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-black dark:text-white truncate">
-                                                    {account.name}
-                                                </p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                    {account.industry} • {account.csm}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <RiskIcon className={`h-4 w-4 ${getRiskColor(account.riskScore)}`} />
-                                                <span className="text-xs font-mono font-bold text-gray-600 dark:text-gray-300">
-                                                    ${(account.arr / 1000).toFixed(0)}K
-                                                </span>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </div>
                             </div>
                         ) : (
                             // No results
-                            <div className="p-6 text-center">
-                                <Search className="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                                <p className="text-sm font-bold text-gray-500 dark:text-gray-400">
-                                    No accounts found
+                            <div className="p-10 text-center">
+                                <Search className="h-12 w-12 text-foreground/10 mx-auto mb-4" />
+                                <p className="text-sm font-black text-foreground uppercase tracking-widest italic">
+                                    NULL_RESULT_SET
                                 </p>
-                                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                    Try searching by company name, industry, or CSM
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mt-2">
+                                    PROBE_RETRY_REQUIRED
                                 </p>
                             </div>
                         )}
 
                         {/* Quick Actions Footer */}
-                        {searchQuery === "" && (
-                            <div className="border-t-2 border-black dark:border-white p-2 bg-gray-50 dark:bg-gray-900">
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-gray-500 dark:text-gray-400 font-mono">
-                                        <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded">↑↓</kbd> Navigate
-                                    </span>
-                                    <span className="text-gray-500 dark:text-gray-400 font-mono">
-                                        <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded">↵</kbd> Select
-                                    </span>
-                                    <span className="text-gray-500 dark:text-gray-400 font-mono">
-                                        <kbd className="px-1.5 py-0.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded">ESC</kbd> Close
-                                    </span>
-                                </div>
+                        <div className="border-t-4 border-foreground p-4 bg-secondary">
+                            <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                <span className="flex items-center gap-2">
+                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[2px_2px_0_0_hsl(var(--foreground))]">↑↓</kbd> NAV_INDEX
+                                </span>
+                                <span className="flex items-center gap-2">
+                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[2px_2px_0_0_hsl(var(--foreground))]">↵</kbd> EXEC_LINK
+                                </span>
+                                <span className="flex items-center gap-2">
+                                    <kbd className="px-2 py-1 bg-white border-2 border-foreground rounded shadow-[2px_2px_0_0_hsl(var(--foreground))]">ESC</kbd> ABORT
+                                </span>
                             </div>
-                        )}
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>

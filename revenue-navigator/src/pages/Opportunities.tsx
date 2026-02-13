@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { DollarSign, TrendingUp, BarChart3, Target } from "lucide-react";
+import { DollarSign, TrendingUp, BarChart3, Target, Briefcase, Zap } from "lucide-react";
 import { opportunities, formatCurrency } from "@/data/mockData";
+import AnimatedCard from "@/components/ui/AnimatedCard";
 
-const typeBadge: Record<string, { label: string; bgColor: string; textColor: string }> = {
-  renewal: { label: "Renewal", bgColor: "bg-blue-600", textColor: "text-white" },
-  upsell: { label: "Upsell", bgColor: "bg-purple-600", textColor: "text-white" },
-  cross_sell: { label: "Cross-sell", bgColor: "bg-cyan-600", textColor: "text-white" },
+const typeBadge: Record<string, { label: string; bgColor: string }> = {
+  renewal: { label: "RENEWAL", bgColor: "bg-primary" },
+  upsell: { label: "UPSELL", bgColor: "bg-accent" },
+  cross_sell: { label: "CROSS_SELL", bgColor: "bg-foreground" },
 };
 
 export default function Opportunities() {
@@ -21,72 +22,105 @@ export default function Opportunities() {
   ) || 15;
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-bold text-foreground tracking-tight">Opportunities</h1>
+    <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex items-end justify-between border-b border-gray-200 pb-6">
+        <div>
+          <h1 className="text-5xl font-bold text-foreground tracking-tight leading-none">
+            Growth <span className="text-primary">Pipeline</span>
+          </h1>
+          <p className="text-sm font-medium text-gray-500 mt-2">
+            Strategic Opportunity Management
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-sm italic text-accent">High Velocity!</div>
+          <div className="sticker-outline px-4 py-2 text-sm flex items-center gap-2">
+            <Zap size={16} className="text-primary" />
+            LIVE PIPELINE FEED
+          </div>
+        </div>
+      </div>
 
-      {/* NB-Style Metric Cards */}
+      {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Pipeline', value: formatCurrency(totalPipeline), icon: <DollarSign size={20} />, color: 'text-black', borderColor: 'border-b-black', iconBg: 'bg-black' },
-          { label: 'Weighted Value', value: formatCurrency(weightedValue), icon: <BarChart3 size={20} />, color: 'text-purple-600', borderColor: 'border-b-purple-600', iconBg: 'bg-purple-600' },
-          { label: 'Avg Deal Size', value: formatCurrency(avgDeal), icon: <TrendingUp size={20} />, color: 'text-emerald-600', borderColor: 'border-b-emerald-600', iconBg: 'bg-emerald-600' },
-          { label: 'Conversion Rate', value: `${conversionRate}%`, icon: <Target size={20} />, color: 'text-blue-600', borderColor: 'border-b-blue-600', iconBg: 'bg-blue-600' }
+          { label: 'Pipeline Total', value: formatCurrency(totalPipeline), icon: <DollarSign size={20} />, iconBg: 'bg-primary' },
+          { label: 'Weighted Forecast', value: formatCurrency(weightedValue), icon: <BarChart3 size={20} />, iconBg: 'bg-accent' },
+          { label: 'Avg Deal Index', value: formatCurrency(avgDeal), icon: <TrendingUp size={20} />, iconBg: 'bg-white' },
+          { label: 'Closer Ratio', value: `${conversionRate}%`, icon: <Target size={20} />, iconBg: 'bg-white' }
         ].map((metric, idx) => (
-          <div key={idx} className={`p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white border-b-[6px] ${metric.borderColor.replace('border-b-', 'border-b-')} flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] transition-transform hover:-translate-y-0.5`}>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest">{metric.label}</p>
-              <div className={`text-3xl font-mono font-bold mt-1 ${metric.color} dark:text-white`}>{metric.value}</div>
+          <AnimatedCard
+            key={idx}
+            delay={idx * 0.05}
+            className={`paper-card p-5 flex flex-col justify-between group bg-white`}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase">{metric.label}</p>
+              <div className={`p-2 rounded-lg ${metric.iconBg} ${metric.iconBg === 'bg-white' ? 'text-foreground border border-gray-200' : 'text-white'} shadow-sm`}>
+                {metric.icon}
+              </div>
             </div>
-            <div className={`p-2 border-2 border-black dark:border-white ${metric.iconBg} text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]`}>
-              {metric.icon}
+            <div className="text-3xl font-bold tracking-tight text-foreground">
+              {metric.value}
             </div>
-          </div>
+          </AnimatedCard>
         ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2">
-        {(['all', 'renewal', 'upsell', 'cross_sell'] as const).map((filter) => (
-          <button
-            key={filter}
-            onClick={() => setTypeFilter(filter)}
-            className={`px-4 py-1.5 text-xs font-bold uppercase border-2 border-black dark:border-white transition-all duration-200
-              ${typeFilter === filter
-                ? 'bg-indigo-600 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]'
-                : 'bg-white dark:bg-gray-800 text-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] dark:hover:shadow-[1px_1px_0px_0px_rgba(255,255,255,0.3)] hover:translate-x-[1px] hover:translate-y-[1px]'
-              }`}
-          >
-            {filter === 'all' ? 'ALL' : filter.replace('_', ' ')}
-          </button>
-        ))}
+      {/* Filters & Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          {(['all', 'renewal', 'upsell', 'cross_sell'] as const).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setTypeFilter(filter)}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${typeFilter === filter ? 'bg-primary text-white shadow-sm' : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'}`}
+            >
+              {filter === 'all' ? 'All Types' : filter.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </button>
+          ))}
+        </div>
+        <button className="px-4 py-2 bg-accent text-white rounded-lg font-semibold text-sm shadow-sm hover:shadow-md transition-all flex items-center gap-2 group">
+          <Briefcase size={16} className="group-hover:scale-110 transition-transform" />
+          New Opportunity
+        </button>
       </div>
 
       {/* Table */}
-      <div className="border-2 border-black dark:border-white bg-white dark:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
+      <div className="paper-card overflow-hidden bg-white border border-gray-200">
         <table className="w-full text-sm">
-          <thead className="bg-indigo-600 border-b-2 border-black dark:border-white">
-            <tr className="text-xs uppercase text-white font-black tracking-wide">
-              <th className="text-left pl-4 py-3">Account</th>
-              <th className="text-center py-3">Type</th>
-              <th className="text-right py-3">Value</th>
-              <th className="text-center py-3">Probability</th>
-              <th className="text-center py-3">Stage</th>
-              <th className="text-center py-3 pr-4">Created</th>
+          <thead className="bg-primary border-b border-gray-200">
+            <tr className="text-xs uppercase text-white font-semibold text-left">
+              <th className="pl-6 py-4">Account</th>
+              <th className="text-center py-4">Type</th>
+              <th className="text-right py-4">Value</th>
+              <th className="text-center py-4">Probability</th>
+              <th className="text-center py-4">Stage</th>
+              <th className="text-center py-4 pr-6">Created Date</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-black/5 dark:divide-white/10">
+          <tbody className="divide-y divide-gray-100">
             {filtered.map((opp) => (
-              <tr key={opp.id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                <td className="pl-4 py-3 font-bold text-black dark:text-white">{opp.accountName}</td>
-                <td className="text-center py-3">
-                  <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-black uppercase border-2 border-black ${typeBadge[opp.type].bgColor} ${typeBadge[opp.type].textColor} shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
+              <tr key={opp.id} className="hover:bg-purple-50 transition-colors group">
+                <td className="pl-6 py-4 font-bold text-foreground group-hover:text-primary transition-colors">{opp.accountName}</td>
+                <td className="text-center py-4">
+                  <div className={`sticker inline-flex py-1 px-3 text-xs text-white ${typeBadge[opp.type].bgColor} shadow-sm`}>
                     {typeBadge[opp.type].label}
-                  </span>
+                  </div>
                 </td>
-                <td className="text-right py-3 font-mono text-gray-700 dark:text-gray-300">{formatCurrency(opp.value)}</td>
-                <td className="text-center py-3 font-mono text-gray-700 dark:text-gray-300">{opp.probability}%</td>
-                <td className="text-center py-3 text-xs uppercase font-bold text-gray-600 dark:text-gray-400">{opp.stage.replace('_', ' ')}</td>
-                <td className="text-center py-3 text-xs text-gray-600 dark:text-gray-400 pr-4">{opp.createdDate}</td>
+                <td className="text-right py-4 font-semibold text-foreground">{formatCurrency(opp.value)}</td>
+                <td className="text-center py-4">
+                  <div className="w-24 h-3 border border-gray-200 bg-gray-100 rounded-full inline-block relative overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full"
+                      style={{ width: `${opp.probability}%` }}
+                    ></div>
+                    <span className="absolute -top-5 right-0 text-xs font-semibold text-gray-600">{opp.probability}%</span>
+                  </div>
+                </td>
+                <td className="text-center py-4 text-xs font-medium uppercase text-gray-600">{opp.stage.replace('_', ' ')}</td>
+                <td className="text-center py-4 text-xs text-gray-500 pr-6">{opp.createdDate}</td>
               </tr>
             ))}
           </tbody>

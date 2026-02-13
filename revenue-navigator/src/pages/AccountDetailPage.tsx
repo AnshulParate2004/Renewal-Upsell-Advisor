@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, Users, Building2, Clock, BarChart3, ArrowLeft, Mail, Phone, Edit2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { accounts, formatCurrency, getDaysUntil } from "@/data/mockData";
 import { generateHistoricalData } from "@/data/historicalDataGenerator";
 import MetricsHistoryChart from "@/components/charts/MetricsHistoryChart";
@@ -16,14 +17,20 @@ export default function AccountDetailPage() {
 
     if (!account) {
         return (
-            <div className="p-8 text-center">
-                <h2 className="text-2xl font-black text-black dark:text-white mb-4">Account Not Found</h2>
-                <button
-                    onClick={() => navigate(-1)}
-                    className="px-6 py-2 bg-indigo-600 text-white border-2 border-black text-xs font-black uppercase"
-                >
-                    Go Back
-                </button>
+            <div className="min-h-screen bg-purple-50/30 flex items-center justify-center p-8">
+                <div className="paper-card bg-white p-12 text-center max-w-md shadow-2xl shadow-purple-900/10 rounded-3xl">
+                    <div className="w-20 h-20 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <AlertTriangle size={40} />
+                    </div>
+                    <h2 className="text-3xl font-bold text-foreground mb-4 tracking-tight">Account Not Found</h2>
+                    <p className="text-gray-500 mb-8 font-medium">The account record you are looking for does not exist in the current registry.</p>
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="w-full btn-punch bg-primary text-white py-4"
+                    >
+                        RETURN_TO_BASE
+                    </button>
+                </div>
             </div>
         );
     }
@@ -34,15 +41,15 @@ export default function AccountDetailPage() {
     const getSentimentColor = (score: number) => {
         if (score > 0.5) return "text-emerald-600";
         if (score > 0) return "text-blue-600";
-        if (score > -0.5) return "text-yellow-600";
+        if (score > -0.5) return "text-amber-600";
         return "text-red-600";
     };
 
     const getSentimentLabel = (score: number) => {
-        if (score > 0.5) return "Very Positive";
-        if (score > 0) return "Positive";
-        if (score > -0.5) return "Neutral";
-        return "Negative";
+        if (score > 0.5) return "EXCEPTIONAL";
+        if (score > 0) return "POSITIVE";
+        if (score > -0.5) return "NEUTRAL";
+        return "CRITICAL";
     };
 
     const getSentimentEmoji = (score: number) => {
@@ -53,215 +60,219 @@ export default function AccountDetailPage() {
     };
 
     const tabs = [
-        { id: 'overview', label: 'Overview', icon: <Building2 size={14} /> },
-        { id: 'timeline', label: 'Timeline', icon: <Clock size={14} /> },
-        { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={14} /> }
+        { id: 'overview', label: 'OVERVIEW', icon: <Building2 size={16} /> },
+        { id: 'timeline', label: 'TIMELINE', icon: <Clock size={16} /> },
+        { id: 'analytics', label: 'ANALYTICS', icon: <BarChart3 size={16} /> }
     ] as const;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="min-h-screen bg-white">
             {/* Header */}
-            <div className="bg-indigo-600 border-b-4 border-black dark:border-white p-6">
-                <div className="max-w-7xl mx-auto">
-                    <button
-                        onClick={() => navigate(-1)}
-                        className="mb-4 px-4 py-2 bg-white text-black border-2 border-black text-xs font-black uppercase flex items-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
-                    >
-                        <ArrowLeft size={16} />
-                        Back
-                    </button>
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                            <Building2 className="w-8 h-8 text-indigo-600" />
+            <div className="bg-white border-b border-gray-100 p-8 md:p-12">
+                <div className="max-w-7xl mx-auto flex flex-col gap-10">
+                    <div>
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="group px-4 py-2 bg-gray-50 text-gray-400 hover:text-primary hover:bg-primary/5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-3 transition-all"
+                        >
+                            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                            BACK_TO_COMMAND_CENTER
+                        </button>
+                    </div>
+
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                        <div className="flex items-center gap-8">
+                            <div className="h-24 w-24 flex items-center justify-center bg-white border border-gray-100 shadow-2xl shadow-purple-900/10 rounded-3xl relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
+                                <Building2 className="h-10 w-10 text-primary relative z-10" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-4 mb-3">
+                                    <h1 className="text-5xl font-extrabold text-foreground tracking-tight leading-none">
+                                        {account.name}
+                                    </h1>
+                                    <div className="sticker-outline bg-emerald-50 text-emerald-600 border-emerald-100 px-3 py-1 font-bold text-[10px] tracking-widest">
+                                        ACTIVE_ENTITY
+                                    </div>
+                                </div>
+                                <p className="text-sm font-bold text-gray-400 uppercase tracking-[0.3em]">
+                                    {account.industry} <span className="mx-3 text-gray-200">/</span> ID: {account.id}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-black text-white uppercase tracking-tight">{account.name}</h1>
-                            <p className="text-sm text-white/80 font-mono">{account.industry} • Account ID: {account.id}</p>
+                        <div className="flex items-center gap-4">
+                            <button className="btn-punch px-8 py-4 bg-primary text-white shadow-lg shadow-primary/20 flex items-center gap-3 group">
+                                <Edit2 size={18} />
+                                MODIFY_DATA
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="border-b-4 border-black dark:border-white bg-white dark:bg-gray-800">
-                <div className="max-w-7xl mx-auto flex gap-0">
+            <div className="bg-white border-b border-gray-50 sticky top-0 z-30 px-8">
+                <div className="max-w-7xl mx-auto flex">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 px-6 py-4 text-sm font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 border-r-2 border-black dark:border-white last:border-r-0 ${activeTab === tab.id
-                                ? 'bg-white dark:bg-gray-800 text-black dark:text-white shadow-[inset_0_4px_0_0_rgba(99,102,241,1)]'
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                            className={`px-8 py-6 text-xs font-extrabold uppercase tracking-[0.2em] transition-all flex items-center gap-3 relative group ${activeTab === tab.id
+                                ? 'text-primary'
+                                : 'text-gray-400 hover:text-gray-600'
                                 }`}
                         >
-                            {tab.icon}
+                            <span className={activeTab === tab.id ? 'text-primary' : 'text-gray-300'}>{tab.icon}</span>
                             {tab.label}
+                            {activeTab === tab.id && (
+                                <motion.div
+                                    layoutId="activeTab"
+                                    className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full"
+                                />
+                            )}
                         </button>
                     ))}
                 </div>
             </div>
 
             {/* Content */}
-            <div className="max-w-7xl mx-auto p-6">
+            <div className="max-w-7xl mx-auto p-8 md:p-12">
                 {activeTab === 'overview' && (
-                    <div>
+                    <div className="space-y-12">
                         {/* Key Metrics Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
-                                <p className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2">ARR</p>
-                                <p className="text-3xl font-black text-black dark:text-white font-mono">{formatCurrency(account.arr)}</p>
-                            </div>
-                            <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
-                                <p className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2">Renewal</p>
-                                <p className={`text-3xl font-black font-mono ${getDaysUntil(account.renewalDate) <= 30 ? 'text-red-600' : 'text-black dark:text-white'}`}>
-                                    {getDaysUntil(account.renewalDate)}d
-                                </p>
-                            </div>
-                            <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
-                                <p className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2">Licenses</p>
-                                <p className="text-3xl font-black text-black dark:text-white font-mono">
-                                    {account.licensesUsed}/{account.licensesTotal}
-                                </p>
-                            </div>
-                            <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
-                                <p className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2">Stage</p>
-                                <p className="text-2xl font-black text-black dark:text-white uppercase">{account.renewalStage}</p>
-                            </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {[
+                                { label: 'ANNUAL_REVENUE', value: formatCurrency(account.arr), icon: <TrendingUp size={20} /> },
+                                { label: 'RENEWAL_HORIZON', value: `T-${getDaysUntil(account.renewalDate)}D`, alert: getDaysUntil(account.renewalDate) <= 30, icon: <Clock size={20} /> },
+                                { label: 'UTILIZATION_INDEX', value: `${account.licensesUsed}/${account.licensesTotal}`, icon: <Users size={20} /> },
+                                { label: 'DEPLOYMENT_STAGE', value: account.renewalStage.toUpperCase(), icon: <BarChart3 size={20} /> }
+                            ].map((m, i) => (
+                                <div key={i} className="paper-card p-6 bg-white border border-gray-100 shadow-xl shadow-purple-900/5 group hover:border-primary/20 transition-all">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <div className="p-2.5 bg-gray-50 text-gray-400 group-hover:text-primary group-hover:bg-primary/5 rounded-xl transition-colors">
+                                            {m.icon}
+                                        </div>
+                                        <p className="text-[10px] uppercase font-bold text-gray-400 tracking-widest">{m.label}</p>
+                                    </div>
+                                    <p className={`text-4xl font-extrabold tracking-tight ${m.alert ? 'text-red-500' : 'text-foreground'}`}>
+                                        {m.value}
+                                    </p>
+                                </div>
+                            ))}
                         </div>
 
-                        {/* Analytics Section */}
-                        <div className="mb-6">
-                            <h3 className="text-lg font-black uppercase tracking-wider text-black dark:text-white mb-4 flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5" />
-                                Analytics & Predictions
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Analytic Intelligence */}
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            {/* Health & Risk */}
+                            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {/* Health Score */}
-                                <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-sm font-bold uppercase text-gray-600 dark:text-gray-400">Health Score</span>
-                                        <span className="text-2xl font-black font-mono text-black dark:text-white">{account.healthScore}%</span>
+                                <div className="paper-card p-8 bg-white border border-gray-100 shadow-xl shadow-purple-900/5">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400">HEALTH_INDEX</h3>
+                                        <span className={`text-3xl font-extrabold tracking-tight ${account.healthScore >= 70 ? 'text-emerald-500' : account.healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+                                            {account.healthScore}%
+                                        </span>
                                     </div>
-                                    <div className="w-full h-4 bg-gray-200 dark:bg-gray-700 border-2 border-black/20 dark:border-white/20 rounded-sm overflow-hidden">
+                                    <div className="w-full h-2.5 bg-gray-50 rounded-full overflow-hidden">
                                         <div
-                                            className={`h-full ${account.healthScore >= 70 ? 'bg-emerald-500' : account.healthScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                            className={`h-full transition-all duration-500 ${account.healthScore >= 70 ? 'bg-emerald-500' : account.healthScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
                                             style={{ width: `${account.healthScore}%` }}
                                         />
                                     </div>
+                                    <p className="text-[10px] font-bold text-gray-400 mt-4 uppercase tracking-widest">STABILITY_METRIC: NOMINAL</p>
                                 </div>
 
-                                {/* Risk Score */}
-                                <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-sm font-bold uppercase text-gray-600 dark:text-gray-400">Risk Score</span>
-                                        <span className={`inline-flex px-4 py-1 text-xs uppercase font-black tracking-wide border-2 border-black ${account.riskScore >= 70
-                                            ? 'bg-red-600 text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                                            : account.riskScore >= 40
-                                                ? 'bg-yellow-400 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]'
-                                                : 'bg-white text-green-700 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]'
-                                            }`}>
-                                            {account.riskScore >= 70 ? 'HIGH RISK' : account.riskScore >= 40 ? 'MEDIUM' : 'LOW RISK'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Relationship Score */}
-                                <div className="p-6 bg-blue-50 dark:bg-blue-950/30 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-sm font-bold uppercase text-gray-600 dark:text-gray-400">Relationship Score</span>
-                                        <span className="text-2xl font-black font-mono text-black dark:text-white">{account.relationshipScore}%</span>
-                                    </div>
-                                    <div className="w-full h-4 bg-gray-200 dark:bg-gray-700 border-2 border-black/20 dark:border-white/20 rounded-sm overflow-hidden">
-                                        <div
-                                            className={`h-full ${account.relationshipScore >= 70 ? 'bg-blue-600' : account.relationshipScore >= 40 ? 'bg-blue-400' : 'bg-blue-300'}`}
-                                            style={{ width: `${account.relationshipScore}%` }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Churn Probability */}
-                                <div className="p-6 bg-red-50 dark:bg-red-950/30 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-sm font-bold uppercase text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                            <AlertTriangle className="w-4 h-4" />
-                                            Churn Probability
-                                        </span>
-                                        <span className={`text-2xl font-black font-mono ${account.churnProbability >= 0.7 ? 'text-red-600' : account.churnProbability >= 0.4 ? 'text-yellow-600' : 'text-green-600'}`}>
-                                            {Math.round(account.churnProbability * 100)}%
-                                        </span>
-                                    </div>
-                                    <div className="w-full h-4 bg-gray-200 dark:bg-gray-700 border-2 border-black/20 dark:border-white/20 rounded-sm overflow-hidden">
-                                        <div
-                                            className={`h-full ${account.churnProbability >= 0.7 ? 'bg-red-600' : account.churnProbability >= 0.4 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                                            style={{ width: `${account.churnProbability * 100}%` }}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Sentiment Analysis */}
-                                <div className="p-6 bg-purple-50 dark:bg-purple-950/30 border-2 border-black dark:border-white md:col-span-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-bold uppercase text-gray-600 dark:text-gray-400">Sentiment Analysis</span>
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-3xl">{getSentimentEmoji(account.sentimentScore)}</span>
-                                            <span className={`text-2xl font-black ${getSentimentColor(account.sentimentScore)}`}>
-                                                {getSentimentLabel(account.sentimentScore)}
-                                            </span>
-                                            <span className="text-lg font-mono text-gray-500 dark:text-gray-400">
-                                                ({account.sentimentScore > 0 ? '+' : ''}{account.sentimentScore.toFixed(2)})
-                                            </span>
+                                {/* Churn Risk */}
+                                <div className="paper-card p-8 bg-foreground text-white border-none shadow-2xl shadow-purple-900/20 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
+                                    <div className="relative z-10">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-white/40">RISK_ARCHITECTURE</h3>
+                                            <AlertTriangle className={`w-5 h-5 ${account.churnProbability >= 0.7 ? 'text-red-500' : 'text-primary'}`} />
+                                        </div>
+                                        <div className="flex items-end justify-between">
+                                            <div>
+                                                <p className="text-4xl font-extrabold tracking-tight mb-1">{Math.round(account.churnProbability * 100)}%</p>
+                                                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">CHURN_PROBABILITY</p>
+                                            </div>
+                                            <div className="px-3 py-1 bg-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest">
+                                                {account.riskScore >= 70 ? 'CRITICAL' : 'STABLE'}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Utilization */}
-                                <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white md:col-span-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <span className="text-sm font-bold uppercase text-gray-600 dark:text-gray-400">Utilization</span>
-                                        <span className="text-2xl font-black font-mono text-black dark:text-white">{account.utilization}%</span>
+                                {/* Sentiment Audit */}
+                                <div className="md:col-span-2 paper-card p-8 bg-white border border-gray-100 shadow-xl shadow-purple-900/5">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400">SENTIMENT_AUDIT_STREAM</h3>
+                                        <span className="px-3 py-1 bg-gray-50 border border-gray-100 rounded-lg text-[10px] font-bold text-gray-400">P_IDX: {account.sentimentScore.toFixed(2)}</span>
                                     </div>
-                                    <div className="w-full h-4 bg-gray-200 dark:bg-gray-700 border-2 border-black/20 dark:border-white/20 rounded-sm overflow-hidden">
-                                        <div
-                                            className={`h-full ${account.utilization > 80 ? 'bg-emerald-500' : 'bg-blue-600'}`}
-                                            style={{ width: `${account.utilization}%` }}
-                                        />
+                                    <div className="flex items-center gap-8">
+                                        <div className="h-20 w-20 flex items-center justify-center bg-gray-50 rounded-3xl text-5xl">
+                                            {getSentimentEmoji(account.sentimentScore)}
+                                        </div>
+                                        <div>
+                                            <h4 className={`text-3xl font-extrabold tracking-tight mb-2 uppercase ${getSentimentColor(account.sentimentScore)}`}>
+                                                {getSentimentLabel(account.sentimentScore)}
+                                            </h4>
+                                            <p className="text-sm font-medium text-gray-500">
+                                                Linguistic patterns indicate a {getSentimentLabel(account.sentimentScore).toLowerCase()} trajectory for the fiscal quarter.
+                                            </p>
+                                        </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Relationship Pulse */}
+                            <div className="paper-card p-8 bg-primary/5 border border-primary/10 shadow-xl shadow-purple-900/5 flex flex-col justify-between">
+                                <div>
+                                    <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-primary/60 mb-8">RELATIONSHIP_PULSE</h3>
+                                    <div className="flex items-baseline gap-2 mb-1">
+                                        <span className="text-5xl font-extrabold text-primary tracking-tight">{account.relationshipScore}%</span>
+                                        <span className="text-sm font-bold text-primary/40 uppercase tracking-widest">CORE</span>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-primary/40 uppercase tracking-widest mb-10">Engagement Matrix Alpha</p>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="h-1 bg-primary/10 rounded-full w-full">
+                                        <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${account.relationshipScore}%` }} />
+                                    </div>
+                                    <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest">SYNC_STATUS: ESTABLISHED</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Primary Contact Information */}
-                        <div className="mb-8">
-                            <h3 className="text-lg font-black uppercase tracking-wider text-black dark:text-white mb-4 flex items-center gap-2">
-                                <Users className="w-5 h-5" />
-                                Primary Contact
+                        {/* Primary Contact */}
+                        <div className="space-y-6">
+                            <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400 flex items-center gap-3">
+                                <Users size={16} />
+                                PRIMARY_STAKEHOLDER_RECORD
                             </h3>
                             <ContactInfoSection account={account} />
                         </div>
 
                         {/* Account Information */}
-                        <div className="mb-6">
-                            <h3 className="text-lg font-black uppercase tracking-wider text-black dark:text-white mb-4 flex items-center gap-2">
-                                <Building2 className="w-5 h-5" />
-                                Account Information
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <p className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2">CSM</p>
-                                    <p className="text-base font-bold text-black dark:text-white">{account.csm}</p>
-                                </div>
-                                <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <p className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2">Last Contact</p>
-                                    <p className="text-base font-bold text-black dark:text-white">{account.lastContact}</p>
-                                </div>
-                                <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <p className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2">Contract Start</p>
-                                    <p className="text-base font-bold text-black dark:text-white font-mono">{account.contractStart}</p>
-                                </div>
-                                <div className="p-6 bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                                    <p className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2">Renewal Date</p>
-                                    <p className="text-base font-bold text-black dark:text-white font-mono">{account.renewalDate}</p>
-                                </div>
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <Building2 className="w-6 h-6 text-primary" />
+                                <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400">METADATA_REGISTRY</h3>
+                                <div className="h-px flex-1 bg-gray-100" />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {[
+                                    { label: 'ASSIGNED_CSM', value: account.csm },
+                                    { label: 'LAST_UPLINK', value: account.lastContact },
+                                    { label: 'CONTRACT_ROOT', value: account.contractStart, mono: true },
+                                    { label: 'RENEWAL_NODE', value: account.renewalDate, mono: true }
+                                ].map((field, i) => (
+                                    <div key={i} className="paper-card p-6 bg-white border border-gray-100">
+                                        <p className="text-[9px] uppercase font-bold text-gray-400 tracking-widest mb-3">{field.label}</p>
+                                        <p className={`text-lg font-bold text-foreground tracking-tight ${field.mono ? 'font-mono' : ''}`}>
+                                            {field.value}
+                                        </p>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -272,7 +283,7 @@ export default function AccountDetailPage() {
                 )}
 
                 {activeTab === 'analytics' && (
-                    <div className="space-y-6">
+                    <div className="space-y-12">
                         <MetricsHistoryChart data={history.metrics} />
                         <SentimentTrendChart data={history.sentiment} />
                     </div>
@@ -304,101 +315,134 @@ function ContactInfoSection({ account }: { account: any }) {
 
     if (!account.contactName && !account.contactEmail && !account.contactPhone) {
         return (
-            <div className="p-8 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-700 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <Users className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                <p className="text-base text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">No primary contact information available</p>
+            <div className="p-12 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200 text-center">
+                <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-sm text-gray-400 font-bold uppercase tracking-wider">No stakeholder information available</p>
+                <button
+                    onClick={() => setIsEditing(true)}
+                    className="mt-6 text-primary hover:text-primary/80 text-[10px] font-black uppercase tracking-widest"
+                >
+                    + REGISTER_CONTACT
+                </button>
             </div>
         );
     }
 
     return (
-        <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]">
-            <div className="flex items-center justify-between mb-6">
-                <h4 className="text-sm font-black uppercase text-blue-800 dark:text-blue-300 tracking-widest">Contact Details</h4>
+        <div className="paper-card p-10 bg-white border border-gray-100 shadow-xl shadow-purple-900/5 rounded-3xl relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
+                <div className="flex items-center gap-6">
+                    <div className="h-16 w-16 flex items-center justify-center bg-primary/5 rounded-2xl border border-primary/10">
+                        <Users className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                        <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400 mb-1">PRIMARY_STAKEHOLDER</h4>
+                        <p className="text-2xl font-extrabold tracking-tight text-foreground">{contactName || "UNASSIGNED"}</p>
+                    </div>
+                </div>
                 {!isEditing ? (
                     <button
                         onClick={() => setIsEditing(true)}
-                        className="px-4 py-2 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-white text-xs font-black uppercase transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px]"
+                        className="btn-punch px-6 py-3 bg-gray-50 text-gray-500 hover:text-primary hover:bg-primary/5 text-[10px] font-black uppercase tracking-widest"
                     >
-                        <span className="flex items-center gap-2">
-                            <Edit2 size={14} />
-                            Edit
-                        </span>
+                        <Edit2 size={14} className="mr-2" />
+                        MODIFY_RECORD
                     </button>
                 ) : (
-                    <div className="flex gap-3">
+                    <div className="flex gap-4">
                         <button
                             onClick={handleCancel}
-                            className="px-4 py-2 bg-white dark:bg-gray-800 text-black dark:text-white border-2 border-black dark:border-white text-xs font-black uppercase transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                            className="btn-punch px-6 py-3 bg-white text-gray-400 text-[10px] font-black uppercase tracking-widest"
                         >
-                            Cancel
+                            ABORT
                         </button>
                         <button
                             onClick={handleSave}
-                            className="px-4 py-2 bg-indigo-600 text-white border-2 border-black dark:border-white text-xs font-black uppercase transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px]"
+                            className="btn-punch px-6 py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest"
                         >
-                            Save Changes
+                            COMMIT_CHANGES
                         </button>
                     </div>
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Name */}
-                <div className="p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white">
-                    <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2 block">Primary Contact Name</label>
-                    {isEditing ? (
-                        <input
-                            type="text"
-                            value={contactName}
-                            onChange={(e) => setContactName(e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                        />
-                    ) : (
-                        <p className="text-base font-black text-black dark:text-white">{contactName || "—"}</p>
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-8">
+                    {/* Name Edit */}
+                    {isEditing && (
+                        <div className="space-y-3">
+                            <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">STAKEHOLDER_NAME</label>
+                            <input
+                                type="text"
+                                value={contactName}
+                                onChange={(e) => setContactName(e.target.value)}
+                                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-inner"
+                            />
+                        </div>
                     )}
+
+                    {/* Email */}
+                    <div className="space-y-4">
+                        <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">SECURE_COMMUNICATION_PATH</label>
+                        {isEditing ? (
+                            <input
+                                type="email"
+                                value={contactEmail}
+                                onChange={(e) => setContactEmail(e.target.value)}
+                                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-inner"
+                            />
+                        ) : (
+                            <div className="paper-card bg-gray-50/50 p-6 rounded-2xl border border-gray-100 group hover:border-primary/20 transition-all">
+                                <a
+                                    href={`mailto:${contactEmail}`}
+                                    className="text-lg font-bold text-foreground hover:text-primary transition-colors flex items-center gap-4"
+                                >
+                                    <div className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 group-hover:text-primary transition-colors">
+                                        <Mail size={18} />
+                                    </div>
+                                    {contactEmail || "NOT_DEFINED"}
+                                </a>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* Email */}
-                <div className="p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white">
-                    <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2 block">Email Address</label>
-                    {isEditing ? (
-                        <input
-                            type="email"
-                            value={contactEmail}
-                            onChange={(e) => setContactEmail(e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                        />
-                    ) : (
-                        <a
-                            href={`mailto:${contactEmail}`}
-                            className="text-base font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-2"
-                        >
-                            <Mail size={16} />
-                            {contactEmail || "—"}
-                        </a>
-                    )}
-                </div>
+                <div className="space-y-8">
+                    {/* Phone */}
+                    <div className="space-y-4">
+                        <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">DIRECT_VOICE_UPLINK</label>
+                        {isEditing ? (
+                            <input
+                                type="tel"
+                                value={contactPhone}
+                                onChange={(e) => setContactPhone(e.target.value)}
+                                className="w-full px-6 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-inner"
+                            />
+                        ) : (
+                            <div className="paper-card bg-gray-50/50 p-6 rounded-2xl border border-gray-100 group hover:border-primary/20 transition-all">
+                                <a
+                                    href={`tel:${contactPhone}`}
+                                    className="text-lg font-bold text-foreground hover:text-primary transition-colors flex items-center gap-4"
+                                >
+                                    <div className="p-2 bg-white rounded-lg border border-gray-100 text-gray-400 group-hover:text-primary transition-colors">
+                                        <Phone size={18} />
+                                    </div>
+                                    <span className="font-mono">{contactPhone || "NOT_DEFINED"}</span>
+                                </a>
+                            </div>
+                        )}
+                    </div>
 
-                {/* Phone */}
-                <div className="p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white">
-                    <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest mb-2 block">Phone Number</label>
-                    {isEditing ? (
-                        <input
-                            type="tel"
-                            value={contactPhone}
-                            onChange={(e) => setContactPhone(e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-gray-900 border-2 border-black dark:border-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                        />
-                    ) : (
-                        <a
-                            href={`tel:${contactPhone}`}
-                            className="text-base font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-2 font-mono"
-                        >
-                            <Phone size={16} />
-                            {contactPhone || "—"}
-                        </a>
-                    )}
+                    <div className="p-6 bg-primary/[0.03] border border-primary/5 rounded-2xl flex items-center gap-6">
+                        <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center text-xl shadow-sm border border-gray-100">
+                            💡
+                        </div>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase leading-relaxed tracking-wider">
+                            Last interaction recorded <span className="text-primary">3 DAYS AGO</span> via Automated Voice Path.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

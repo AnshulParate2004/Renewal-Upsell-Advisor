@@ -23,51 +23,54 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   return (
-    <div className="p-4 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col space-y-4">
+    <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex items-center justify-between shrink-0"
+        className="flex items-end justify-between shrink-0 pb-6 border-b border-gray-200"
       >
         <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Revenue Navigator</h1>
-          <p className="text-xs text-muted-foreground font-mono mt-1">REAL-TIME PERFORMANCE OVERVIEW</p>
+          <h1 className="text-5xl font-bold text-foreground tracking-tight leading-none">
+            Revenue <span className="text-primary">Navigator</span>
+          </h1>
+          <p className="text-sm font-medium text-gray-500 mt-2">
+            Real-Time Performance Intelligence
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold uppercase text-muted-foreground bg-muted/10 px-2 py-1 rounded border border-border">Q1 2026</span>
+        <div className="flex items-center gap-3">
+          <div className="text-sm italic text-accent">Operational!</div>
+          <div className="sticker-outline px-4 py-2 text-sm">
+            Q1 2026 ALPHA
+          </div>
         </div>
       </motion.div>
 
-      {/* NB-Style Metric Cards */}
+      {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 shrink-0">
         {[
-          { label: 'Total ARR', value: totalArr, displayValue: formatCurrency(totalArr), icon: <DollarSign size={20} />, color: 'text-black', borderColor: 'border-b-black', iconBg: 'bg-black', isNumber: true },
-          { label: 'Churn Risk', value: churnRiskCount, displayValue: churnRiskCount, icon: <AlertTriangle size={20} />, color: 'text-red-600', borderColor: 'border-b-red-600', iconBg: 'bg-red-600', isNumber: true },
-          { label: 'Renewal Rate', value: renewalRate, displayValue: `${renewalRate}%`, icon: <TrendingUp size={20} />, color: 'text-emerald-600', borderColor: 'border-b-emerald-600', iconBg: 'bg-emerald-600', isNumber: true, suffix: '%' },
-          { label: 'Upsell Pipeline', value: upsellPipeline, displayValue: formatCurrency(upsellPipeline), icon: <Users size={20} />, color: 'text-blue-600', borderColor: 'border-b-blue-600', iconBg: 'bg-blue-600', isNumber: true },
-          { label: 'Avg Relationship', value: avgRelationshipScore, displayValue: `${avgRelationshipScore}%`, icon: <Heart size={20} />, color: 'text-purple-600', borderColor: 'border-b-purple-600', iconBg: 'bg-purple-600', isNumber: true, suffix: '%' },
-          { label: 'Avg Sentiment', value: parseFloat(avgSentimentScore), displayValue: avgSentimentScore, icon: <Smile size={20} />, color: 'text-pink-600', borderColor: 'border-b-pink-600', iconBg: 'bg-pink-600', isNumber: false }
+          { label: 'Total ARR', value: totalArr, displayValue: formatCurrency(totalArr), icon: <DollarSign size={20} />, color: 'text-foreground', iconBg: 'bg-primary' },
+          { label: 'Churn Risk', value: churnRiskCount, displayValue: churnRiskCount, icon: <AlertTriangle size={20} />, color: 'text-red-600', iconBg: 'bg-white', isAlert: true },
+          { label: 'Renewal Rate', value: renewalRate, displayValue: `${renewalRate}%`, icon: <TrendingUp size={20} />, color: 'text-primary', iconBg: 'bg-white' },
+          { label: 'Upsell Pipeline', value: upsellPipeline, displayValue: formatCurrency(upsellPipeline), icon: <Users size={20} />, color: 'text-foreground', iconBg: 'bg-accent' },
+          { label: 'Avg Relationship', value: avgRelationshipScore, displayValue: `${avgRelationshipScore}%`, icon: <Heart size={20} />, color: 'text-foreground', iconBg: 'bg-white' },
+          { label: 'Avg Sentiment', value: parseFloat(avgSentimentScore), displayValue: avgSentimentScore, icon: <Smile size={20} />, color: 'text-foreground', iconBg: 'bg-white' }
         ].map((metric, idx) => (
           <AnimatedCard
             key={idx}
-            delay={idx * 0.1}
-            className={`p-4 bg-white dark:bg-gray-800 border-2 border-black dark:border-white border-b-[6px] ${metric.borderColor} flex items-center justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]`}
+            delay={idx * 0.05}
+            className={`paper-card p-5 flex flex-col justify-between group cursor-default transition-all ${metric.isAlert ? 'bg-red-50 border-red-200' : 'bg-white'}`}
           >
-            <div>
-              <p className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-widest">{metric.label}</p>
-              <div className={`text-3xl font-mono font-bold mt-1 ${metric.color} dark:text-white`}>
-                {metric.displayValue}
+            <div className="flex justify-between items-start mb-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase">{metric.label}</p>
+              <div className={`p-2 rounded-lg ${metric.iconBg} ${metric.iconBg === 'bg-white' ? 'text-foreground border border-gray-200' : 'text-white'} shadow-sm`}>
+                {metric.icon}
               </div>
             </div>
-            <motion.div
-              whileHover={{ rotate: 360 }}
-              transition={{ duration: 0.6 }}
-              className={`p-2 border-2 border-black dark:border-white ${metric.iconBg} text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.3)]`}
-            >
-              {metric.icon}
-            </motion.div>
+            <div className={`text-3xl font-bold tracking-tight ${metric.color}`}>
+              {metric.displayValue}
+            </div>
           </AnimatedCard>
         ))}
       </div>
