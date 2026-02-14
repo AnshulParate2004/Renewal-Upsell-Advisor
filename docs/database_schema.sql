@@ -9,16 +9,58 @@
 --   4. PostgreSQL has excellent JSON support (JSONB) for flexible log storage
 --   5. Simpler architecture with one database system
 -- ============================================================================
+--
+-- IMPORTANT: If you get "relation does not exist" errors, you may need to
+-- drop existing tables first. Uncomment the DROP statements below if needed.
+-- ============================================================================
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================================
+-- DROP EXISTING TABLES (Uncomment if you need to start fresh)
+-- ============================================================================
+-- WARNING: This will delete all data! Only use for fresh setup.
+-- ============================================================================
+-- DROP TABLE IF EXISTS webhook_events CASCADE;
+-- DROP TABLE IF EXISTS ml_training_logs CASCADE;
+-- DROP TABLE IF EXISTS activity_logs CASCADE;
+-- DROP TABLE IF EXISTS salesforce_sync_log CASCADE;
+-- DROP TABLE IF EXISTS transactions CASCADE;
+-- DROP TABLE IF EXISTS renewal_events CASCADE;
+-- DROP TABLE IF EXISTS renewal_quotes CASCADE;
+-- DROP TABLE IF EXISTS voice_calls CASCADE;
+-- DROP TABLE IF EXISTS email_campaigns CASCADE;
+-- DROP TABLE IF EXISTS sentiment_analysis CASCADE;
+-- DROP TABLE IF EXISTS upsell_opportunities CASCADE;
+-- DROP TABLE IF EXISTS churn_predictions CASCADE;
+-- DROP TABLE IF EXISTS support_tickets CASCADE;
+-- DROP TABLE IF EXISTS usage_metrics CASCADE;
+-- DROP TABLE IF EXISTS contacts CASCADE;
+-- DROP TABLE IF EXISTS accounts CASCADE;
+-- ============================================================================
+
+-- ============================================================================
 -- CORE ENTITIES
 -- ============================================================================
 
+-- Contacts Table (CSM, AE, Customer contacts) - Created FIRST to avoid FK issues
+CREATE TABLE IF NOT EXISTS contacts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID, -- Will add FK constraint after accounts table is created
+    salesforce_id VARCHAR(255) UNIQUE,
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    email VARCHAR(500) UNIQUE NOT NULL,
+    phone VARCHAR(50),
+    role VARCHAR(100), -- CSM, AE, Customer, Decision Maker, etc.
+    is_primary BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Accounts/Companies Table
-CREATE TABLE accounts (
+CREATE TABLE IF NOT EXISTS accounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     salesforce_id VARCHAR(255) UNIQUE,
     name VARCHAR(500) NOT NULL,
@@ -47,9 +89,10 @@ CREATE TABLE accounts (
     sentiment_category VARCHAR(50), -- very_negative, negative, neutral, positive, very_positive
     utilization_percentage DECIMAL(5, 2),
     csm_email VARCHAR(500), -- Denormalized from contacts table for quick access
+    csm_name VARCHAR(255), -- CSM name for quick access (matches frontend requirement)
     
     -- NEW: Primary customer contact (denormalized for quick access)
-    primary_contact_id UUID REFERENCES contacts(id) ON DELETE SET NULL,
+    primary_contact_id UUID, -- Will add FK constraint after both tables are created
     primary_contact_name VARCHAR(500),
     primary_contact_email VARCHAR(500),
     primary_contact_phone VARCHAR(50),
@@ -58,40 +101,27 @@ CREATE TABLE accounts (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for accounts table
-CREATE INDEX idx_accounts_renewal_date ON accounts(renewal_date);
-CREATE INDEX idx_accounts_renewal_stage ON accounts(renewal_stage);
-CREATE INDEX idx_accounts_risk_score ON accounts(risk_score DESC);
-CREATE INDEX idx_accounts_health_score ON accounts(health_score DESC);
-CREATE INDEX idx_accounts_relationship_score ON accounts(relationship_score DESC);
-CREATE INDEX idx_accounts_last_contact_date ON accounts(last_contact_date DESC);
-CREATE INDEX idx_accounts_status ON accounts(status);
-CREATE INDEX idx_accounts_industry ON accounts(industry);
-CREATE INDEX idx_accounts_primary_contact_id ON accounts(primary_contact_id);
+-- Foreign key constraints are added at the end of the file after all tables are created
 
--- Contacts Table (CSM, AE, Customer contacts)
-CREATE TABLE contacts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
-    salesforce_id VARCHAR(255) UNIQUE,
-    first_name VARCHAR(255),
-    last_name VARCHAR(255),
-    email VARCHAR(500) UNIQUE NOT NULL,
-    phone VARCHAR(50),
-    role VARCHAR(100), -- CSM, AE, Customer, Decision Maker, etc.
-    is_primary BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- Indexes for accounts table (using IF NOT EXISTS to allow re-running)
+CREATE INDEX IF NOT EXISTS idx_accounts_renewal_date ON accounts(renewal_date);
+CREATE INDEX IF NOT EXISTS idx_accounts_renewal_stage ON accounts(renewal_stage);
+CREATE INDEX IF NOT EXISTS idx_accounts_risk_score ON accounts(risk_score DESC);
+CREATE INDEX IF NOT EXISTS idx_accounts_health_score ON accounts(health_score DESC);
+CREATE INDEX IF NOT EXISTS idx_accounts_relationship_score ON accounts(relationship_score DESC);
+CREATE INDEX IF NOT EXISTS idx_accounts_last_contact_date ON accounts(last_contact_date DESC);
+CREATE INDEX IF NOT EXISTS idx_accounts_status ON accounts(status);
+CREATE INDEX IF NOT EXISTS idx_accounts_industry ON accounts(industry);
+CREATE INDEX IF NOT EXISTS idx_accounts_primary_contact_id ON accounts(primary_contact_id);
 
 -- ============================================================================
 -- USAGE & ENGAGEMENT DATA
 -- ============================================================================
 
 -- Product Usage Metrics
-CREATE TABLE usage_metrics (
+CREATE TABLE IF NOT EXISTS usage_metrics (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+    account_id UUID, -- FK added later
     metric_date DATE NOT NULL,
     active_users INTEGER DEFAULT 0,
     total_sessions INTEGER DEFAULT 0,
@@ -104,9 +134,9 @@ CREATE TABLE usage_metrics (
 );
 
 -- Support Tickets
-CREATE TABLE support_tickets (
+CREATE TABLE IF NOT EXISTS support_tickets (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+    account_id UUID, -- FK added later
     zendesk_id VARCHAR(255) UNIQUE,
     subject VARCHAR(1000),
     description TEXT,
@@ -122,9 +152,9 @@ CREATE TABLE support_tickets (
 -- ============================================================================
 
 -- Churn Predictions
-CREATE TABLE churn_predictions (
+CREATE TABLE IF NOT EXISTS churn_predictions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+    account_id UUID, -- FK added later
     prediction_date DATE NOT NULL,
     churn_probability DECIMAL(5, 4) CHECK (churn_probability >= 0 AND churn_probability <= 1),
     risk_score INTEGER CHECK (risk_score >= 0 AND risk_score <= 100),
@@ -136,9 +166,9 @@ CREATE TABLE churn_predictions (
 );
 
 -- Upsell Opportunities
-CREATE TABLE upsell_opportunities (
+CREATE TABLE IF NOT EXISTS upsell_opportunities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+    account_id UUID, -- FK added later
     opportunity_type VARCHAR(100), -- expansion, cross_sell, upgrade
     predicted_value DECIMAL(15, 2),
     probability DECIMAL(5, 4) CHECK (probability >= 0 AND probability <= 1),
@@ -151,9 +181,9 @@ CREATE TABLE upsell_opportunities (
 );
 
 -- Sentiment Analysis
-CREATE TABLE sentiment_analysis (
+CREATE TABLE IF NOT EXISTS sentiment_analysis (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+    account_id UUID, -- FK added later
     analysis_date DATE NOT NULL,
     sentiment_score DECIMAL(5, 4) CHECK (sentiment_score >= -1 AND sentiment_score <= 1),
     sentiment_category VARCHAR(50), -- very_negative, negative, neutral, positive, very_positive
@@ -169,10 +199,10 @@ CREATE TABLE sentiment_analysis (
 -- ============================================================================
 
 -- Email Campaigns
-CREATE TABLE email_campaigns (
+CREATE TABLE IF NOT EXISTS email_campaigns (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
-    contact_id UUID REFERENCES contacts(id) ON DELETE SET NULL,
+    account_id UUID, -- FK added later
+    contact_id UUID, -- FK added later
     campaign_type VARCHAR(100), -- renewal_reminder, upsell, churn_prevention
     subject VARCHAR(1000),
     body TEXT,
@@ -186,10 +216,10 @@ CREATE TABLE email_campaigns (
 );
 
 -- Voice Calls
-CREATE TABLE voice_calls (
+CREATE TABLE IF NOT EXISTS voice_calls (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
-    contact_id UUID REFERENCES contacts(id) ON DELETE SET NULL,
+    account_id UUID, -- FK added later
+    contact_id UUID, -- FK added later
     call_type VARCHAR(100), -- renewal_reminder, upsell, check_in
     phone_number VARCHAR(50),
     duration_seconds INTEGER,
@@ -211,9 +241,9 @@ CREATE TABLE voice_calls (
 -- ============================================================================
 
 -- Renewal Quotes
-CREATE TABLE renewal_quotes (
+CREATE TABLE IF NOT EXISTS renewal_quotes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
+    account_id UUID, -- FK added later
     quote_number VARCHAR(100) UNIQUE,
     total_amount DECIMAL(15, 2) NOT NULL,
     discount_percentage DECIMAL(5, 2) DEFAULT 0,
@@ -229,7 +259,7 @@ CREATE TABLE renewal_quotes (
 );
 
 -- Renewal Timeline Events
-CREATE TABLE renewal_events (
+CREATE TABLE IF NOT EXISTS renewal_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
     event_type VARCHAR(100), -- t_minus_90, t_minus_60, t_minus_30, quote_sent, payment_received
@@ -246,7 +276,7 @@ CREATE TABLE renewal_events (
 -- ============================================================================
 
 -- Stripe/Chargebee Transactions
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
     stripe_id VARCHAR(255) UNIQUE,
@@ -261,7 +291,7 @@ CREATE TABLE transactions (
 );
 
 -- Salesforce Sync Log
-CREATE TABLE salesforce_sync_log (
+CREATE TABLE IF NOT EXISTS salesforce_sync_log (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sync_type VARCHAR(100), -- accounts, contacts, opportunities
     records_synced INTEGER DEFAULT 0,
@@ -278,7 +308,7 @@ CREATE TABLE salesforce_sync_log (
 -- ============================================================================
 
 -- System Activity Logs
-CREATE TABLE activity_logs (
+CREATE TABLE IF NOT EXISTS activity_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID REFERENCES accounts(id) ON DELETE CASCADE,
     action VARCHAR(255) NOT NULL, -- view_account, send_email, make_call, etc.
@@ -291,7 +321,7 @@ CREATE TABLE activity_logs (
 );
 
 -- Create index for faster log queries
-CREATE INDEX idx_activity_logs_created_at ON activity_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at DESC);
 
 -- ============================================================================
 -- TRIGGERS FOR DATA SYNCHRONIZATION
@@ -315,16 +345,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_sync_primary_contact ON contacts;
 CREATE TRIGGER trigger_sync_primary_contact
 AFTER INSERT OR UPDATE ON contacts
 FOR EACH ROW
 EXECUTE FUNCTION sync_primary_contact_to_accounts();
-CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
-CREATE INDEX idx_activity_logs_account_id ON activity_logs(account_id);
-CREATE INDEX idx_activity_logs_action ON activity_logs(action);
+
+-- Note: user_id column doesn't exist in activity_logs table, so this index is removed
+CREATE INDEX IF NOT EXISTS idx_activity_logs_account_id ON activity_logs(account_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
 
 -- Webhook Events (from external systems)
-CREATE TABLE webhook_events (
+CREATE TABLE IF NOT EXISTS webhook_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     source VARCHAR(100) NOT NULL, -- stripe, salesforce, zendesk, etc.
     event_type VARCHAR(255) NOT NULL,
@@ -335,10 +367,10 @@ CREATE TABLE webhook_events (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_webhook_events_processed ON webhook_events(processed, created_at);
+CREATE INDEX IF NOT EXISTS idx_webhook_events_processed ON webhook_events(processed, created_at);
 
 -- ML Model Training Logs
-CREATE TABLE ml_training_logs (
+CREATE TABLE IF NOT EXISTS ml_training_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     model_name VARCHAR(100) NOT NULL, -- churn_prediction, upsell_propensity, sentiment_analysis
     model_version VARCHAR(50) NOT NULL,
@@ -353,40 +385,39 @@ CREATE TABLE ml_training_logs (
 );
 
 -- ============================================================================
--- INDEXES FOR PERFORMANCE
+-- ADDITIONAL INDEXES FOR PERFORMANCE
 -- ============================================================================
+-- Note: Some indexes are created immediately after table creation above
+-- These are additional indexes that weren't created earlier
 
--- Accounts
-CREATE INDEX idx_accounts_renewal_date ON accounts(renewal_date);
-CREATE INDEX idx_accounts_status ON accounts(status);
-CREATE INDEX idx_accounts_health_score ON accounts(health_score);
-CREATE INDEX idx_accounts_salesforce_id ON accounts(salesforce_id);
+-- Accounts (additional indexes)
+CREATE INDEX IF NOT EXISTS idx_accounts_salesforce_id ON accounts(salesforce_id);
 
 -- Contacts
-CREATE INDEX idx_contacts_account_id ON contacts(account_id);
-CREATE INDEX idx_contacts_email ON contacts(email);
+CREATE INDEX IF NOT EXISTS idx_contacts_account_id ON contacts(account_id);
+CREATE INDEX IF NOT EXISTS idx_contacts_email ON contacts(email);
 
--- Usage Metrics
-CREATE INDEX idx_usage_metrics_account_id ON usage_metrics(account_id);
-CREATE INDEX idx_usage_metrics_date ON usage_metrics(metric_date DESC);
+-- Usage Metrics (if not already created)
+CREATE INDEX IF NOT EXISTS idx_usage_metrics_account_id ON usage_metrics(account_id);
+CREATE INDEX IF NOT EXISTS idx_usage_metrics_date ON usage_metrics(metric_date DESC);
 
--- Churn Predictions
-CREATE INDEX idx_churn_predictions_account_id ON churn_predictions(account_id);
-CREATE INDEX idx_churn_predictions_date ON churn_predictions(prediction_date DESC);
-CREATE INDEX idx_churn_predictions_risk ON churn_predictions(risk_category);
+-- Churn Predictions (if not already created)
+CREATE INDEX IF NOT EXISTS idx_churn_predictions_account_id ON churn_predictions(account_id);
+CREATE INDEX IF NOT EXISTS idx_churn_predictions_date ON churn_predictions(prediction_date DESC);
+CREATE INDEX IF NOT EXISTS idx_churn_predictions_risk ON churn_predictions(risk_category);
 
--- Upsell Opportunities
-CREATE INDEX idx_upsell_account_id ON upsell_opportunities(account_id);
-CREATE INDEX idx_upsell_status ON upsell_opportunities(status);
+-- Upsell Opportunities (if not already created)
+CREATE INDEX IF NOT EXISTS idx_upsell_account_id ON upsell_opportunities(account_id);
+CREATE INDEX IF NOT EXISTS idx_upsell_status ON upsell_opportunities(status);
 
--- Email Campaigns
-CREATE INDEX idx_email_campaigns_account_id ON email_campaigns(account_id);
-CREATE INDEX idx_email_campaigns_sent_at ON email_campaigns(sent_at DESC);
+-- Email Campaigns (if not already created)
+CREATE INDEX IF NOT EXISTS idx_email_campaigns_account_id ON email_campaigns(account_id);
+CREATE INDEX IF NOT EXISTS idx_email_campaigns_sent_at ON email_campaigns(sent_at DESC);
 
--- Voice Calls
-CREATE INDEX idx_voice_calls_account_id ON voice_calls(account_id);
-CREATE INDEX idx_voice_calls_status ON voice_calls(status);
-CREATE INDEX idx_voice_calls_next_retry ON voice_calls(next_retry_at);
+-- Voice Calls (if not already created)
+CREATE INDEX IF NOT EXISTS idx_voice_calls_account_id ON voice_calls(account_id);
+CREATE INDEX IF NOT EXISTS idx_voice_calls_status ON voice_calls(status);
+CREATE INDEX IF NOT EXISTS idx_voice_calls_next_retry ON voice_calls(next_retry_at);
 
 -- ============================================================================
 -- TRIGGERS FOR UPDATED_AT
@@ -400,15 +431,17 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+DROP TRIGGER IF EXISTS update_accounts_updated_at ON accounts;
 CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON accounts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_contacts_updated_at ON contacts;
 CREATE TRIGGER update_contacts_updated_at BEFORE UPDATE ON contacts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Note: users table doesn't exist in this schema, so this trigger is removed
 
+DROP TRIGGER IF EXISTS update_upsell_opportunities_updated_at ON upsell_opportunities;
 CREATE TRIGGER update_upsell_opportunities_updated_at BEFORE UPDATE ON upsell_opportunities
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -417,7 +450,7 @@ CREATE TRIGGER update_upsell_opportunities_updated_at BEFORE UPDATE ON upsell_op
 -- ============================================================================
 
 -- Account Health Dashboard View
-CREATE VIEW account_health_dashboard AS
+CREATE OR REPLACE VIEW account_health_dashboard AS
 SELECT 
     a.id,
     a.name,
@@ -442,7 +475,7 @@ GROUP BY a.id, a.name, a.arr, a.renewal_date, a.health_score, a.status,
          cp.churn_probability, cp.risk_category, sa.sentiment_score, um.utilization_percentage;
 
 -- Upcoming Renewals View
-CREATE VIEW upcoming_renewals AS
+CREATE OR REPLACE VIEW upcoming_renewals AS
 SELECT 
     a.id,
     a.name,
@@ -459,6 +492,32 @@ LEFT JOIN renewal_quotes rq ON a.id = rq.account_id
     AND rq.generated_at = (SELECT MAX(generated_at) FROM renewal_quotes WHERE account_id = a.id)
 WHERE a.renewal_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '90 days'
 ORDER BY a.renewal_date;
+
+-- ============================================================================
+-- FOREIGN KEY CONSTRAINTS
+-- ============================================================================
+-- Add all foreign key constraints after all tables are created
+-- ============================================================================
+
+-- Contacts -> Accounts
+ALTER TABLE contacts ADD CONSTRAINT fk_contacts_account_id 
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
+
+-- Accounts -> Contacts (primary contact)
+ALTER TABLE accounts ADD CONSTRAINT fk_accounts_primary_contact_id 
+    FOREIGN KEY (primary_contact_id) REFERENCES contacts(id) ON DELETE SET NULL;
+
+-- Email Campaigns
+ALTER TABLE email_campaigns ADD CONSTRAINT fk_email_campaigns_account_id 
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
+ALTER TABLE email_campaigns ADD CONSTRAINT fk_email_campaigns_contact_id 
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL;
+
+-- Voice Calls
+ALTER TABLE voice_calls ADD CONSTRAINT fk_voice_calls_account_id 
+    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE;
+ALTER TABLE voice_calls ADD CONSTRAINT fk_voice_calls_contact_id 
+    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL;
 
 -- ============================================================================
 -- SAMPLE DATA (Optional - for testing)
