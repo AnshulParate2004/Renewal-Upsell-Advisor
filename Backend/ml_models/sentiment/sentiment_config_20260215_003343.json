@@ -1,0 +1,26 @@
+{
+  "model_name": "distilbert-base-uncased-finetuned-sst-2-english",
+  "text_columns": [
+    "combined_text"
+  ],
+  "sentiment_mapping": {
+    "very_positive": "> 0.7",
+    "positive": "0.3 to 0.7",
+    "neutral": "-0.3 to 0.3",
+    "negative": "-0.7 to -0.3",
+    "very_negative": "< -0.7"
+  },
+  "timestamp": "20260215_003343",
+  "total_records_processed": 24874,
+  "device": "CPU",
+  "eda_insights": {
+    "mean_sentiment": 0.3904919353541851,
+    "median_sentiment": 0.47755000000000003,
+    "std_sentiment": 0.43862786343826604,
+    "positive_percentage": 63.05781136930128,
+    "neutral_percentage": 30.312776393020822,
+    "negative_percentage": 6.629412237677896,
+    "health_score_correlation": 0.8043323633330213,
+    "churn_correlation": -0.651479453797445
+  }
+}
