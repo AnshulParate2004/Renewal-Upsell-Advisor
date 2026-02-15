@@ -1,0 +1,1 @@
+# Common schemas (pagination, etc.)

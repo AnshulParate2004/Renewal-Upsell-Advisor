@@ -1,1 +1,0 @@
-# Environment variables (Pydantic Settings)
