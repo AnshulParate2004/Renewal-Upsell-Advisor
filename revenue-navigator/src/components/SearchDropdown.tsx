@@ -2,13 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { Search, Building2, TrendingUp, TrendingDown, Command } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { accounts } from "@/data/mockData";
+import { useAccounts } from "@/hooks/useAccounts";
 
 export function SearchDropdown() {
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const searchRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+    const { data: accounts = [] } = useAccounts();
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -24,8 +25,8 @@ export function SearchDropdown() {
     // Filter accounts based on search query
     const filteredAccounts = accounts.filter(account =>
         account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        account.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        account.csm.toLowerCase().includes(searchQuery.toLowerCase())
+        (account.industry && account.industry.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (account.csm && account.csm.toLowerCase().includes(searchQuery.toLowerCase()))
     ).slice(0, 8); // Limit to 8 results
 
     const handleAccountClick = (accountId: string) => {

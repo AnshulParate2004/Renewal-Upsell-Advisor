@@ -1,7 +1,9 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
-import { accounts } from '@/data/mockData';
+import { useAccounts } from '@/hooks/useAccounts';
 
 export default function RelationshipBarChart() {
+    const { data: accounts = [], isLoading } = useAccounts();
+    
     // Prepare data for the chart
     const chartData = accounts
         .sort((a, b) => b.relationshipScore - a.relationshipScore)
@@ -33,6 +35,25 @@ export default function RelationshipBarChart() {
         }
         return null;
     };
+
+    if (isLoading) {
+        return (
+            <div className="bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] p-4 h-full flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-xs text-foreground/60">Loading chart data...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (chartData.length === 0) {
+        return (
+            <div className="bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] p-4 h-full flex items-center justify-center">
+                <p className="text-sm text-foreground/60">No account data available</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white dark:bg-gray-800 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)] p-4 h-full flex flex-col">

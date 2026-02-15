@@ -1,15 +1,17 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { accounts } from '@/data/mockData';
 import { BarChart3 } from 'lucide-react';
+import { useAccounts } from '@/hooks/useAccounts';
 
 export default function RelationshipTrendChart() {
+    const { data: accounts = [], isLoading } = useAccounts();
+    
     // Generate 6 months of historical data for average relationship score
     const months = ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'];
 
     // Calculate current average
-    const currentAvg = Math.round(
-        accounts.reduce((sum, acc) => sum + acc.relationshipScore, 0) / accounts.length
-    );
+    const currentAvg = accounts.length > 0
+        ? Math.round(accounts.reduce((sum, acc) => sum + acc.relationshipScore, 0) / accounts.length)
+        : 0;
 
     // Generate trend data showing average across all accounts
     const trendData = months.map((month, monthIndex) => {
@@ -51,6 +53,17 @@ export default function RelationshipTrendChart() {
         }
         return null;
     };
+
+    if (isLoading) {
+        return (
+            <div className="paper-card h-full flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-xs text-foreground/60">Loading chart data...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="paper-card h-full flex flex-col">

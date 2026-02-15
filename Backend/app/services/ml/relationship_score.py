@@ -1,1 +1,84 @@
-# Relationship score prediction
+"""
+Relationship Score Prediction Service.
+"""
+import pandas as pd
+import numpy as np
+from typing import Dict, Any
+from app.services.ml.model_loader import model_loader
+from app.core.exceptions import PredictionError, ModelLoadError
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+class RelationshipScorePredictor:
+    """Service for predicting relationship score."""
+    
+    def __init__(self):
+        self.model = None
+        self.preprocessing = None
+        self._load_model()
+    
+    def _load_model(self):
+        """Load relationship score model and preprocessing."""
+        try:
+            self.model, self.preprocessing = model_loader.load_model("relationship")
+        except Exception as e:
+            logger.error(f"Failed to load relationship score model: {e}")
+            raise ModelLoadError("relationship_score", str(e))
+    
+    def predict(self, features: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Predict relationship score for given features.
+        
+        Args:
+            features: Dictionary of input features
+            
+        Returns:
+            Dictionary with relationship_score
+        """
+        try:
+            # Prepare features
+            processed_features = self._preprocess_features(features)
+            
+            # Make prediction
+            relationship_score = float(self.model.predict(processed_features)[0])
+            
+            # Clamp to 0-100 range
+            relationship_score = max(0, min(100, relationship_score))
+            
+            return {
+                "relationship_score": relationship_score
+            }
+        except Exception as e:
+            logger.error(f"Relationship score prediction failed: {e}")
+            raise PredictionError("relationship_score", str(e))
+    
+    def _preprocess_features(self, features: Dict[str, Any]) -> np.ndarray:
+        """Apply preprocessing to input features."""
+        if not self.preprocessing:
+            raise ValueError("Preprocessing pipeline not loaded")
+        
+        # Convert to DataFrame
+        feature_df = pd.DataFrame([features])
+        
+        # Apply label encoders
+        if 'label_encoders' in self.preprocessing:
+            for col, encoder in self.preprocessing['label_encoders'].items():
+                if col in feature_df.columns:
+                    try:
+                        feature_df[col] = encoder.transform(feature_df[col].astype(str))
+                    except ValueError:
+                        feature_df[col] = 0
+        
+        # Select and order features
+        feature_names = self.preprocessing.get('feature_names', feature_df.columns.tolist())
+        feature_df = feature_df.reindex(columns=feature_names, fill_value=0)
+        
+        # Apply scaler
+        if 'scaler' in self.preprocessing:
+            scaled_features = self.preprocessing['scaler'].transform(feature_df)
+        else:
+            scaled_features = feature_df.values
+        
+        return scaled_features

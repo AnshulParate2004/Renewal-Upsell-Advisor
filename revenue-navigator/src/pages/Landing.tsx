@@ -40,7 +40,7 @@ export default function Landing() {
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                     className="whitespace-nowrap py-3 px-8 text-[10px] font-black uppercase tracking-[0.4em] text-white"
                 >
-                    🚀 NEXT-GEN AI RENEWAL INTELLIGENCE IS HERE • MAXIMIZE EVERY UPSELL OPPORTUNITY • TRUSTED BY 500+ REVENUE TEAMS • PREDICT CHURN WITH 98% ACCURACY •
+                    🚀 NEXT-GEN AI RENEWAL INTELLIGENCE IS HERE • MAXIMIZE EVERY UPSELL OPPORTUNITY • ML-POWERED PREDICTIONS • REAL-TIME ANALYTICS •
                 </motion.div>
             </div>
 
@@ -91,17 +91,21 @@ export default function Landing() {
                                 >
                                     Start Free Trial <ArrowRight size={18} />
                                 </Link>
-                                <button className="px-10 py-5 bg-white text-foreground border-2 border-foreground font-black text-[11px] uppercase tracking-widest transition-all" style={{ boxShadow: "6px 6px 0px 0px hsl(var(--foreground))" }}>
-                                    Watch Demo
-                                </button>
+                                <Link
+                                    to="/signin"
+                                    className="px-10 py-5 bg-white text-foreground border-2 border-foreground font-black text-[11px] uppercase tracking-widest transition-all hover:bg-primary/5"
+                                    style={{ boxShadow: "6px 6px 0px 0px hsl(var(--foreground))" }}
+                                >
+                                    Sign In
+                                </Link>
                             </motion.div>
 
                             {/* Stats Cards */}
                             <div className="grid grid-cols-3 gap-6">
                                 {[
-                                    { label: 'CHURN_PREDICTION', value: '98.4%', color: 'text-primary' },
-                                    { label: 'AVG_REVENUE_SAVED', value: '$2.4M', color: 'text-indigo-600' },
-                                    { label: 'ACTIVE_TEAMS', value: '500+', color: 'text-foreground' }
+                                    { label: 'CHURN_PREDICTION', value: 'ML-Powered', color: 'text-primary' },
+                                    { label: 'REVENUE_OPTIMIZATION', value: 'Real-Time', color: 'text-indigo-600' },
+                                    { label: 'ACCOUNT_MANAGEMENT', value: 'Automated', color: 'text-foreground' }
                                 ].map((stat, i) => (
                                     <div key={i} className="group">
                                         <div className="text-3xl font-extrabold text-foreground mb-1 group-hover:text-primary transition-colors">{stat.value}</div>
@@ -135,8 +139,8 @@ export default function Landing() {
                                             <TrendingUp className="h-8 w-8 text-primary" />
                                         </div>
                                         <div>
-                                            <div className="text-xl font-black text-foreground tracking-tight uppercase">Acme Corp Renewal</div>
-                                            <div className="text-[10px] text-foreground/60 font-black uppercase tracking-widest mt-1">Enterprise Cluster • $180K ARR</div>
+                                            <div className="text-xl font-black text-foreground tracking-tight uppercase">Account Renewal</div>
+                                            <div className="text-[10px] text-foreground/60 font-black uppercase tracking-widest mt-1">Enterprise Cluster • Real-Time Data</div>
                                         </div>
                                     </div>
 

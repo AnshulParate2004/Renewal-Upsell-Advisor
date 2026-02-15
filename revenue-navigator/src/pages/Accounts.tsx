@@ -1,14 +1,18 @@
-import { useState } from 'react';
-import { Search, Download, Plus } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Download, Plus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { accounts, formatCurrency, getDaysUntil } from '@/data/mockData';
+import { formatCurrency, getDaysUntil } from '@/data/mockData';
+import { useAccounts } from '@/hooks/useAccounts';
 
 export default function Accounts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRisk, setFilterRisk] = useState<'all' | 'high' | 'safe'>('all');
   const navigate = useNavigate();
+  const { data: accounts = [], isLoading, error } = useAccounts();
 
-  const filteredClients = accounts.filter((client) => {
+  const filteredClients = useMemo(() => {
+    if (!accounts) return [];
+    return accounts.filter((client) => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
     const isHighRisk = client.riskScore >= 70;
     const matchesFilter =
@@ -16,8 +20,9 @@ export default function Accounts() {
       (filterRisk === 'high' && isHighRisk) ||
       (filterRisk === 'safe' && !isHighRisk);
 
-    return matchesSearch && matchesFilter;
-  });
+      return matchesSearch && matchesFilter;
+    });
+  }, [accounts, searchTerm, filterRisk]);
 
   const handleExportCSV = () => {
     if (filteredClients.length === 0) return;
@@ -56,7 +61,7 @@ export default function Accounts() {
             <h1 className="text-5xl font-black text-foreground tracking-tight uppercase">
               Account <span className="text-primary">Navigator</span>
             </h1>
-            <div className="sticker-outline px-3 py-1 text-xs">LIVE PORTFOLIO</div>
+            <div className="sticker-outline px-3 py-1 text-xs">PORTFOLIO</div>
           </div>
           <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
             {filteredClients.length} High-Stakes Accounts Under Management
@@ -114,8 +119,22 @@ export default function Accounts() {
 
       {/* Data Grid */}
       <div className="paper-card table-container flex-1 overflow-hidden flex flex-col p-0">
-        <div className="overflow-auto flex-1 relative custom-scrollbar">
-          <table className="w-full text-sm">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <span className="ml-3 text-foreground/60">Loading accounts...</span>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-full text-red-600">
+            <span>Failed to load accounts. Please try again.</span>
+          </div>
+        ) : filteredClients.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-foreground/60">
+            <span>No accounts found.</span>
+          </div>
+        ) : (
+          <div className="overflow-auto flex-1 relative custom-scrollbar">
+            <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-accent border-b-4 border-foreground">
               <tr className="text-[10px] uppercase text-white font-black tracking-widest text-left">
                 <th className="pl-6 py-4 w-[250px]">Account Entity</th>
@@ -208,14 +227,17 @@ export default function Accounts() {
               ))}
             </tbody>
           </table>
-        </div>
-        {/* Table Footer */}
-        <div className="p-4 bg-accent border-t-4 border-foreground flex justify-between items-center text-[10px] font-black text-white uppercase tracking-widest">
-          <div className="flex gap-6">
-            <span>ACTIVE ACCOUNTS: <span className="text-gray-600">{filteredClients.length}</span></span>
-            <span>TOTAL ARR: <span className="text-gray-600">{formatCurrency(filteredClients.reduce((acc, c) => acc + c.arr, 0))}</span></span>
           </div>
-        </div>
+        )}
+        {/* Table Footer */}
+        {!isLoading && !error && filteredClients.length > 0 && (
+          <div className="p-4 bg-accent border-t-4 border-foreground flex justify-between items-center text-[10px] font-black text-white uppercase tracking-widest">
+            <div className="flex gap-6">
+              <span>ACTIVE ACCOUNTS: <span className="text-gray-600">{filteredClients.length}</span></span>
+              <span>TOTAL ARR: <span className="text-gray-600">{formatCurrency(filteredClients.reduce((acc, c) => acc + c.arr, 0))}</span></span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

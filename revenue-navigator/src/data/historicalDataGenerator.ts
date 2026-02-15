@@ -1,6 +1,14 @@
 import { Account, SentimentHistory, AccountActivity, MetricsHistory } from './mockData';
 
-// ─── Generate Historical Data Helper ───
+/**
+ * Historical Data Generator
+ * 
+ * NOTE: This is a temporary utility that generates synthetic historical data
+ * for visualization purposes. In production, this should be replaced with
+ * actual API calls to fetch real historical data from the backend.
+ * 
+ * TODO: Replace with API endpoint: GET /api/v1/accounts/{id}/history
+ */
 export const generateHistoricalData = (account: Account) => {
     const history: { sentiment: SentimentHistory[], activities: AccountActivity[], metrics: MetricsHistory[] } = {
         sentiment: [],

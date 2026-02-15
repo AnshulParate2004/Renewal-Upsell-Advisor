@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { GripVertical, Clock, DollarSign, ShieldAlert, CheckCircle2 } from "lucide-react";
-import { accounts, formatCurrency, getDaysUntil } from "@/data/mockData";
+import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2 } from "lucide-react";
+import { formatCurrency, getDaysUntil } from "@/data/mockData";
+import { useAccounts } from "@/hooks/useAccounts";
+import { useUpdateAccount } from "@/hooks/useAccounts";
 
 type Stage = "t90" | "t60" | "t30" | "renewed";
 
@@ -14,19 +16,22 @@ const stageConfig: Record<Stage, { title: string; bgColor: string; icon: React.R
 const stages: Stage[] = ["t90", "t60", "t30", "renewed"];
 
 export default function Pipeline() {
-  const [accountData, setAccountData] = useState(accounts);
+  const { data: accounts = [], isLoading } = useAccounts();
+  const updateAccount = useUpdateAccount();
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
-  const byStage = (stage: Stage) => accountData.filter((a) => a.renewalStage === stage);
+  const byStage = (stage: Stage) => accounts.filter((a) => a.renewalStage === stage);
   const stageArr = (stage: Stage) => byStage(stage).reduce((s, a) => s + a.arr, 0);
 
   const handleDragStart = (id: string) => setDraggedId(id);
 
   const handleDrop = (stage: Stage) => {
     if (!draggedId) return;
-    setAccountData((prev) =>
-      prev.map((a) => (a.id === draggedId ? { ...a, renewalStage: stage } : a))
-    );
+    // Update account via API
+    updateAccount.mutate({
+      id: draggedId,
+      data: { renewalStage: stage }
+    });
     setDraggedId(null);
   };
 
@@ -54,8 +59,14 @@ export default function Pipeline() {
       </div>
 
       {/* Board */}
-      <div className="flex gap-6 overflow-x-auto pb-8 snap-x custom-scrollbar">
-        {stages.map((stage) => (
+      {isLoading ? (
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <span className="ml-3 text-foreground/60">Loading pipeline data...</span>
+        </div>
+      ) : (
+        <div className="flex gap-6 overflow-x-auto pb-8 snap-x custom-scrollbar">
+          {stages.map((stage) => (
           <div
             key={stage}
             className="min-w-[340px] flex-1 snap-start flex flex-col gap-4"
@@ -132,8 +143,9 @@ export default function Pipeline() {
               )}
             </div>
           </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

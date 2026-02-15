@@ -1,21 +1,64 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TrendingUp, AlertTriangle, Users, Building2, Clock, BarChart3, ArrowLeft, Mail, Phone, Edit2 } from "lucide-react";
+import { TrendingUp, AlertTriangle, Users, Building2, Clock, BarChart3, ArrowLeft, Mail, Phone, Edit2, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { accounts, formatCurrency, getDaysUntil } from "@/data/mockData";
+import { formatCurrency, getDaysUntil } from "@/data/mockData";
 import { generateHistoricalData } from "@/data/historicalDataGenerator";
 import MetricsHistoryChart from "@/components/charts/MetricsHistoryChart";
 import SentimentTrendChart from "@/components/charts/SentimentTrendChart";
 import ActivityTimeline from "@/components/ActivityTimeline";
+import { useAccount } from "@/hooks/useAccounts";
+import { usePredictions } from "@/hooks/usePredictions";
 
 export default function AccountDetailPage() {
     const { accountId } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'analytics'>('overview');
 
-    const account = accounts.find(a => a.id === accountId);
+    const { data: account, isLoading, error } = useAccount(accountId || '');
+    
+    // Get predictions for this account
+    const { data: predictions } = usePredictions(
+        {
+            account_id: accountId || '',
+            features: account ? {
+                arr: account.arr,
+                health_score: account.healthScore,
+                risk_score: account.riskScore,
+                relationship_score: account.relationshipScore,
+                utilization: account.utilization,
+                industry: account.industry || '',
+                company_size: account.industry || '', // Fallback
+            } : {}
+        },
+        !!account && !!accountId
+    );
+    
+    // Merge account with predictions (use account data as base, predictions override if available)
+    const accountWithPredictions = account ? {
+        ...account,
+        // Override with predictions if available, otherwise use account data
+        healthScore: predictions?.health_score ?? account.healthScore,
+        riskScore: predictions?.risk_score ?? account.riskScore,
+        relationshipScore: predictions?.relationship_score ?? account.relationshipScore,
+        churnProbability: predictions?.churn_probability ?? account.churnProbability,
+        sentimentScore: predictions?.sentiment_score ?? account.sentimentScore,
+    } : null;
 
-    if (!account) {
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="text-center">
+                    <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+                    <p className="text-foreground/60 font-black uppercase tracking-wider">Loading account data...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error || !account || !accountWithPredictions) {
         return (
             <div className="min-h-screen bg-purple-50/30 flex items-center justify-center p-8">
                 <div className="paper-card bg-white p-12 text-center max-w-md shadow-2xl shadow-purple-900/10 rounded-3xl">
@@ -23,7 +66,9 @@ export default function AccountDetailPage() {
                         <AlertTriangle size={40} />
                     </div>
                     <h2 className="text-3xl font-bold text-foreground mb-4 tracking-tight">Account Not Found</h2>
-                    <p className="text-gray-500 mb-8 font-medium">The account record you are looking for does not exist in the current registry.</p>
+                    <p className="text-gray-500 mb-8 font-medium">
+                        {error ? `Error: ${error.message}` : 'The account record you are looking for does not exist in the current registry.'}
+                    </p>
                     <button
                         onClick={() => navigate(-1)}
                         className="w-full btn-punch bg-primary text-white py-4"
@@ -35,8 +80,8 @@ export default function AccountDetailPage() {
         );
     }
 
-    // Generate historical data
-    const history = generateHistoricalData(account);
+    // Generate historical data (accountWithPredictions is guaranteed to exist here)
+    const history = generateHistoricalData(accountWithPredictions);
 
     const getSentimentColor = (score: number) => {
         if (score > 0.5) return "text-emerald-600";
@@ -89,14 +134,14 @@ export default function AccountDetailPage() {
                             <div>
                                 <div className="flex items-center gap-4 mb-3">
                                     <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
-                                        {account.name}
+                                        {accountWithPredictions.name}
                                     </h1>
                                     <div className="px-3 py-1 bg-success text-white border-2 border-foreground rounded-lg font-black text-[10px] uppercase tracking-widest" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
                                         ACTIVE_ENTITY
                                     </div>
                                 </div>
                                 <p className="text-sm font-black text-foreground/60 uppercase tracking-wider">
-                                    {account.industry.toUpperCase()} <span className="mx-3 text-foreground/30">/</span> ID: {account.id}
+                                    {accountWithPredictions.industry?.toUpperCase() || 'N/A'} <span className="mx-3 text-foreground/30">/</span> ID: {accountWithPredictions.id}
                                 </p>
                             </div>
                         </div>
@@ -142,10 +187,10 @@ export default function AccountDetailPage() {
                         {/* Key Metrics Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                             {[
-                                { label: 'ANNUAL_REVENUE', value: formatCurrency(account.arr), icon: <TrendingUp size={20} />, iconColor: 'text-foreground' },
-                                { label: 'RENEWAL_HORIZON', value: `T-${getDaysUntil(account.renewalDate)}D`, alert: getDaysUntil(account.renewalDate) <= 30, icon: <Clock size={20} />, iconColor: 'text-foreground' },
-                                { label: 'UTILIZATION_INDEX', value: `${account.licensesUsed}/${account.licensesTotal}`, icon: <Users size={20} />, iconColor: 'text-foreground' },
-                                { label: 'DEPLOYMENT_STAGE', value: account.renewalStage.toUpperCase(), icon: <BarChart3 size={20} />, iconColor: 'text-foreground' }
+                                { label: 'ANNUAL_REVENUE', value: formatCurrency(accountWithPredictions.arr), icon: <TrendingUp size={20} />, iconColor: 'text-foreground' },
+                                { label: 'RENEWAL_HORIZON', value: `T-${getDaysUntil(accountWithPredictions.renewalDate)}D`, alert: getDaysUntil(accountWithPredictions.renewalDate) <= 30, icon: <Clock size={20} />, iconColor: 'text-foreground' },
+                                { label: 'UTILIZATION_INDEX', value: `${accountWithPredictions.licensesUsed}/${accountWithPredictions.licensesTotal}`, icon: <Users size={20} />, iconColor: 'text-foreground' },
+                                { label: 'DEPLOYMENT_STAGE', value: accountWithPredictions.renewalStage.toUpperCase(), icon: <BarChart3 size={20} />, iconColor: 'text-foreground' }
                             ].map((m, i) => (
                                 <div key={i} className="paper-card p-6 bg-white group">
                                     <div className="flex items-center justify-between mb-6">
@@ -171,14 +216,14 @@ export default function AccountDetailPage() {
                                 <div className="paper-card p-8 bg-white">
                                     <div className="flex items-center justify-between mb-8">
                                         <h3 className="text-[11px] font-black tracking-widest uppercase text-foreground/60">HEALTH_INDEX</h3>
-                                        <span className={`text-3xl font-black tracking-tight ${account.healthScore >= 70 ? 'text-success' : account.healthScore >= 40 ? 'text-warning' : 'text-destructive'}`}>
-                                            {account.healthScore}%
+                                        <span className={`text-3xl font-black tracking-tight ${accountWithPredictions.healthScore >= 70 ? 'text-success' : accountWithPredictions.healthScore >= 40 ? 'text-warning' : 'text-destructive'}`}>
+                                            {accountWithPredictions.healthScore}%
                                         </span>
                                     </div>
                                     <div className="w-full h-2.5 bg-gray-50 rounded-lg overflow-hidden border border-foreground/20">
                                         <div
-                                            className={`h-full transition-all duration-500 ${account.healthScore >= 70 ? 'bg-success' : account.healthScore >= 40 ? 'bg-warning' : 'bg-destructive'}`}
-                                            style={{ width: `${account.healthScore}%` }}
+                                            className={`h-full transition-all duration-500 ${accountWithPredictions.healthScore >= 70 ? 'bg-success' : accountWithPredictions.healthScore >= 40 ? 'bg-warning' : 'bg-destructive'}`}
+                                            style={{ width: `${accountWithPredictions.healthScore}%` }}
                                         />
                                     </div>
                                     <p className="text-[10px] font-black text-foreground/60 mt-4 uppercase tracking-widest">STABILITY_METRIC: NOMINAL</p>
@@ -189,15 +234,15 @@ export default function AccountDetailPage() {
                                     <div className="relative z-10">
                                         <div className="flex items-center justify-between mb-8">
                                             <h3 className="text-[11px] font-black tracking-widest uppercase text-white/60">RISK_ARCHITECTURE</h3>
-                                            <AlertTriangle className={`w-5 h-5 ${account.churnProbability >= 0.7 ? 'text-destructive' : 'text-primary'}`} />
+                                            <AlertTriangle className={`w-5 h-5 ${accountWithPredictions.churnProbability >= 0.7 ? 'text-destructive' : 'text-primary'}`} />
                                         </div>
                                         <div className="flex items-end justify-between">
                                             <div>
-                                                <p className="text-4xl font-black tracking-tight mb-1">{Math.round(account.churnProbability * 100)}%</p>
+                                                <p className="text-4xl font-black tracking-tight mb-1">{Math.round(accountWithPredictions.churnProbability * 100)}%</p>
                                                 <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">CHURN_PROBABILITY</p>
                                             </div>
                                             <div className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-[10px] font-black text-foreground uppercase tracking-widest" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                                                {account.riskScore >= 70 ? 'CRITICAL' : 'STABLE'}
+                                                {accountWithPredictions.riskScore >= 70 ? 'CRITICAL' : 'STABLE'}
                                             </div>
                                         </div>
                                     </div>
@@ -207,18 +252,18 @@ export default function AccountDetailPage() {
                                 <div className="md:col-span-2 paper-card p-8 bg-white">
                                     <div className="flex items-center justify-between mb-8">
                                         <h3 className="text-[11px] font-black tracking-widest uppercase text-foreground/60">SENTIMENT_AUDIT_STREAM</h3>
-                                        <span className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-[10px] font-black text-foreground/60 uppercase tracking-wider" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>P_IDX: {account.sentimentScore.toFixed(2)}</span>
+                                        <span className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-[10px] font-black text-foreground/60 uppercase tracking-wider" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>P_IDX: {accountWithPredictions.sentimentScore.toFixed(2)}</span>
                                     </div>
                                     <div className="flex items-center gap-8">
                                         <div className="w-10 h-10 flex items-center justify-center bg-white border-2 border-foreground rounded-lg text-5xl shrink-0" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                                            {getSentimentEmoji(account.sentimentScore)}
+                                            {getSentimentEmoji(accountWithPredictions.sentimentScore)}
                                         </div>
                                         <div>
-                                            <h4 className={`text-3xl font-black tracking-tight mb-2 uppercase ${getSentimentColor(account.sentimentScore)}`}>
-                                                {getSentimentLabel(account.sentimentScore)}
+                                            <h4 className={`text-3xl font-black tracking-tight mb-2 uppercase ${getSentimentColor(accountWithPredictions.sentimentScore)}`}>
+                                                {getSentimentLabel(accountWithPredictions.sentimentScore)}
                                             </h4>
                                             <p className="text-sm font-black text-foreground/60 uppercase tracking-wider">
-                                                Linguistic patterns indicate a {getSentimentLabel(account.sentimentScore).toLowerCase()} trajectory for the fiscal quarter.
+                                                Linguistic patterns indicate a {getSentimentLabel(accountWithPredictions.sentimentScore).toLowerCase()} trajectory for the fiscal quarter.
                                             </p>
                                         </div>
                                     </div>
@@ -230,14 +275,14 @@ export default function AccountDetailPage() {
                                 <div>
                                     <h3 className="text-[11px] font-black tracking-widest uppercase text-primary/60 mb-8">RELATIONSHIP_PULSE</h3>
                                     <div className="flex items-baseline gap-2 mb-1">
-                                        <span className="text-5xl font-black text-primary tracking-tight">{account.relationshipScore}%</span>
+                                        <span className="text-5xl font-black text-primary tracking-tight">{accountWithPredictions.relationshipScore}%</span>
                                         <span className="text-sm font-black text-primary/40 uppercase tracking-widest">CORE</span>
                                     </div>
-                                    <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest mb-10">ENGAGEMENT MATRIX ALPHA</p>
+                                    <p className="text-[10px] font-black text-primary/40 uppercase tracking-widest mb-10">ENGAGEMENT MATRIX</p>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="h-1 bg-primary/10 rounded-lg w-full border border-foreground/20">
-                                        <div className="h-full bg-primary rounded-lg transition-all duration-1000" style={{ width: `${account.relationshipScore}%` }} />
+                                        <div className="h-full bg-primary rounded-lg transition-all duration-1000" style={{ width: `${accountWithPredictions.relationshipScore}%` }} />
                                     </div>
                                     <p className="text-[10px] font-black text-primary/60 uppercase tracking-widest">SYNC_STATUS: ESTABLISHED</p>
                                 </div>
@@ -250,7 +295,7 @@ export default function AccountDetailPage() {
                                 <Users size={16} />
                                 PRIMARY_STAKEHOLDER_RECORD
                             </h3>
-                            <ContactInfoSection account={account} />
+                            <ContactInfoSection account={accountWithPredictions} />
                         </div>
 
                         {/* Account Information */}
@@ -262,10 +307,10 @@ export default function AccountDetailPage() {
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {[
-                                    { label: 'ASSIGNED_CSM', value: account.csm },
-                                    { label: 'LAST_UPLINK', value: account.lastContact },
-                                    { label: 'CONTRACT_ROOT', value: account.contractStart, mono: true },
-                                    { label: 'RENEWAL_NODE', value: account.renewalDate, mono: true }
+                                    { label: 'ASSIGNED_CSM', value: accountWithPredictions.csm },
+                                    { label: 'LAST_UPLINK', value: accountWithPredictions.lastContact },
+                                    { label: 'CONTRACT_ROOT', value: accountWithPredictions.contractStart, mono: true },
+                                    { label: 'RENEWAL_NODE', value: accountWithPredictions.renewalDate, mono: true }
                                 ].map((field, i) => (
                                     <div key={i} className="paper-card p-6 bg-white">
                                         <p className="text-[9px] uppercase font-black text-foreground/60 tracking-widest mb-3">{field.label}</p>

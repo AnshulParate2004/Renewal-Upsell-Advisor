@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { DollarSign, TrendingUp, BarChart3, Target, Briefcase, Zap } from "lucide-react";
-import { opportunities, formatCurrency } from "@/data/mockData";
+import { useState, useMemo } from "react";
+import { DollarSign, TrendingUp, BarChart3, Target, Briefcase, Zap, Loader2 } from "lucide-react";
+import { formatCurrency } from "@/data/mockData";
 import AnimatedCard from "@/components/ui/AnimatedCard";
+import { useOpportunities } from "@/hooks/useOpportunities";
+import { useAccounts } from "@/hooks/useAccounts";
 
 const typeBadge: Record<string, { label: string; bgColor: string }> = {
   renewal: { label: "RENEWAL", bgColor: "bg-primary" },
@@ -11,14 +13,29 @@ const typeBadge: Record<string, { label: string; bgColor: string }> = {
 
 export default function Opportunities() {
   const [typeFilter, setTypeFilter] = useState("all");
+  const { data: opportunities = [], isLoading, error } = useOpportunities();
+  const { data: accounts = [] } = useAccounts();
 
-  const filtered = opportunities.filter((o) => typeFilter === "all" || o.type === typeFilter);
+  // Enrich opportunities with account names
+  const enrichedOpportunities = useMemo(() => {
+    return opportunities.map(opp => {
+      const account = accounts.find(a => a.id === opp.accountId);
+      return {
+        ...opp,
+        accountName: account?.name || 'Unknown Account'
+      };
+    });
+  }, [opportunities, accounts]);
 
-  const totalPipeline = opportunities.reduce((s, o) => s + o.value, 0);
-  const weightedValue = opportunities.reduce((s, o) => s + o.value * (o.probability / 100), 0);
-  const avgDeal = totalPipeline / opportunities.length;
+  const filtered = useMemo(() => {
+    return enrichedOpportunities.filter((o) => typeFilter === "all" || o.type === typeFilter);
+  }, [enrichedOpportunities, typeFilter]);
+
+  const totalPipeline = useMemo(() => enrichedOpportunities.reduce((s, o) => s + o.value, 0), [enrichedOpportunities]);
+  const weightedValue = useMemo(() => enrichedOpportunities.reduce((s, o) => s + o.value * (o.probability / 100), 0), [enrichedOpportunities]);
+  const avgDeal = enrichedOpportunities.length > 0 ? totalPipeline / enrichedOpportunities.length : 0;
   const conversionRate = Math.round(
-    (opportunities.filter((o) => o.stage === "closed_won").length / opportunities.length) * 100
+    (enrichedOpportunities.filter((o) => o.stage === "closed_won").length / enrichedOpportunities.length) * 100
   ) || 15;
 
   return (
@@ -37,35 +54,46 @@ export default function Opportunities() {
           <div className="text-sm italic text-accent">High Velocity!</div>
           <div className="sticker-outline px-4 py-2 text-sm flex items-center gap-2">
             <Zap size={16} className="text-primary" />
-            LIVE PIPELINE FEED
+            PIPELINE
           </div>
         </div>
       </div>
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Pipeline Total', value: formatCurrency(totalPipeline), icon: <DollarSign size={20} />, iconBg: 'bg-primary' },
-          { label: 'Weighted Forecast', value: formatCurrency(weightedValue), icon: <BarChart3 size={20} />, iconBg: 'bg-accent' },
-          { label: 'Avg Deal Index', value: formatCurrency(avgDeal), icon: <TrendingUp size={20} />, iconBg: 'bg-white' },
-          { label: 'Closer Ratio', value: `${conversionRate}%`, icon: <Target size={20} />, iconBg: 'bg-white' }
-        ].map((metric, idx) => (
-          <AnimatedCard
-            key={idx}
-            delay={idx * 0.05}
-            className={`paper-card p-5 flex flex-col justify-between group bg-white`}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <p className="text-xs font-black text-foreground/60 uppercase tracking-wider">{metric.label}</p>
-              <div className={`w-10 h-10 p-2 border-2 border-foreground rounded-lg ${metric.iconBg} ${metric.iconBg === 'bg-white' ? 'text-foreground' : 'text-white'} flex items-center justify-center shrink-0`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                {metric.icon}
+        {isLoading ? (
+          <div className="col-span-4 flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <span className="ml-3 text-foreground/60">Loading opportunities...</span>
+          </div>
+        ) : error ? (
+          <div className="col-span-4 flex items-center justify-center py-12 text-red-600">
+            <span>Failed to load opportunities. Please try again.</span>
+          </div>
+        ) : (
+          [
+            { label: 'Pipeline Total', value: formatCurrency(totalPipeline), icon: <DollarSign size={20} />, iconBg: 'bg-primary' },
+            { label: 'Weighted Forecast', value: formatCurrency(weightedValue), icon: <BarChart3 size={20} />, iconBg: 'bg-accent' },
+            { label: 'Avg Deal Index', value: formatCurrency(avgDeal), icon: <TrendingUp size={20} />, iconBg: 'bg-white' },
+            { label: 'Closer Ratio', value: `${conversionRate}%`, icon: <Target size={20} />, iconBg: 'bg-white' }
+          ].map((metric, idx) => (
+            <AnimatedCard
+              key={idx}
+              delay={idx * 0.05}
+              className={`paper-card p-5 flex flex-col justify-between group bg-white`}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <p className="text-xs font-black text-foreground/60 uppercase tracking-wider">{metric.label}</p>
+                <div className={`w-10 h-10 p-2 border-2 border-foreground rounded-lg ${metric.iconBg} ${metric.iconBg === 'bg-white' ? 'text-foreground' : 'text-white'} flex items-center justify-center shrink-0`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+                  {metric.icon}
+                </div>
               </div>
-            </div>
-            <div className="text-3xl font-black tracking-tight text-foreground">
-              {metric.value}
-            </div>
-          </AnimatedCard>
-        ))}
+              <div className="text-3xl font-black tracking-tight text-foreground">
+                {metric.value}
+              </div>
+            </AnimatedCard>
+          ))
+        )}
       </div>
 
       {/* Filters & Controls */}
@@ -102,8 +130,28 @@ export default function Opportunities() {
             </tr>
           </thead>
           <tbody className="divide-y-2 divide-foreground">
-            {filtered.map((opp) => (
-              <tr key={opp.id} className="hover:bg-primary/10 transition-colors group">
+            {isLoading ? (
+              <tr>
+                <td colSpan={6} className="text-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+                  <span className="ml-3 text-foreground/60">Loading opportunities...</span>
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan={6} className="text-center py-12 text-red-600">
+                  Failed to load opportunities.
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-center py-12 text-foreground/60">
+                  No opportunities found.
+                </td>
+              </tr>
+            ) : (
+              filtered.map((opp) => (
+                <tr key={opp.id} className="hover:bg-primary/10 transition-colors group">
                 <td className="pl-6 py-4 font-black text-foreground uppercase tracking-wide group-hover:text-primary transition-colors">{opp.accountName}</td>
                 <td className="text-center py-4">
                   <div className={`inline-flex py-1 px-3 text-xs text-white border-2 border-foreground rounded-lg font-black uppercase tracking-wider ${typeBadge[opp.type].bgColor}`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
@@ -123,7 +171,8 @@ export default function Opportunities() {
                 <td className="text-center py-4 text-xs font-black uppercase text-foreground">{opp.stage.replace('_', ' ')}</td>
                 <td className="text-center py-4 text-xs font-black text-foreground uppercase pr-6">{opp.createdDate}</td>
               </tr>
-            ))}
+              ))
+            )}
           </tbody>
         </table>
       </div>
