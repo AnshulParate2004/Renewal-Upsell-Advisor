@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=Caveat:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=Caveat:wght@500;600;700&family=Bricolage+Grotesque:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -11,6 +11,14 @@
     /* Very Light Purple #f8f7ff */
     --foreground: 240 10% 15%;
     /* Dark Gray #1f2937 */
+    
+    /* Spacing Tokens */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+    --spacing-2xl: 4rem;
 
     --card: 0 0% 100%;
     --card-foreground: 240 10% 15%;
@@ -123,9 +131,9 @@
   h4,
   h5,
   h6 {
-    font-family: 'Outfit', sans-serif !important;
-    @apply font-black tracking-tight;
-    font-weight: 900 !important;
+    font-family: "Bricolage Grotesque", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em !important;
   }
 
   p, span, div, a, button, input, textarea, select, label, td, th, li, small, strong, em, b, i, u {
@@ -146,6 +154,32 @@
   ::-webkit-scrollbar-thumb {
     @apply bg-primary border-2 border-foreground;
     box-shadow: 2px 2px 0px 0px hsl(var(--foreground));
+  }
+
+  /* Optimize blur performance and prevent scroll artifacts */
+  @supports (backdrop-filter: blur(1px)) {
+    .backdrop-blur-optimized {
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+  }
+
+  /* GPU acceleration for animated elements */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* Prevent blur artifacts on scroll */
+  .no-blur-scroll {
+    -webkit-transform: translate3d(0, 0, 0);
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* Optimize sticky elements */
+  [class*="sticky"] {
+    will-change: transform;
+    transform: translateZ(0);
   }
 
   ::-webkit-scrollbar-thumb:hover {
@@ -271,7 +305,30 @@
   /* KPI Value */
   .kpi-value {
     @apply text-4xl font-black tracking-tighter;
-    font-family: 'Bricolage Grotesque', serif;
+    font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  /* Wavy Underline Decoration */
+  .wavy-underline {
+    position: relative;
+    display: inline-block;
+  }
+
+  .wavy-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10'%3E%3Cpath d='M0,5 Q25,0 50,5 T100,5' stroke='%23f97316' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+    background-repeat: repeat-x;
+    background-size: 100px 10px;
+    opacity: 0.8;
+  }
+
+  .wavy-underline-primary::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 10'%3E%3Cpath d='M0,5 Q25,0 50,5 T100,5' stroke='%238b5cf6' stroke-width='2' fill='none'/%3E%3C/svg%3E");
   }
 }
 

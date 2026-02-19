@@ -23,6 +23,7 @@ export function AppSidebar() {
     <aside
       className={cn(
         "fixed left-0 top-0 z-40 flex h-screen flex-col bg-white border-r-4 border-foreground transition-all duration-200",
+        "hidden lg:flex", // Hide on mobile, show on desktop
         collapsed ? "w-20" : "w-64"
       )}
       style={{ boxShadow: "3px 0px 0px 0px hsl(var(--foreground))" }}

@@ -113,7 +113,7 @@ export default function AccountDetailPage() {
     return (
         <div className="min-h-screen bg-white">
             {/* Header */}
-            <div className="bg-white border-b border-gray-100 p-8 md:p-12">
+            <div className="bg-white border-b border-gray-100 p-6">
                 <div className="max-w-7xl mx-auto flex flex-col gap-10">
                     <div>
                         <button
@@ -181,7 +181,7 @@ export default function AccountDetailPage() {
             </div>
 
             {/* Content */}
-            <div className="max-w-7xl mx-auto p-8 md:p-12">
+            <div className="max-w-[1600px] mx-auto p-6">
                 {activeTab === 'overview' && (
                     <div className="space-y-12">
                         {/* Key Metrics Grid */}

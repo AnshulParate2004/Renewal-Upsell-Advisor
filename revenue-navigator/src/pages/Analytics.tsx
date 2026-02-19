@@ -3,6 +3,9 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useDashboardStats } from "@/hooks/useAnalytics";
 import { useMemo } from "react";
@@ -44,33 +47,28 @@ export default function Analytics() {
     }));
   }, [accounts]);
   return (
-    <div className="p-8 max-w-[1600px] mx-auto min-h-screen flex flex-col space-y-8">
-      {/* Header */}
-      <div className="flex items-end justify-between border-b-4 border-foreground pb-6">
-        <div>
-          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
-            Strategic <span className="text-primary">Analytics</span>
-          </h1>
-          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
-            Advanced Metric Aggregation & Predictive Intelligence
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 bg-white text-foreground border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-            <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-            PDF Export
-          </button>
-          <button className="px-4 py-2 bg-primary text-white border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-            <FileText className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-            CSV Sync
-          </button>
-        </div>
-      </div>
+    <PageContainer className="min-h-screen">
+      <PageHeader
+        title="Strategic Analytics"
+        subtitle="Advanced Metric Aggregation & Predictive Intelligence"
+        actions={
+          <div className="flex gap-3">
+            <button className="px-4 py-2 bg-white text-foreground border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+              <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+              PDF Export
+            </button>
+            <button className="px-4 py-2 bg-primary text-white border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
+              <FileText className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+              CSV Sync
+            </button>
+          </div>
+        }
+      />
 
       {isLoading ? (
         <div className="flex items-center justify-center h-96">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="ml-3 text-foreground/60">Loading analytics data...</span>
+          <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading analytics data...</span>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
@@ -194,6 +192,6 @@ export default function Analytics() {
         </div>
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

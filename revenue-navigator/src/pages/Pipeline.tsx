@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2 } from "lucide-react";
 import { formatCurrency, getDaysUntil } from "@/data/mockData";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useUpdateAccount } from "@/hooks/useAccounts";
 
@@ -36,33 +39,24 @@ export default function Pipeline() {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto min-h-screen flex flex-col space-y-8">
-      {/* Header */}
-      <div className="flex items-end justify-between border-b-4 border-foreground pb-8">
-        <div>
-          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
-            Persistence <span className="text-primary">Flow</span>
-          </h1>
-          <p className="text-sm font-black text-foreground/60 mt-3 uppercase tracking-wider">
-            Temporal Renewal Matrix & Cohort Persistence Analysis
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
+    <PageContainer className="min-h-screen">
+      <PageHeader
+        title="Persistence Flow"
+        subtitle="Temporal Renewal Matrix & Cohort Persistence Analysis"
+        badge="STABILITY: 94% NOMINAL"
+        actions={
           <span className="text-xs font-black text-primary flex items-center gap-2 uppercase tracking-wider">
             <div className="w-2 h-2 bg-primary border border-foreground animate-pulse" />
             Active Pipeline Sync
           </span>
-          <div className="sticker-outline px-4 py-2 text-xs font-black bg-white">
-            STABILITY: 94% NOMINAL
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Board */}
       {isLoading ? (
         <div className="flex items-center justify-center h-96">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="ml-3 text-foreground/60">Loading pipeline data...</span>
+          <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading pipeline data...</span>
         </div>
       ) : (
         <div className="flex gap-6 overflow-x-auto pb-8 snap-x custom-scrollbar">
@@ -146,6 +140,6 @@ export default function Pipeline() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

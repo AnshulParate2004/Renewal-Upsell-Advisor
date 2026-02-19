@@ -2,6 +2,9 @@ import { useState, useMemo } from 'react';
 import { Search, Download, Plus, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency, getDaysUntil } from '@/data/mockData';
+import { PageContainer } from '@/components/ui/PageContainer';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useAccounts } from '@/hooks/useAccounts';
 
 export default function Accounts() {
@@ -53,85 +56,81 @@ export default function Accounts() {
   };
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col gap-6">
-      {/* Header & Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-4 border-foreground pb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-5xl font-black text-foreground tracking-tight uppercase">
-              Account <span className="text-primary">Navigator</span>
-            </h1>
-            <div className="sticker-outline px-3 py-1 text-xs">PORTFOLIO</div>
-          </div>
-          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
-            {filteredClients.length} High-Stakes Accounts Under Management
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
-            <input
-              type="text"
-              placeholder="Search accounts..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2.5 text-sm bg-white border-2 border-foreground rounded-lg focus:outline-none focus:bg-primary/5 w-64 transition-all font-black uppercase tracking-wider"
-              style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
-            />
-          </div>
-
-          <div className="flex gap-2">
-            {(['all', 'high', 'safe'] as const).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setFilterRisk(filter)}
-                className={`px-4 py-2 text-xs font-black border-2 border-foreground rounded-lg transition-all uppercase tracking-wider
-                  ${filterRisk === filter
-                    ? 'bg-primary text-white'
-                    : 'bg-white text-foreground hover:bg-accent/10'
-                  }`}
+    <PageContainer className="h-[calc(100vh-64px)]">
+      <PageHeader
+        title="Account Navigator"
+        subtitle={`${filteredClients.length} High-Stakes Accounts Under Management`}
+        badge="PORTFOLIO"
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
+              <input
+                type="text"
+                placeholder="Search accounts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2.5 text-sm bg-white border-2 border-foreground rounded-lg focus:outline-none focus:bg-primary/5 w-64 transition-all font-black uppercase tracking-wider"
                 style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
-              >
-                {filter === 'all' ? 'All' : filter.toUpperCase()}
-              </button>
-            ))}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              {(['all', 'high', 'safe'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setFilterRisk(filter)}
+                  className={`px-4 py-2 text-xs font-black border-2 border-foreground rounded-lg transition-all uppercase tracking-wider
+                    ${filterRisk === filter
+                      ? 'bg-primary text-white'
+                      : 'bg-white text-foreground hover:bg-accent/10'
+                    }`}
+                  style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
+                >
+                  {filter === 'all' ? 'All' : filter.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2 bg-white text-foreground border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider"
+              style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </button>
+
+            <button
+              className="px-4 py-2 bg-primary text-white border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider"
+              style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Account
+            </button>
           </div>
-
-          <button
-            onClick={handleExportCSV}
-            className="px-4 py-2 bg-white text-foreground border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider"
-            style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </button>
-
-          <button
-            className="px-4 py-2 bg-primary text-white border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider"
-            style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Account
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Data Grid */}
       <div className="paper-card table-container flex-1 overflow-hidden flex flex-col p-0">
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-3 text-foreground/60">Loading accounts...</span>
+            <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading accounts...</span>
           </div>
         ) : error ? (
-          <div className="flex items-center justify-center h-full text-red-600">
-            <span>Failed to load accounts. Please try again.</span>
-          </div>
+          <EmptyState
+            variant="not-found"
+            title="Failed to Load Accounts"
+            message={error.message || "Failed to load accounts. Please try again."}
+          />
         ) : filteredClients.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-foreground/60">
-            <span>No accounts found.</span>
-          </div>
+          <EmptyState
+            variant="no-results"
+            title="No Accounts Found"
+            message="Try adjusting your search or filter criteria."
+          />
         ) : (
           <div className="overflow-auto flex-1 relative custom-scrollbar">
             <table className="w-full text-sm">
@@ -239,6 +238,6 @@ export default function Accounts() {
           </div>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

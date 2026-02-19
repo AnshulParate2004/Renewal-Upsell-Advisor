@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react";
 import { Search, Phone, History, ShieldCheck, Loader2 } from "lucide-react";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
 // TODO: Create API hook for voice calls when backend endpoint is available
 // import { useVoiceCalls } from "@/hooks/useVoiceCalls";
 
@@ -18,25 +21,17 @@ export default function Calls() {
   }, [voiceCalls, search, outcomeFilter]);
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto min-h-screen flex flex-col space-y-8">
-      {/* Header */}
-      <div className="flex items-end justify-between border-b-4 border-foreground pb-6">
-        <div>
-          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
-            Voice <span className="text-primary">Operations</span>
-          </h1>
-          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
-            Asynchronous Voice Path Intelligence & Sentiment Analysis
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-sm italic text-accent font-medium">Recording Active</div>
-          <div className="sticker-outline px-4 py-2 text-primary border-primary/20 bg-primary/5 flex items-center gap-2">
-            <ShieldCheck size={16} />
-            Secure Comms V4
+    <PageContainer className="min-h-screen">
+      <PageHeader
+        title="Voice Operations"
+        subtitle="Asynchronous Voice Path Intelligence & Sentiment Analysis"
+        badge="Secure Comms V4"
+        actions={
+          <div className="flex items-center gap-4">
+            <div className="text-sm italic text-accent font-bold">Recording Active</div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Controls */}
       <div className="flex items-center justify-between gap-6 bg-white p-4 border-4 border-foreground rounded-lg">
@@ -71,16 +66,15 @@ export default function Calls() {
         {isLoading ? (
           <div className="flex items-center justify-center h-96">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-3 text-foreground/60">Loading voice calls...</span>
+            <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading voice calls...</span>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-96 text-foreground/60">
-            <div className="text-center">
-              <Phone className="w-12 h-12 mx-auto mb-4 opacity-20" />
-              <p className="text-sm font-black uppercase">No voice calls available</p>
-              <p className="text-xs mt-2">Voice call data will appear here when available</p>
-            </div>
-          </div>
+          <EmptyState
+            variant="default"
+            title="No Voice Calls Available"
+            message="Voice call data will appear here when available."
+            icon={<Phone size={48} className="text-foreground/40" />}
+          />
         ) : (
           <>
             <div className="overflow-auto flex-1 relative custom-scrollbar">
@@ -142,24 +136,7 @@ export default function Calls() {
             </div>
           </>
         )}
-
-        {/* Footer */}
-        {!isLoading && filtered.length > 0 && (
-          <div className="p-4 bg-accent border-t-4 border-foreground flex justify-between items-center text-[10px] font-black text-white uppercase tracking-widest rounded-b-lg">
-            <div className="flex items-center gap-3">
-              <span className="w-2 h-2 bg-success border border-foreground rounded-full animate-pulse" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}></span>
-              SYNC STATUS: {filtered.length} / {voiceCalls.length} AUDIT LOGS
-            </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <History size={12} />
-              <span>Retention 90d</span>
-            </div>
-            <div className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-foreground font-black" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>Sorted by Recency</div>
-          </div>
-          </div>
-        )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

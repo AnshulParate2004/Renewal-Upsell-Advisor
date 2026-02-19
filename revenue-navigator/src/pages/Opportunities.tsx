@@ -1,7 +1,10 @@
 import { useState, useMemo } from "react";
 import { DollarSign, TrendingUp, BarChart3, Target, Briefcase, Zap, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/data/mockData";
-import AnimatedCard from "@/components/ui/AnimatedCard";
+import { PageContainer } from "@/components/ui/PageContainer";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { MetricCard } from "@/components/ui/MetricCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useOpportunities } from "@/hooks/useOpportunities";
 import { useAccounts } from "@/hooks/useAccounts";
 
@@ -39,59 +42,49 @@ export default function Opportunities() {
   ) || 15;
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-end justify-between border-b-4 border-foreground pb-6">
-        <div>
-          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
-            Growth <span className="text-primary">Pipeline</span>
-          </h1>
-          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
-            Strategic Opportunity Management
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-sm italic text-accent">High Velocity!</div>
-          <div className="sticker-outline px-4 py-2 text-sm flex items-center gap-2">
-            <Zap size={16} className="text-primary" />
-            PIPELINE
+    <PageContainer className="h-[calc(100vh-64px)]">
+      <PageHeader
+        title="Growth Pipeline"
+        subtitle="Strategic Opportunity Management"
+        badge="PIPELINE"
+        actions={
+          <div className="flex items-center gap-3">
+            <div className="text-sm italic text-accent font-bold">High Velocity!</div>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {isLoading ? (
           <div className="col-span-4 flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-3 text-foreground/60">Loading opportunities...</span>
+            <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading opportunities...</span>
           </div>
         ) : error ? (
-          <div className="col-span-4 flex items-center justify-center py-12 text-red-600">
-            <span>Failed to load opportunities. Please try again.</span>
+          <div className="col-span-4">
+            <EmptyState
+              variant="not-found"
+              title="Failed to Load Opportunities"
+              message={error.message || "Failed to load opportunities. Please try again."}
+            />
           </div>
         ) : (
           [
-            { label: 'Pipeline Total', value: formatCurrency(totalPipeline), icon: <DollarSign size={20} />, iconBg: 'bg-primary' },
-            { label: 'Weighted Forecast', value: formatCurrency(weightedValue), icon: <BarChart3 size={20} />, iconBg: 'bg-accent' },
-            { label: 'Avg Deal Index', value: formatCurrency(avgDeal), icon: <TrendingUp size={20} />, iconBg: 'bg-white' },
-            { label: 'Closer Ratio', value: `${conversionRate}%`, icon: <Target size={20} />, iconBg: 'bg-white' }
+            { label: 'Pipeline Total', value: formatCurrency(totalPipeline), icon: <DollarSign size={20} />, iconBg: 'bg-primary', iconColor: 'text-white', delay: 0 },
+            { label: 'Weighted Forecast', value: formatCurrency(weightedValue), icon: <BarChart3 size={20} />, iconBg: 'bg-accent', iconColor: 'text-white', delay: 0.05 },
+            { label: 'Avg Deal Index', value: formatCurrency(avgDeal), icon: <TrendingUp size={20} />, iconBg: 'bg-white', iconColor: 'text-foreground', delay: 0.1 },
+            { label: 'Closer Ratio', value: `${conversionRate}%`, icon: <Target size={20} />, iconBg: 'bg-white', iconColor: 'text-foreground', delay: 0.15 }
           ].map((metric, idx) => (
-            <AnimatedCard
+            <MetricCard
               key={idx}
-              delay={idx * 0.05}
-              className={`paper-card p-5 flex flex-col justify-between group bg-white`}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <p className="text-xs font-black text-foreground/60 uppercase tracking-wider">{metric.label}</p>
-                <div className={`w-10 h-10 p-2 border-2 border-foreground rounded-lg ${metric.iconBg} ${metric.iconBg === 'bg-white' ? 'text-foreground' : 'text-white'} flex items-center justify-center shrink-0`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                  {metric.icon}
-                </div>
-              </div>
-              <div className="text-3xl font-black tracking-tight text-foreground">
-                {metric.value}
-              </div>
-            </AnimatedCard>
+              label={metric.label}
+              value={metric.value}
+              icon={metric.icon}
+              iconBg={metric.iconBg}
+              iconColor={metric.iconColor}
+              delay={metric.delay}
+            />
           ))
         )}
       </div>
@@ -145,8 +138,12 @@ export default function Opportunities() {
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-foreground/60">
-                  No opportunities found.
+                <td colSpan={6} className="p-0">
+                  <EmptyState
+                    variant="no-results"
+                    title="No Opportunities Found"
+                    message="Try adjusting your filters or create a new opportunity."
+                  />
                 </td>
               </tr>
             ) : (
@@ -176,6 +173,6 @@ export default function Opportunities() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageContainer>
   );
 }
