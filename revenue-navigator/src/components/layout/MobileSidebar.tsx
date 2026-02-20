@@ -11,8 +11,8 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { title: "Dashboard", path: "/app", icon: LayoutDashboard },
   { title: "Accounts", path: "/app/accounts", icon: Users },
-  { title: "Renewal Pipeline", path: "/app/pipeline", icon: Kanban },
-  { title: "Voice Calls", path: "/app/calls", icon: Phone },
+  { title: "Pipeline", path: "/app/pipeline", icon: Kanban },
+  { title: "Calls", path: "/app/calls", icon: Phone },
   { title: "Opportunities", path: "/app/opportunities", icon: DollarSign },
   { title: "Analytics", path: "/app/analytics", icon: BarChart3 },
   { title: "Settings", path: "/app/settings", icon: Settings },
@@ -23,17 +23,14 @@ export function MobileSidebar() {
 
   return (
     <>
-      {/* Mobile Menu Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 w-12 h-12 bg-primary text-white border-2 border-foreground rounded-lg flex items-center justify-center"
-        style={{ boxShadow: "3px 3px 0px 0px hsl(var(--foreground))" }}
+        className="lg:hidden fixed top-3 left-3 z-50 w-10 h-10 bg-primary text-primary-foreground rounded-xl flex items-center justify-center shadow-lg"
         aria-label="Open menu"
       >
-        <Menu size={24} />
+        <Menu size={20} />
       </button>
 
-      {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isOpen && (
           <>
@@ -42,41 +39,33 @@ export function MobileSidebar() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+              className="fixed inset-0 bg-foreground/20 backdrop-blur-sm z-40 lg:hidden"
             />
             <motion.div
-              initial={{ x: -300 }}
+              initial={{ x: -280 }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
+              exit={{ x: -280 }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-              className="fixed left-0 top-0 h-full w-64 bg-white border-r-4 border-foreground z-50 lg:hidden flex flex-col"
-              style={{ boxShadow: "3px 0px 0px 0px hsl(var(--foreground))" }}
+              className="fixed left-0 top-0 h-full w-64 bg-card border-r-[0.5px] border-black z-50 lg:hidden flex flex-col shadow-xl"
             >
-              {/* Header */}
-              <div className="h-20 flex items-center gap-3 px-4 border-b-4 border-foreground bg-primary">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center bg-white border-2 border-foreground rounded-lg" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                  <Zap className="h-6 w-6 text-primary fill-primary" />
+              <div className="h-16 flex items-center gap-3 px-4 border-b-[0.5px] border-black">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-primary rounded-xl">
+                  <Zap className="h-4.5 w-4.5 text-primary-foreground fill-primary-foreground" />
                 </div>
-                <div className="flex flex-col">
-                  <span className="text-xl font-black text-white tracking-tight leading-none uppercase">
-                    REVENUE
-                  </span>
-                  <span className="text-xs font-black text-white tracking-wider leading-none uppercase">
-                    NAVIGATOR
-                  </span>
+                <div className="flex flex-col leading-none">
+                  <span className="text-base font-bold text-foreground tracking-tight">Revenue</span>
+                  <span className="text-[10px] font-semibold text-primary tracking-wider uppercase">Navigator</span>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="ml-auto w-10 h-10 flex items-center justify-center bg-white border-2 border-foreground rounded-lg"
-                  style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
+                  className="ml-auto w-8 h-8 flex items-center justify-center rounded-xl hover:bg-muted text-muted-foreground"
                   aria-label="Close menu"
                 >
-                  <X size={20} className="text-foreground" />
+                  <X size={18} />
                 </button>
               </div>
 
-              {/* Navigation */}
-              <nav className="flex-1 space-y-2 px-3 py-6 overflow-y-auto">
+              <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
                 {navItems.map((item) => (
                   <NavLink
                     key={item.path}
@@ -84,22 +73,20 @@ export function MobileSidebar() {
                     end={item.path === "/app"}
                     onClick={() => setIsOpen(false)}
                     className={({ isActive }) => cn(
-                      "flex items-center gap-3 px-4 py-2.5 text-sm font-black text-foreground transition-all border-2 border-foreground rounded-lg uppercase tracking-wider",
-                      isActive && "bg-primary text-white"
+                      "flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-muted-foreground rounded-xl transition-all hover:bg-muted hover:text-foreground border-[0.5px] border-black",
+                      isActive && "bg-primary/10 text-primary font-semibold"
                     )}
-                    style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
                   >
-                    <item.icon className="h-5 w-5 shrink-0" />
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
                     <span>{item.title}</span>
                   </NavLink>
                 ))}
               </nav>
 
-              {/* Status Footer */}
-              <div className="border-t-4 border-foreground bg-secondary p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-3 w-3 bg-primary border-2 border-foreground animate-pulse" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}></div>
-                  <span className="text-xs font-black text-foreground uppercase tracking-wider">System Ready</span>
+              <div className="border-t-[0.5px] border-black px-4 py-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
+                  <span className="text-xs text-muted-foreground font-medium">System Online</span>
                 </div>
               </div>
             </motion.div>

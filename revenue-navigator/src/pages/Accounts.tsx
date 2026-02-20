@@ -1,9 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Search, Download, Plus, Loader2 } from 'lucide-react';
+import { Search, Download, Plus, Loader2, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency, getDaysUntil } from '@/data/mockData';
-import { PageContainer } from '@/components/ui/PageContainer';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAccounts } from '@/hooks/useAccounts';
 
@@ -16,13 +14,12 @@ export default function Accounts() {
   const filteredClients = useMemo(() => {
     if (!accounts) return [];
     return accounts.filter((client) => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const isHighRisk = client.riskScore >= 70;
-    const matchesFilter =
-      filterRisk === 'all' ||
-      (filterRisk === 'high' && isHighRisk) ||
-      (filterRisk === 'safe' && !isHighRisk);
-
+      const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const isHighRisk = client.riskScore >= 70;
+      const matchesFilter =
+        filterRisk === 'all' ||
+        (filterRisk === 'high' && isHighRisk) ||
+        (filterRisk === 'safe' && !isHighRisk);
       return matchesSearch && matchesFilter;
     });
   }, [accounts, searchTerm, filterRisk]);
@@ -31,213 +28,149 @@ export default function Accounts() {
     if (filteredClients.length === 0) return;
     const headers = ['Account', 'ARR', 'Health', 'Risk', 'Renewal Days', 'Utilization', 'Relationship Score', 'Churn Probability', 'Sentiment Score'];
     const rows = filteredClients.map(client => [
-      client.name,
-      client.arr,
-      client.healthScore,
-      client.riskScore,
-      getDaysUntil(client.renewalDate),
-      client.utilization,
-      client.relationshipScore,
-      client.churnProbability,
-      client.sentimentScore
+      client.name, client.arr, client.healthScore, client.riskScore,
+      getDaysUntil(client.renewalDate), client.utilization, client.relationshipScore,
+      client.churnProbability, client.sentimentScore
     ]);
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `accounts_export_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `accounts_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
-    <PageContainer className="h-[calc(100vh-64px)]">
-      <PageHeader
-        title="Account Navigator"
-        subtitle={`${filteredClients.length} High-Stakes Accounts Under Management`}
-        badge="PORTFOLIO"
-        actions={
-          <div className="flex flex-wrap items-center gap-3">
+    <div className="h-[calc(100vh-56px)] flex flex-col bg-background">
+      {/* Page Header */}
+      <div className="bg-card border-b-2 border-black px-6 py-5 shrink-0">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Accounts</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">{filteredClients.length} accounts under management</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search accounts..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2.5 text-sm bg-white border-2 border-foreground rounded-lg focus:outline-none focus:bg-primary/5 w-64 transition-all font-black uppercase tracking-wider"
-                style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
+                className="pl-8 pr-4 py-2 text-sm bg-background border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-ring/20 w-48 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px]"
               />
             </div>
-
-            <div className="flex gap-2">
+            <div className="flex gap-0.5 bg-muted rounded-lg p-0.5 border-2 border-black">
               {(['all', 'high', 'safe'] as const).map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setFilterRisk(filter)}
-                  className={`px-4 py-2 text-xs font-black border-2 border-foreground rounded-lg transition-all uppercase tracking-wider
-                    ${filterRisk === filter
-                      ? 'bg-primary text-white'
-                      : 'bg-white text-foreground hover:bg-accent/10'
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${filterRisk === filter
+                    ? 'bg-card text-foreground shadow-sm border-2 border-black'
+                    : 'text-muted-foreground hover:text-foreground bg-transparent'
                     }`}
-                  style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
                 >
-                  {filter === 'all' ? 'All' : filter.toUpperCase()}
+                  {filter === 'all' ? 'All' : filter === 'high' ? 'High Risk' : 'Safe'}
                 </button>
               ))}
             </div>
-
-            <button
-              onClick={handleExportCSV}
-              className="px-4 py-2 bg-white text-foreground border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider"
-              style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export
+            <button onClick={handleExportCSV} className="h-9 px-3 bg-card text-foreground border-2 border-black rounded-lg text-xs font-medium hover:bg-muted transition-all flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
+              <Download className="w-3.5 h-3.5" /> Export
             </button>
-
-            <button
-              className="px-4 py-2 bg-primary text-white border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider"
-              style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Account
+            <button className="h-9 px-3 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-all flex items-center gap-1.5 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
+              <Plus className="w-3.5 h-3.5" /> Add Account
             </button>
           </div>
-        }
-      />
+        </div>
+      </div>
 
-      {/* Data Grid */}
-      <div className="paper-card table-container flex-1 overflow-hidden flex flex-col p-0">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading accounts...</span>
-          </div>
-        ) : error ? (
-          <EmptyState
-            variant="not-found"
-            title="Failed to Load Accounts"
-            message={error.message || "Failed to load accounts. Please try again."}
-          />
-        ) : filteredClients.length === 0 ? (
-          <EmptyState
-            variant="no-results"
-            title="No Accounts Found"
-            message="Try adjusting your search or filter criteria."
-          />
-        ) : (
-          <div className="overflow-auto flex-1 relative custom-scrollbar">
-            <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-accent border-b-4 border-foreground">
-              <tr className="text-[10px] uppercase text-white font-black tracking-widest text-left">
-                <th className="pl-6 py-4 w-[250px]">Account Entity</th>
-                <th className="text-right py-4">ARR Portfolio</th>
-                <th className="text-center py-4">Renewal</th>
-                <th className="text-center py-4">Utilization</th>
-                <th className="text-center py-4">Rel. Score</th>
-                <th className="text-center py-4">Churn Pr.</th>
-                <th className="text-center py-4">Sentiment</th>
-                <th className="text-center py-4">Status</th>
-                <th className="w-[100px] text-center py-4 pr-6">Audit</th>
+      {/* Table */}
+      <div className="p-6">
+        <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b-2 border-black">
+              <tr className="text-[11px] uppercase text-muted-foreground font-medium tracking-wider text-left">
+                <th className="pl-5 py-3">Account</th>
+                <th className="text-right py-3 pr-4">ARR</th>
+                <th className="text-center py-3">Renewal</th>
+                <th className="text-center py-3">Utilization</th>
+                <th className="text-center py-3">Rel. Score</th>
+                <th className="text-center py-3">Churn</th>
+                <th className="text-center py-3">Sentiment</th>
+                <th className="text-center py-3">Status</th>
+                <th className="text-center py-3 pr-5"></th>
               </tr>
             </thead>
-            <tbody className="divide-y-2 divide-foreground">
-              {filteredClients.map((client) => (
-                <tr
-                  key={client.id}
-                  onClick={() => navigate(`/app/accounts/${client.id}`)}
-                  className="group cursor-pointer hover:bg-primary/10 transition-colors"
-                >
-                  <td className="pl-6 py-4">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-base group-hover:text-primary transition-colors">
-                        {client.name}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-medium tracking-wider">
-                        UID: {client.id.substring(0, 8)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="text-right font-bold text-gray-700">
-                    {formatCurrency(client.arr)}
-                  </td>
-                  <td className="text-center">
-                    <div className={`px-2 py-0.5 border-2 border-foreground text-[10px] font-black text-white inline-flex uppercase ${getDaysUntil(client.renewalDate) <= 30 ? 'bg-red-500' : 'bg-primary'}`} style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>
-                      {getDaysUntil(client.renewalDate)}D
-                    </div>
-                  </td>
-                  <td className="text-center">
-                    <div className="flex flex-col items-center gap-1.5">
-                      <span className="font-bold text-xs text-gray-600">{client.utilization}%</span>
-                      <div className="w-20 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${client.utilization > 80 ? 'bg-primary' : 'bg-accent'}`}
-                          style={{ width: `${client.utilization}%` }}
-                        />
+            <tbody>
+              {isLoading ? (
+                <tr className="border-b-2 border-black"><td colSpan={9} className="text-center py-12">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
+                </td></tr>
+              ) : error ? (
+                <tr className="border-b-2 border-black"><td colSpan={9} className="p-0">
+                  <EmptyState variant="not-found" title="Failed to Load Accounts" message={error.message || "Failed to load accounts."} />
+                </td></tr>
+              ) : filteredClients.length === 0 ? (
+                <tr className="border-b-2 border-black"><td colSpan={9} className="p-0">
+                  <EmptyState variant="no-results" title="No Accounts Found" message="Try adjusting your search or filter criteria." />
+                </td></tr>
+              ) : (
+                filteredClients.map((client) => (
+                  <tr
+                    key={client.id}
+                    onClick={() => navigate(`/app/accounts/${client.id}`)}
+                    className="group cursor-pointer hover:bg-muted/20 transition-colors border-b-2 border-black"
+                  >
+                    <td className="pl-5 py-3.5">
+                      <div>
+                        <span className="font-medium text-foreground group-hover:text-primary transition-colors text-sm">{client.name}</span>
+                        <div className="text-[11px] text-muted-foreground">{client.id.substring(0, 8)}</div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="text-center">
-                    <span className="font-black text-sm px-2 py-1 bg-accent/20 text-primary border-2 border-foreground uppercase" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>
-                      {client.relationshipScore}
-                    </span>
-                  </td>
-                  <td className="text-center">
-                    <span className={`font-black text-sm uppercase ${client.churnProbability >= 0.7 ? 'text-red-600' : client.churnProbability >= 0.4 ? 'text-accent' : 'text-success'}`}>
-                      {Math.round(client.churnProbability * 100)}%
-                    </span>
-                  </td>
-                  <td className="text-center">
-                    <div className="inline-flex items-center gap-2 px-2 py-1 bg-white border-2 border-foreground" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>
-                      <span className="text-lg">
-                        {client.sentimentScore > 0.5 ? '🔥' : client.sentimentScore > 0 ? '👍' : client.sentimentScore > -0.5 ? '😐' : '⚠️'}
+                    </td>
+                    <td className="text-right font-medium text-foreground pr-4 py-3.5 text-sm">{formatCurrency(client.arr)}</td>
+                    <td className="text-center py-3.5">
+                      <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${getDaysUntil(client.renewalDate) <= 30 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                        {getDaysUntil(client.renewalDate)}d
                       </span>
-                      <span className="font-black text-xs text-foreground">
-                        {client.sentimentScore > 0 ? '+' : ''}{client.sentimentScore.toFixed(2)}
+                    </td>
+                    <td className="text-center py-3.5">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-xs text-muted-foreground">{client.utilization}%</span>
+                        <div className="w-16 h-1 bg-muted rounded-full overflow-hidden border border-black/10">
+                          <div className={`h-full rounded-full ${client.utilization > 80 ? 'bg-primary' : 'bg-emerald-500'}`} style={{ width: `${client.utilization}%` }} />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="text-center py-3.5">
+                      <span className="text-sm font-medium text-primary">{client.relationshipScore}</span>
+                    </td>
+                    <td className="text-center py-3.5">
+                      <span className={`text-sm font-medium ${client.churnProbability >= 0.7 ? 'text-destructive' : client.churnProbability >= 0.4 ? 'text-amber-500' : 'text-emerald-600'}`}>
+                        {Math.round(client.churnProbability * 100)}%
                       </span>
-                    </div>
-                  </td>
-                  <td className="text-center">
-                    {client.riskScore >= 70 ? (
-                      <span className="px-2 py-1 border-2 border-foreground text-[10px] font-black bg-red-50 text-red-600 uppercase" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>High Risk</span>
-                    ) : (
-                      <span className="px-2 py-1 border-2 border-foreground text-[10px] font-black bg-success/10 text-success uppercase" style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}>Target Safe</span>
-                    )}
-                  </td>
-                  <td className="text-center pr-6">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/app/accounts/${client.id}`);
-                      }}
-                      className="px-3 py-1 text-[10px] font-black uppercase bg-white text-foreground hover:bg-primary/10 hover:text-primary transition-all border-2 border-foreground"
-                      style={{ boxShadow: "2px 2px 0px 0px hsl(var(--foreground))" }}
-                    >
-                      Audit
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="text-center py-3.5 text-base">
+                      {client.sentimentScore > 0.5 ? '😊' : client.sentimentScore > 0 ? '🙂' : client.sentimentScore > -0.5 ? '😐' : '😟'}
+                    </td>
+                    <td className="text-center py-3.5">
+                      <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${client.riskScore >= 70 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                        {client.riskScore >= 70 ? 'High Risk' : 'Safe'}
+                      </span>
+                    </td>
+                    <td className="text-center py-3.5 pr-5">
+                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors inline-block" />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-          </div>
-        )}
-        {/* Table Footer */}
-        {!isLoading && !error && filteredClients.length > 0 && (
-          <div className="p-4 bg-accent border-t-4 border-foreground flex justify-between items-center text-[10px] font-black text-white uppercase tracking-widest">
-            <div className="flex gap-6">
-              <span>ACTIVE ACCOUNTS: <span className="text-gray-600">{filteredClients.length}</span></span>
-              <span>TOTAL ARR: <span className="text-gray-600">{formatCurrency(filteredClients.reduce((acc, c) => acc + c.arr, 0))}</span></span>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }

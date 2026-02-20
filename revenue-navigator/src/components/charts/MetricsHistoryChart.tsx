@@ -17,7 +17,7 @@ export default function MetricsHistoryChart({ data }: MetricsHistoryChartProps) 
     }));
 
     return (
-        <div className="w-full h-[400px] bg-white dark:bg-gray-800 p-4 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
+        <div className="w-full h-[400px] bg-white dark:bg-gray-800 p-4 border-[0.5px] border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
             <h3 className="text-sm font-black uppercase mb-4 text-black dark:text-white">📊 Metrics History (6 Months)</h3>
             <ResponsiveContainer width="100%" height="90%">
                 <LineChart data={chartData}>
@@ -35,7 +35,7 @@ export default function MetricsHistoryChart({ data }: MetricsHistoryChartProps) 
                     <Tooltip
                         contentStyle={{
                             backgroundColor: '#fff',
-                            border: '2px solid #000',
+                            border: '0.5px solid #000',
                             borderRadius: '0',
                             boxShadow: '2px 2px 0px 0px rgba(0,0,0,1)',
                             fontSize: '11px',

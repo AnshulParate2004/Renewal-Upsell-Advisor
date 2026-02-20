@@ -11,9 +11,6 @@ export const useAccounts = (skip = 0, limit = 1000) => {
     queryFn: () => accountsApi.getAll(skip, limit),
     staleTime: 30000, // 30 seconds
     retry: 1,
-    onError: (error) => {
-      console.error('Failed to fetch accounts:', error);
-    },
   });
 };
 

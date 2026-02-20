@@ -21,7 +21,7 @@ export default function SentimentTrendChart({ data }: SentimentTrendChartProps) 
         if (active && payload && payload.length) {
             const data = payload[0].payload;
             return (
-                <div className="bg-white dark:bg-gray-800 p-3 border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                <div className="bg-white dark:bg-gray-800 p-3 border-[0.5px] border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                     <p className="text-xs font-black uppercase">{data.date}</p>
                     <p className={`text-sm font-bold ${data.score > 0.5 ? 'text-emerald-600' : data.score > 0 ? 'text-blue-600' : data.score > -0.5 ? 'text-yellow-600' : 'text-red-600'}`}>
                         Score: {data.score > 0 ? '+' : ''}{data.score.toFixed(2)}
@@ -35,7 +35,7 @@ export default function SentimentTrendChart({ data }: SentimentTrendChartProps) 
     };
 
     return (
-        <div className="w-full h-[350px] bg-white dark:bg-gray-800 p-4 border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
+        <div className="w-full h-[350px] bg-white dark:bg-gray-800 p-4 border-[0.5px] border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.3)]">
             <h3 className="text-sm font-black uppercase mb-4 text-black dark:text-white">💭 Sentiment Analysis Trend</h3>
             <ResponsiveContainer width="100%" height="90%">
                 <LineChart data={chartData}>

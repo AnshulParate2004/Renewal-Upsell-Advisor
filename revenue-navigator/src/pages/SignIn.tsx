@@ -1,53 +1,56 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Zap, Mail, Lock, ArrowRight, ShieldCheck } from "lucide-react";
+import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
 
 export default function SignIn() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        // Simulate auth
         setTimeout(() => {
-            console.log("Sign in:", { email, password });
             navigate("/app");
         }, 1000);
     };
 
     return (
-        <div className="min-h-screen bg-background bg-grid flex items-center justify-center p-6 font-display">
-            <div className="w-full max-w-lg">
+        <div
+            className="min-h-screen bg-white flex items-center justify-center p-4 overflow-hidden"
+            style={{
+                backgroundImage: `
+                    linear-gradient(to right, rgba(0,0,0,0.4) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(0,0,0,0.4) 1px, transparent 1px)
+                `,
+                backgroundSize: '40px 40px'
+            }}
+        >
+            <div className="w-full max-w-lg scale-[0.75] origin-center -translate-y-12 transition-transform py-2">
                 {/* Logo & Branding */}
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center gap-4 mb-8">
-                        <div className="h-16 w-16 flex items-center justify-center bg-primary border-4 border-foreground shadow-[6px_6px_0px_0px_hsl(var(--foreground))]">
-                            <Zap className="h-8 w-8 text-white fill-white" />
+                <div className="text-center mb-6">
+                    <div className="inline-flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 bg-white border-2 border-black rounded-xl flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                            <Zap className="w-7 h-7 text-[#5F63F2] fill-[#5F63F2]" />
                         </div>
-                        <div className="flex flex-col items-start leading-none uppercase italic">
-                            <span className="text-4xl font-black text-foreground tracking-tighter">
-                                REVENUE
-                            </span>
-                            <span className="text-xl font-black text-primary tracking-widest mt-1">
-                                NAVIGATOR
-                            </span>
+                        <div className="text-left">
+                            <h2 className="text-2xl font-black text-black tracking-tighter leading-none">REVENUE</h2>
+                            <p className="text-[#5F63F2] text-xs font-bold tracking-[0.2em] transform scale-y-90 uppercase">Navigator</p>
                         </div>
                     </div>
-                    <h1 className="text-4xl font-black text-foreground uppercase tracking-tight italic mb-3">ACCESS_PORTAL_V4</h1>
-                    <div className="sticker-outline inline-block">AUTH_MODE: ZERO_TRUST_ENCRYPTION</div>
+                    <h1 className="text-4xl font-black text-black uppercase tracking-tight mb-3">ACCESS_PORTAL_V4</h1>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-black bg-black text-white border-2 border-black rounded-md uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
+                        AUTH_MODE: ZERO_TRUST_ENCRYPTION
+                    </div>
                 </div>
 
-                {/* Sign In Form */}
-                <div className="paper-card bg-white p-10 relative overflow-visible">
-                    <div className="absolute -top-4 left-0 w-full h-8 bg-primary border-4 border-foreground z-20"></div>
-
-                    <form onSubmit={handleSubmit} className="space-y-8 mt-6">
+                <div className="bg-white border-2 border-black rounded-lg p-8 sm:p-10 relative overflow-visible shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Email Input */}
                         <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">
+                            <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
                                 // IDENTITY_URI
                             </label>
                             <div className="relative">
@@ -57,7 +60,7 @@ export default function SignIn() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="OPERATOR@SYSTEM.COM"
-                                    className="w-[67%] pl-12 pr-4 py-4 bg-white border-4 border-foreground text-sm font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[4px_4px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all"
+                                    className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all"
                                     required
                                 />
                             </div>
@@ -65,19 +68,26 @@ export default function SignIn() {
 
                         {/* Password Input */}
                         <div className="space-y-3">
-                            <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground">
+                            <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
                                 // CRYPTOGRAPHIC_KEY
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="••••••••"
-                                    className="w-[67%] pl-12 pr-4 py-4 bg-white border-4 border-foreground text-sm font-black text-foreground placeholder:text-foreground/10 focus:outline-none focus:bg-primary/5 shadow-[4px_4px_0px_0px_hsl(var(--foreground))] focus:shadow-none focus:translate-x-1 focus:translate-y-1 transition-all"
+                                    className="w-full pl-12 pr-12 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all"
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-foreground/40 hover:text-foreground transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                </button>
                             </div>
                         </div>
 
@@ -89,12 +99,12 @@ export default function SignIn() {
                                         type="checkbox"
                                         className="peer sr-only"
                                     />
-                                    <div className="w-5 h-5 border-2 border-foreground bg-white peer-checked:bg-primary transition-colors"></div>
+                                    <div className="w-5 h-5 border border-black bg-white peer-checked:bg-primary peer-checked:border-primary transition-colors rounded"></div>
                                 </div>
-                                <span className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover:text-primary transition-colors">Persist_Session</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover:text-primary transition-colors">PERSIST_SESSION</span>
                             </label>
-                            <button type="button" className="text-[10px] font-black uppercase tracking-widest text-accent hover:underline">
-                                Recover_Access
+                            <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                                RECOVER_ACCESS
                             </button>
                         </div>
 
@@ -102,7 +112,7 @@ export default function SignIn() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className={`w-full btn-punch bg-foreground text-white py-5 flex items-center justify-center gap-3 text-lg group ${isLoading ? 'opacity-70 cursor-wait' : ''}`}
+                            className={`w-full px-6 py-5 bg-black text-white border border-black rounded-lg flex items-center justify-center gap-3 text-lg font-black uppercase tracking-wider hover:shadow-md transition-all group ${isLoading ? 'opacity-70 cursor-wait' : ''}`}
                         >
                             {isLoading ? 'INITIALIZING_LINK...' : (
                                 <>
@@ -114,35 +124,43 @@ export default function SignIn() {
                     </form>
 
                     {/* Divider */}
-                    <div className="relative my-10 flex items-center gap-4">
-                        <div className="flex-1 h-[2px] bg-foreground/5"></div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground whitespace-nowrap">EXT_BRIDGE_PROTOCOL</span>
-                        <div className="flex-1 h-[2px] bg-foreground/5"></div>
+                    <div className="relative my-8 flex items-center gap-4">
+                        <div className="flex-1 h-[1px] bg-black/20"></div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/60 whitespace-nowrap">EXT_BRIDGE_PROTOCOL</span>
+                        <div className="flex-1 h-[1px] bg-black/20"></div>
                     </div>
 
                     {/* Social Sign In */}
                     <div className="grid grid-cols-2 gap-4">
-                        <button className="btn-punch bg-white text-sm py-3">GOOGLE_API</button>
-                        <button className="btn-punch bg-white text-sm py-3">AUTH_O_FED</button>
+                        <button
+                            type="button"
+                            className="px-4 py-3 bg-white text-foreground border border-black rounded-lg text-sm font-black uppercase tracking-wider hover:shadow-md transition-all"
+                        >
+                            GOOGLE_API
+                        </button>
+                        <button
+                            type="button"
+                            className="px-4 py-3 bg-white text-foreground border border-black rounded-lg text-sm font-black uppercase tracking-wider hover:shadow-md transition-all"
+                        >
+                            AUTH_O_FED
+                        </button>
                     </div>
 
-                    <div className="mt-10 pt-6 border-t-2 border-foreground/5 flex items-center justify-center gap-2">
+                    <div className="mt-8 pt-6 border-t border-black flex items-center justify-center gap-2">
                         <ShieldCheck size={14} className="text-primary" />
-                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">ENCRYPTED_PATH: RSA_4096_GCM</p>
+                        <p className="text-[10px] font-black text-foreground/60 uppercase tracking-widest">ENCRYPTED_PATH: RSA_4096_GCM</p>
                     </div>
                 </div>
 
-                {/* Sign Up Link */}
-                <div className="text-center mt-12 space-y-4">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                        NULL_ACCOUNT_RECORD?{" "}
-                        <Link to="/signup" className="text-primary hover:underline">
-                            Request_Credentials
-                        </Link>
+                <div className="mt-6 text-center space-y-4">
+                    <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">
+                        NULL_ACCOUNT_RECORD? <a href="#" className="text-[#5F63F2] hover:underline transition-all">REQUEST_CREDENTIALS</a>
                     </p>
-                    <Link to="/" className="inline-block text-[10px] font-black uppercase tracking-widest text-foreground/40 hover:text-foreground transition-colors">
-                        ← RETURN_TO_ROOT_DOMAIN
-                    </Link>
+                    <div className="flex justify-center items-center gap-4 text-[10px] font-black text-black/20 uppercase tracking-[0.2em]">
+                        <span className="w-8 h-px bg-black/10" />
+                        <Link to="/" className="hover:text-black transition-colors">RETURN_TO_ROOT_DOMAIN</Link>
+                        <span className="w-8 h-px bg-black/10" />
+                    </div>
                 </div>
             </div>
         </div>

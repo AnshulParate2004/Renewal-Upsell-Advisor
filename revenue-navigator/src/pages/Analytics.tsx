@@ -3,8 +3,6 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts";
-import { PageContainer } from "@/components/ui/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useDashboardStats } from "@/hooks/useAnalytics";
@@ -13,185 +11,122 @@ import { useMemo } from "react";
 export default function Analytics() {
   const { data: accounts = [], isLoading: accountsLoading } = useAccounts();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  
   const isLoading = accountsLoading || statsLoading;
 
   const riskDistribution = useMemo(() => [
-    { name: "Low Risk", value: accounts.filter((a) => a.riskScore < 40).length, color: "#10b981" },
-    { name: "Medium Risk", value: accounts.filter((a) => a.riskScore >= 40 && a.riskScore < 70).length, color: "#f59e0b" },
-    { name: "High Risk", value: accounts.filter((a) => a.riskScore >= 70).length, color: "#ef4444" },
+    { name: "Low Risk", value: accounts.filter((a) => a.riskScore < 40).length, color: "hsl(142, 71%, 45%)" },
+    { name: "Medium Risk", value: accounts.filter((a) => a.riskScore >= 40 && a.riskScore < 70).length, color: "hsl(38, 92%, 50%)" },
+    { name: "High Risk", value: accounts.filter((a) => a.riskScore >= 70).length, color: "hsl(var(--destructive))" },
   ], [accounts]);
 
-  // Generate revenue data from accounts (last 12 months placeholder - should come from API)
   const revenueData = useMemo(() => {
-    // TODO: Replace with actual API data when available
     const months = ["Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
     return months.map((month, idx) => ({
       month,
       total: stats?.total_arr ? Math.round(stats.total_arr / 1000) + (idx * 10) : 0,
-      new: 0,
-      expansion: 0,
       churned: 0,
     }));
   }, [stats]);
 
-  // Generate churn data from accounts (last 6 months placeholder - should come from API)
   const churnData = useMemo(() => {
-    // TODO: Replace with actual API data when available
     const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
-    return months.map(() => ({
-      month: months[Math.floor(Math.random() * months.length)],
+    return months.map((month) => ({
+      month,
       renewed: accounts.filter(a => a.renewalStage === "renewed").length,
-      churned: 0,
       atRisk: accounts.filter(a => a.riskScore >= 70).length,
     }));
   }, [accounts]);
+
   return (
-    <PageContainer className="min-h-screen">
-      <PageHeader
-        title="Strategic Analytics"
-        subtitle="Advanced Metric Aggregation & Predictive Intelligence"
-        actions={
-          <div className="flex gap-3">
-            <button className="px-4 py-2 bg-white text-foreground border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-              <Download className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-              PDF Export
+    <div className="min-h-screen bg-background">
+      <div className="bg-card border-b-2 border-black px-6 py-5">
+        <div className="max-w-[1400px] mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Analytics</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Revenue metrics & predictive intelligence</p>
+          </div>
+          <div className="flex gap-2">
+            <button className="h-9 px-3 bg-card text-foreground border-2 border-black rounded-lg text-xs font-medium hover:bg-muted transition-all flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
+              <Download className="h-3.5 w-3.5" /> PDF
             </button>
-            <button className="px-4 py-2 bg-primary text-white border-2 border-foreground rounded-lg font-black text-sm transition-all flex items-center uppercase tracking-wider group" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-              <FileText className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
-              CSV Sync
+            <button className="h-9 px-3 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-all flex items-center gap-1.5 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
+              <FileText className="h-3.5 w-3.5" /> Export CSV
             </button>
           </div>
-        }
-      />
-
-      {isLoading ? (
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading analytics data...</span>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          {/* Revenue Trend */}
-          <div className="lg:col-span-12 paper-card overflow-hidden bg-white p-0">
-            <div className="p-6 border-b-4 border-foreground bg-primary/10 flex items-center justify-between">
-              <h3 className="text-xl font-black text-foreground uppercase">Revenue Persistence Trend</h3>
-              <div className="sticker-outline px-3 py-1 text-xs">Analytics</div>
+      </div>
+
+      <div className="max-w-[1400px] mx-auto p-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="ml-2.5 text-muted-foreground text-sm">Loading analytics...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            {/* Revenue Trend */}
+            <div className="lg:col-span-12 bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="px-5 py-3.5 border-b-2 border-black flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">Revenue Trend</h3>
+                <span className="text-[11px] text-muted-foreground">Last 12 months</span>
+              </div>
+              <div className="p-5">
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={revenueData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: '2px solid #000', borderRadius: '8px', fontSize: '12px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)' }} />
+                    <Legend iconType="circle" verticalAlign="top" height={32} />
+                    <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} name="Total ARR" />
+                    <Line type="monotone" dataKey="churned" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} name="Churned" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div className="p-8">
-              <ResponsiveContainer width="100%" height={350}>
-                <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }}
-                  axisLine={{ stroke: "#f1f5f9" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }}
-                  axisLine={{ stroke: "#f1f5f9" }}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#fff", border: '1px solid #f1f5f9', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontWeight: "700" }}
-                />
-                <Legend iconType="circle" verticalAlign="top" height={36} />
-                <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: "hsl(var(--primary))", strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 0 }} name="Total ARR" />
-                <Line type="monotone" dataKey="churned" stroke="hsl(var(--accent))" strokeWidth={3} dot={{ r: 4, fill: "hsl(var(--accent))", strokeWidth: 0 }} name="Churned" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
 
-        {/* Churn Analysis */}
-        <div className="lg:col-span-7 paper-card table-container overflow-hidden bg-white p-0">
-          <div className="p-6 border-b-4 border-foreground bg-accent/10 flex items-center gap-3">
-            <div className="w-2 h-2 bg-accent border border-foreground rounded-full" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }} />
-            <h3 className="text-xl font-black text-foreground uppercase">Retention Flow Matrix</h3>
-          </div>
-          <div className="p-8">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={churnData}>
-                <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }}
-                  axisLine={{ stroke: "#f1f5f9" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: "#94a3b8", fontSize: 11, fontWeight: "600" }}
-                  axisLine={{ stroke: "#f1f5f9" }}
-                  tickLine={false}
-                />
-                <Tooltip contentStyle={{ backgroundColor: "#fff", border: '1px solid #f1f5f9', borderRadius: '12px' }} />
-                <Legend iconType="circle" />
-                <Bar dataKey="renewed" stackId="a" fill="hsl(var(--primary))" radius={[0, 0, 0, 0]} name="Renewed" />
-                <Bar dataKey="atRisk" stackId="a" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="At Risk" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+            {/* Churn Analysis */}
+            <div className="lg:col-span-7 bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="px-5 py-3.5 border-b-2 border-black">
+                <h3 className="text-sm font-semibold text-foreground">Retention Flow</h3>
+              </div>
+              <div className="p-5">
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={churnData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="month" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: '2px solid #000', borderRadius: '8px', fontSize: '12px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)' }} />
+                    <Legend iconType="circle" />
+                    <Bar dataKey="renewed" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Renewed" />
+                    <Bar dataKey="atRisk" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="At Risk" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
-        {/* Risk Distribution */}
-        <div className="lg:col-span-5 paper-card table-container overflow-hidden bg-white p-0">
-          <div className="p-6 border-b-4 border-foreground bg-accent/10">
-            <h3 className="text-xl font-black text-foreground uppercase tracking-wider">Portfolio Volatility Index</h3>
+            {/* Risk Distribution */}
+            <div className="lg:col-span-5 bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="px-5 py-3.5 border-b-2 border-black">
+                <h3 className="text-sm font-semibold text-foreground">Portfolio Risk Distribution</h3>
+              </div>
+              <div className="p-5 flex justify-center">
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={riskDistribution} dataKey="value" cx="50%" cy="50%" innerRadius={65} outerRadius={95} strokeWidth={0} paddingAngle={4}>
+                      {riskDistribution.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: '2px solid #000', borderRadius: '8px', fontSize: '12px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)' }} />
+                    <Legend iconType="circle" />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
-          <div className="p-8 flex justify-center">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={riskDistribution}
-                  dataKey="value"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={100}
-                  strokeWidth={0}
-                  paddingAngle={8}
-                  label={({ name, value, cx, cy, midAngle, innerRadius, outerRadius }) => {
-                    const RADIAN = Math.PI / 180;
-                    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                    const entry = riskDistribution.find(r => r.name === name);
-                    
-                    return (
-                      <text
-                        x={x}
-                        y={y}
-                        fill={entry?.color || "#000"}
-                        textAnchor={x > cx ? 'start' : 'end'}
-                        dominantBaseline="central"
-                        className="text-xs font-black uppercase"
-                        style={{ fontSize: '11px', fontWeight: '900' }}
-                      >
-                        {`${name}: ${value}`}
-                      </text>
-                    );
-                  }}
-                >
-                  {riskDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "#fff", 
-                    border: '2px solid hsl(var(--foreground))', 
-                    borderRadius: '0.5rem',
-                    boxShadow: "1px 1px 0px 0px hsl(var(--foreground))"
-                  }} 
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        </div>
-      )}
-    </PageContainer>
+        )}
+      </div>
+    </div>
   );
 }

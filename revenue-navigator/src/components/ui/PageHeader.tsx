@@ -18,24 +18,24 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className={`flex items-end justify-between shrink-0 pb-6 border-b-4 border-foreground ${className}`}
+      transition={{ duration: 0.35 }}
+      className={`flex items-end justify-between shrink-0 pb-5 border-b border-border ${className}`}
     >
       <div>
         <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-5xl font-black text-foreground tracking-tight leading-none uppercase">
+          <h1 className="text-2xl font-black text-foreground uppercase tracking-tight">
             {title}
           </h1>
           {badge && (
-            <div className="sticker-outline px-3 py-1 text-xs">
+            <span className="px-2.5 py-0.5 bg-primary/10 text-primary border border-black rounded-md text-[11px] font-black uppercase tracking-wider">
               {badge}
-            </div>
+            </span>
           )}
         </div>
         {subtitle && (
-          <p className="text-sm font-black text-foreground/60 mt-2 uppercase tracking-wider">
+          <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">
             {subtitle}
           </p>
         )}

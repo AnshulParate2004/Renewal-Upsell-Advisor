@@ -18,9 +18,9 @@ interface MetricCardProps {
 const colorMap = {
   default: 'text-foreground',
   primary: 'text-primary',
-  success: 'text-success',
-  warning: 'text-warning',
-  danger: 'text-red-600',
+  success: 'text-primary',
+  warning: 'text-accent',
+  danger: 'text-destructive',
 };
 
 export function MetricCard({
@@ -28,43 +28,35 @@ export function MetricCard({
   value,
   icon,
   color = 'default',
-  iconBg = 'bg-primary',
-  iconColor = 'text-white',
-  iconBorder = 'border-foreground',
+  iconBg = 'bg-primary/10',
+  iconColor = 'text-primary',
+  iconBorder,
   isAlert = false,
   delay = 0,
   className = '',
 }: MetricCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ delay, duration: 0.35, ease: "easeOut" }}
       className={cn(
-        'paper-card p-5 flex flex-col justify-between group cursor-default transition-all',
-        isAlert ? 'bg-red-50' : 'bg-white',
+        'bg-card rounded-2xl border border-border p-5 flex flex-col justify-between hover:shadow-md transition-all',
+        isAlert && 'border-destructive/20 bg-destructive/5',
         className
       )}
     >
       <div className="flex justify-between items-start mb-4">
-        <p className="text-xs font-black text-foreground/60 uppercase tracking-wider">
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
           {label}
         </p>
         {icon && (
-          <div
-            className={cn(
-              'w-10 h-10 p-2 border-2 rounded-lg flex items-center justify-center shrink-0',
-              iconBorder,
-              iconBg,
-              iconColor
-            )}
-            style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}
-          >
+          <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', iconBg, iconColor)}>
             {icon}
           </div>
         )}
       </div>
-      <div className={cn('text-3xl font-black tracking-tight', colorMap[color])}>
+      <div className={cn('text-2xl font-bold tracking-tight', colorMap[color])}>
         {value}
       </div>
     </motion.div>

@@ -1,16 +1,10 @@
 import { useState, useMemo } from "react";
-import { Search, Phone, History, ShieldCheck, Loader2 } from "lucide-react";
-import { PageContainer } from "@/components/ui/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { Search, Phone, Loader2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
-// TODO: Create API hook for voice calls when backend endpoint is available
-// import { useVoiceCalls } from "@/hooks/useVoiceCalls";
 
 export default function Calls() {
   const [search, setSearch] = useState("");
   const [outcomeFilter, setOutcomeFilter] = useState("all");
-  
-  // TODO: Replace with API call when voice calls endpoint is available
   const voiceCalls: any[] = [];
   const isLoading = false;
 
@@ -21,122 +15,96 @@ export default function Calls() {
   }, [voiceCalls, search, outcomeFilter]);
 
   return (
-    <PageContainer className="min-h-screen">
-      <PageHeader
-        title="Voice Operations"
-        subtitle="Asynchronous Voice Path Intelligence & Sentiment Analysis"
-        badge="Secure Comms V4"
-        actions={
-          <div className="flex items-center gap-4">
-            <div className="text-sm italic text-accent font-bold">Recording Active</div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="bg-card border-b-2 border-black px-6 py-5">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Voice Calls</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Voice intelligence & sentiment analysis</p>
           </div>
-        }
-      />
-
-      {/* Controls */}
-      <div className="flex items-center justify-between gap-6 bg-white p-4 border-4 border-foreground rounded-lg">
-        <div className="flex items-center gap-6 flex-1">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/40" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by account..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white border-2 border-foreground rounded-lg text-sm font-black focus:outline-none focus:bg-primary/5 transition-all uppercase tracking-wider"
-            />
-          </div>
-          <div className="h-8 w-1 bg-foreground rounded-full" />
-          <div className="flex gap-2">
-            {(['all', 'picked_up', 'missed', 'retry'] as const).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setOutcomeFilter(filter)}
-                className={`px-4 py-2 text-xs font-black border-2 border-foreground rounded-lg transition-all uppercase tracking-wider ${outcomeFilter === filter ? 'bg-primary text-white' : 'bg-white text-foreground hover:bg-accent/10'}`}
-              >
-                {filter === 'all' ? 'All Calls' : filter.replace('_', ' ').toUpperCase()}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by account..."
+                className="pl-8 pr-4 py-2 text-sm bg-background border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-ring/20 w-48 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:translate-x-[1px] focus:translate-y-[1px] focus:shadow-none"
+              />
+            </div>
+            <div className="flex gap-0.5 bg-muted rounded-lg p-0.5 border-2 border-black">
+              {(['all', 'picked_up', 'missed', 'retry'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setOutcomeFilter(filter)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${outcomeFilter === filter ? 'bg-card text-foreground shadow-sm border-2 border-black' : 'text-muted-foreground hover:text-foreground bg-transparent border-transparent'}`}
+                >
+                  {filter === 'all' ? 'All' : filter.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="paper-card table-container flex-1 overflow-hidden flex flex-col bg-white p-0">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-96">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading voice calls...</span>
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            variant="default"
-            title="No Voice Calls Available"
-            message="Voice call data will appear here when available."
-            icon={<Phone size={48} className="text-foreground/40" />}
-          />
-        ) : (
-          <>
-            <div className="overflow-auto flex-1 relative custom-scrollbar">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-accent border-b-4 border-foreground">
-                  <tr className="text-[10px] uppercase text-white font-black tracking-widest text-left">
-                    <th className="pl-8 py-4">Account</th>
-                    <th className="py-4">Time</th>
-                    <th className="text-center py-4">Duration</th>
-                    <th className="text-center py-4">Status</th>
-                    <th className="text-center py-4">Sentiment</th>
-                    <th className="text-center py-4 pr-8">Retries</th>
+      <div className="p-6">
+        <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b-2 border-black">
+              <tr className="text-[11px] uppercase text-muted-foreground font-medium tracking-wider text-left">
+                <th className="pl-5 py-3">Account</th>
+                <th className="py-3">Time</th>
+                <th className="text-center py-3">Duration</th>
+                <th className="text-center py-3">Status</th>
+                <th className="text-center py-3">Sentiment</th>
+                <th className="text-center py-3 pr-5">Retries</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr className="border-b-2 border-black"><td colSpan={6} className="text-center py-12">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
+                </td></tr>
+              ) : filtered.length === 0 ? (
+                <tr className="border-b-2 border-black"><td colSpan={6} className="p-0">
+                  <EmptyState
+                    variant="default"
+                    title="No Voice Calls Available"
+                    message="Voice call data will appear here when available."
+                    icon={<Phone size={40} className="text-muted-foreground/40" />}
+                  />
+                </td></tr>
+              ) : (
+                filtered.map((call) => (
+                  <tr key={call.id} className="hover:bg-muted/20 transition-colors group border-b-2 border-black">
+                    <td className="pl-5 py-3.5 font-medium text-foreground group-hover:text-primary transition-colors">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center border-2 border-black">
+                          <Phone size={12} className="text-primary" />
+                        </div>
+                        {call.accountName}
+                      </div>
+                    </td>
+                    <td className="py-3.5 text-xs text-muted-foreground">{call.date}</td>
+                    <td className="text-center py-3.5 text-sm font-medium text-foreground">{call.duration}</td>
+                    <td className="text-center py-3.5">
+                      <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${call.outcome === 'picked_up' ? 'bg-emerald-500/10 text-emerald-600' : call.outcome === 'missed' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+                        {call.outcome?.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="text-center py-3.5 text-base">
+                      {call.sentiment === "positive" ? "😊" : call.sentiment === "neutral" ? "😐" : "😟"}
+                    </td>
+                    <td className="text-center py-3.5 text-sm text-foreground pr-5">{call.retryCount}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y-2 divide-foreground">
-                  {filtered.map((call) => (
-                    <tr key={call.id} className="hover:bg-primary/10 transition-colors group">
-                      <td className="pl-8 py-4 font-black text-foreground group-hover:text-primary transition-colors flex items-center gap-3">
-                        <div className="p-2 bg-purple-50 border-2 border-foreground rounded-lg group-hover:bg-primary/10 transition-colors" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                          <Phone size={14} className="text-primary" />
-                        </div>
-                        <span className="uppercase tracking-wide">{call.accountName}</span>
-                      </td>
-                      <td className="py-4 text-[10px] text-foreground/60 font-black uppercase">{call.date}</td>
-                      <td className="text-center py-4 font-black text-foreground">{call.duration}</td>
-                      <td className="text-center py-4">
-                        <div className={`px-2.5 py-1 border-2 border-foreground rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex ${call.outcome === 'picked_up' ? 'bg-success/10 text-success' : call.outcome === 'missed' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                          {call.outcome.replace('_', ' ').toUpperCase()}
-                        </div>
-                      </td>
-                      <td className="text-center py-4">
-                        {call.sentiment ? (
-                          <div className="flex items-center justify-center gap-2 bg-white py-1 px-2 border-2 border-foreground rounded-lg inline-flex mx-auto" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                            <span className="text-lg">{call.sentiment === "positive" ? "😊" : call.sentiment === "neutral" ? "😐" : "😟"}</span>
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${call.sentiment === 'positive' ? 'text-success' : call.sentiment === 'neutral' ? 'text-foreground/60' : 'text-red-600'}`}>{call.sentiment}</span>
-                          </div>
-                        ) : <span className="text-foreground/40 font-black text-xs uppercase">N/A</span>}
-                      </td>
-                      <td className="text-center py-4 font-black text-xs pr-8 text-foreground">{call.retryCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 bg-accent border-t-4 border-foreground flex justify-between items-center text-[10px] font-black text-white uppercase tracking-widest rounded-b-lg">
-              <div className="flex items-center gap-3">
-                <span className="w-2 h-2 bg-success border border-foreground rounded-full animate-pulse" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}></span>
-                SYNC STATUS: {filtered.length} / {voiceCalls.length} AUDIT LOGS
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <History size={12} />
-                  <span>Retention 90d</span>
-                </div>
-                <div className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-foreground font-black" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>Sorted by Recency</div>
-              </div>
-            </div>
-          </>
-        )}
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }

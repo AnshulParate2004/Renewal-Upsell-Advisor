@@ -1,19 +1,17 @@
 import { useState } from "react";
 import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2 } from "lucide-react";
 import { formatCurrency, getDaysUntil } from "@/data/mockData";
-import { PageContainer } from "@/components/ui/PageContainer";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useUpdateAccount } from "@/hooks/useAccounts";
 
 type Stage = "t90" | "t60" | "t30" | "renewed";
 
-const stageConfig: Record<Stage, { title: string; bgColor: string; icon: React.ReactNode }> = {
-  t90: { title: "T-90_HORIZON", bgColor: "bg-secondary", icon: <Clock size={16} /> },
-  t60: { title: "T-60_CRITICAL", bgColor: "bg-accent", icon: <Clock size={16} /> },
-  t30: { title: "T-30_IMMEDIATE", bgColor: "bg-destructive", icon: <ShieldAlert size={16} /> },
-  renewed: { title: "PERSISTED_RENEWAL", bgColor: "bg-primary", icon: <CheckCircle2 size={16} /> },
+const stageConfig: Record<Stage, { title: string; color: string; icon: React.ReactNode }> = {
+  t90: { title: "T-90 Horizon", color: "text-primary", icon: <Clock size={14} /> },
+  t60: { title: "T-60 Critical", color: "text-amber-500", icon: <Clock size={14} /> },
+  t30: { title: "T-30 Immediate", color: "text-destructive", icon: <ShieldAlert size={14} /> },
+  renewed: { title: "Renewed", color: "text-emerald-600", icon: <CheckCircle2 size={14} /> },
 };
 
 const stages: Stage[] = ["t90", "t60", "t30", "renewed"];
@@ -30,116 +28,111 @@ export default function Pipeline() {
 
   const handleDrop = (stage: Stage) => {
     if (!draggedId) return;
-    // Update account via API
-    updateAccount.mutate({
-      id: draggedId,
-      data: { renewalStage: stage }
-    });
+    updateAccount.mutate({ id: draggedId, data: { renewalStage: stage } });
     setDraggedId(null);
   };
 
   return (
-    <PageContainer className="min-h-screen">
-      <PageHeader
-        title="Persistence Flow"
-        subtitle="Temporal Renewal Matrix & Cohort Persistence Analysis"
-        badge="STABILITY: 94% NOMINAL"
-        actions={
-          <span className="text-xs font-black text-primary flex items-center gap-2 uppercase tracking-wider">
-            <div className="w-2 h-2 bg-primary border border-foreground animate-pulse" />
-            Active Pipeline Sync
-          </span>
-        }
-      />
-
-      {/* Board */}
-      {isLoading ? (
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <span className="ml-3 text-foreground/60 font-black uppercase tracking-wider">Loading pipeline data...</span>
+    <div className="h-[calc(100vh-56px)] flex flex-col bg-background">
+      {/* Page Header */}
+      <div className="bg-card border-b-2 border-black px-6 py-5 shrink-0">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">Renewal Pipeline</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">Drag accounts between stages to update status</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-primary flex items-center gap-2 px-3 py-1.5 bg-background border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+              Live sync
+            </span>
+          </div>
         </div>
-      ) : (
-        <div className="flex gap-6 overflow-x-auto pb-8 snap-x custom-scrollbar">
-          {stages.map((stage) => (
-          <div
-            key={stage}
-            className="min-w-[340px] flex-1 snap-start flex flex-col gap-4"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleDrop(stage)}
-          >
-            {/* Column Header */}
-            <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 border-2 border-foreground rounded-lg ${stageConfig[stage].bgColor === 'bg-destructive' ? 'bg-red-50 text-red-600' : 'bg-primary/10 text-primary'}`} style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                  {stageConfig[stage].icon}
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-foreground tracking-tight uppercase leading-none">
-                    {stageConfig[stage].title.replace('_', ' ')}
-                  </h3>
-                  <p className="text-[10px] font-black text-foreground/60 mt-1 uppercase tracking-widest">
-                    Registry: {byStage(stage).length}
-                  </p>
-                </div>
-              </div>
-              <div className="px-3 py-1 bg-white border-2 border-foreground rounded-lg text-[10px] font-black text-foreground uppercase" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                {formatCurrency(stageArr(stage))}
-              </div>
-            </div>
+      </div>
 
-            {/* Column Body */}
-            <div className="flex-1 bg-gray-50/50 border-4 border-foreground rounded-lg p-4 space-y-4 min-h-[600px]">
-              {byStage(stage).map((account) => {
-                const days = getDaysUntil(account.renewalDate);
-                const isCritical = account.riskScore >= 70;
-                return (
-                  <div
-                    key={account.id}
-                    draggable
-                    onDragStart={() => handleDragStart(account.id)}
-                    className="cursor-grab paper-card p-5 bg-white group transition-all active:cursor-grabbing relative overflow-hidden"
-                  >
-                    {isCritical && <div className="absolute top-0 left-0 w-2 h-full bg-red-500 border-r-2 border-foreground" />}
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-6 max-w-[1600px] mx-auto w-full">
 
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="flex flex-col gap-1">
-                        <p className="text-base font-black text-foreground group-hover:text-primary transition-colors tracking-tight uppercase">{account.name}</p>
-                        <p className="text-[10px] font-black text-foreground/60 uppercase tracking-widest">{formatCurrency(account.arr)} ARR</p>
-                      </div>
-                      <div className="p-1.5 bg-white border-2 border-foreground rounded-lg opacity-20 group-hover:opacity-100 transition-opacity" style={{ boxShadow: "1px 1px 0px 0px hsl(var(--foreground))" }}>
-                        <GripVertical className="h-4 w-4 text-foreground" />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-auto">
-                      {isCritical ? (
-                        <span className="badge-risk">CRITICAL</span>
-                      ) : (
-                        <span className="badge-safe">NOMINAL</span>
-                      )}
-
-                      <div className="flex items-center gap-2">
-                        <div className="w-1 h-1 bg-foreground" />
-                        <span className={`text-[10px] font-black tracking-widest uppercase ${days <= 30 ? 'text-red-500' : 'text-foreground/60'}`}>
-                          T-{days}D
-                        </span>
-                      </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="ml-3 text-muted-foreground text-sm">Loading pipeline...</span>
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-8 snap-x">
+            {stages.map((stage) => (
+              <div
+                key={stage}
+                className="min-w-[300px] flex-1 snap-start flex flex-col gap-3"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDrop(stage)}
+              >
+                {/* Column Header */}
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2">
+                    <span className={stageConfig[stage].color}>{stageConfig[stage].icon}</span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{stageConfig[stage].title}</h3>
+                      <p className="text-[11px] text-muted-foreground">{byStage(stage).length} accounts</p>
                     </div>
                   </div>
-                );
-              })}
-
-              {byStage(stage).length === 0 && (
-                <div className="h-full flex flex-col items-center justify-center text-center opacity-20 py-20">
-                  <div className="w-12 h-12 border-4 border-dashed border-foreground flex items-center justify-center text-xl font-black">+</div>
-                  <p className="mt-4 text-[10px] font-black uppercase tracking-[0.2em]">Zero_Nodes</p>
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md border-2 border-black">
+                    {formatCurrency(stageArr(stage))}
+                  </span>
                 </div>
-              )}
-            </div>
+
+                {/* Column Body */}
+                <div className="flex-1 bg-muted/30 border-2 border-black rounded-xl p-3 space-y-3 min-h-[500px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                  {byStage(stage).map((account) => {
+                    const days = getDaysUntil(account.renewalDate);
+                    const isCritical = account.riskScore >= 70;
+                    return (
+                      <div
+                        key={account.id}
+                        draggable
+                        onDragStart={() => handleDragStart(account.id)}
+                        className="cursor-grab bg-card border-2 border-black rounded-xl p-4 group transition-all active:cursor-grabbing relative overflow-hidden"
+                      >
+                        {isCritical && <div className="absolute top-0 left-0 w-1 h-full bg-destructive rounded-l-xl" />}
+
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{account.name}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(account.arr)} ARR</p>
+                          </div>
+                          <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground transition-opacity" />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black ${isCritical ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                            {isCritical ? 'Critical' : 'Healthy'}
+                          </span>
+                          <span className={`text-xs font-medium border-2 border-black px-2 py-0.5 rounded ${days <= 30 ? 'text-destructive bg-destructive/10' : 'text-muted-foreground bg-muted/50'}`}>
+                            {days}d to renewal
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {byStage(stage).length === 0 && (
+                    <div className="h-full flex flex-col items-center justify-center text-center py-16">
+                      <div className="w-10 h-10 border-2 border-dashed border-black rounded-xl flex items-center justify-center text-muted-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        <Plus className="w-4 h-4" />
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">No accounts</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-          ))}
-        </div>
-      )}
-    </PageContainer>
+        )}
+      </div>
+    </div>
   );
+}
+
+function Plus({ className }: { className?: string }) {
+  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>;
 }
