@@ -40,6 +40,8 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "pytz>=2025.2",
+    # Audio processing
+    "pydub>=0.25.1",
 ]
 
 [build-system]

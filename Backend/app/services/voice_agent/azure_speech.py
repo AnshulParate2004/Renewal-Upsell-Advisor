@@ -49,13 +49,14 @@ class AzureSpeechService:
             logger.error(f"Speech synthesis failed: {result.reason}")
             raise RuntimeError(f"Speech synthesis failed: {result.reason}")
     
-    def speech_to_text(self, audio_data: bytes, language: str = "en-US") -> str:
+    def speech_to_text(self, audio_data: bytes, language: str = "en-US", audio_format: str = "webm") -> str:
         """
         Convert speech audio to text.
         
         Args:
             audio_data: Audio bytes
             language: Language code (default: en-US)
+            audio_format: Audio format (webm, wav, etc.)
             
         Returns:
             Transcribed text
@@ -63,28 +64,48 @@ class AzureSpeechService:
         if not self.speech_config:
             raise ValueError("Azure Speech not configured")
         
-        audio_config = speechsdk.audio.AudioConfig(stream=speechsdk.audio.PushAudioInputStream())
-        recognizer = speechsdk.SpeechRecognizer(
-            speech_config=self.speech_config,
-            audio_config=audio_config,
-            language=language
-        )
-        
-        # Write audio data to stream
-        audio_stream = speechsdk.audio.PushAudioInputStream()
-        audio_stream.write(audio_data)
-        audio_stream.close()
-        
-        result = recognizer.recognize_once_async().get()
-        
-        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
-            return result.text
-        elif result.reason == speechsdk.ResultReason.NoMatch:
-            logger.warning("No speech could be recognized")
+        try:
+            import tempfile
+            import os
+            
+            # Use file-based recognition (more reliable for WAV format)
+            # Save to temporary file with appropriate extension
+            file_suffix = '.wav' if audio_format.lower() == 'wav' else '.webm'
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_suffix) as tmp_file:
+                tmp_file.write(audio_data)
+                tmp_file_path = tmp_file.name
+            
+            try:
+                # Use file-based audio config (Azure Speech SDK handles WAV files well)
+                audio_config = speechsdk.audio.AudioConfig(filename=tmp_file_path)
+                recognizer = speechsdk.SpeechRecognizer(
+                    speech_config=self.speech_config,
+                    audio_config=audio_config,
+                    language=language
+                )
+                
+                result = recognizer.recognize_once_async().get()
+                
+                if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+                    logger.info(f"Successfully recognized speech: {result.text[:50]}...")
+                    return result.text
+                elif result.reason == speechsdk.ResultReason.NoMatch:
+                    logger.warning("No speech could be recognized from audio")
+                    return ""
+                else:
+                    logger.error(f"Speech recognition failed: {result.reason}")
+                    return ""
+            finally:
+                # Clean up temp file
+                if os.path.exists(tmp_file_path):
+                    try:
+                        os.unlink(tmp_file_path)
+                    except:
+                        pass
+        except Exception as e:
+            logger.error(f"Error in speech_to_text: {e}", exc_info=True)
             return ""
-        else:
-            logger.error(f"Speech recognition failed: {result.reason}")
-            raise RuntimeError(f"Speech recognition failed: {result.reason}")
 
 
 # Global instance

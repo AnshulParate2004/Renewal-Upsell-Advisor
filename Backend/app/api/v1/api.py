@@ -2,7 +2,7 @@
 API v1 Router - Includes all endpoint routers.
 """
 from fastapi import APIRouter
-from app.api.v1.endpoints import predictions, accounts, opportunities, analytics, contracts, webhooks, email, voice_calls
+from app.api.v1.endpoints import predictions, accounts, opportunities, analytics, contracts, webhooks, email, voice_calls, voicebot_frontend, voicebot_audio
 
 api_router = APIRouter()
 
@@ -15,3 +15,5 @@ api_router.include_router(contracts.router, prefix="/contracts", tags=["contract
 api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 api_router.include_router(email.router, prefix="/email", tags=["email"])
 api_router.include_router(voice_calls.router, prefix="/voice", tags=["voice"])
+api_router.include_router(voicebot_frontend.router, prefix="/voicebot", tags=["voicebot"])
+api_router.include_router(voicebot_audio.router, prefix="/voicebot", tags=["voicebot-audio"])

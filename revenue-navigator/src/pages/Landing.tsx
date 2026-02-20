@@ -97,12 +97,15 @@ export default function Landing() {
 
                     {/* Center Nav */}
                     <div className="hidden md:flex items-center gap-6">
-                        {['Features', 'Pricing', 'Case Studies', 'Resources'].map((item) => (
-                            <a key={item} href={`#${item.toLowerCase().replace(' ', '-')}`}
-                                className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                                {item}
-                            </a>
-                        ))}
+                        <Link to="/features" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
+                            Features
+                        </Link>
+                        <Link to="/pricing" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
+                            Pricing
+                        </Link>
+                        <Link to="/demo" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
+                            Demo
+                        </Link>
                     </div>
 
                     {/* Right CTA */}
