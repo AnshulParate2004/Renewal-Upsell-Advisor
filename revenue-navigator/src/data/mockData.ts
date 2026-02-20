@@ -42,6 +42,7 @@ export interface Account {
   renewalDate: string;
   renewalStage: "t90" | "t60" | "t30" | "renewed" | "lost";
   industry: string;
+  company_size?: string; // Added to match Supabase schema
   csm: string;
   lastContact: string;
   contractStart: string;

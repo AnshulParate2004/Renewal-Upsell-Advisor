@@ -1,68 +1,168 @@
 """
-Account API endpoints.
+Account API endpoints using Supabase REST API directly.
+This connects directly to Supabase to fetch account data.
 """
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
-from typing import List
-from app.db.session import get_db
-from app.schemas.account import AccountCreate, AccountUpdate, AccountResponse
-from app.models.account import Account
+from fastapi import APIRouter, HTTPException
+from typing import List, Optional
+from pathlib import Path
+from dotenv import load_dotenv
+from app.core.config import settings
 from app.core.logging import get_logger
+from supabase import create_client, Client
+import os
+
+# Load .env file explicitly - go up from app/api/v1/endpoints/accounts.py to Backend/.env
+# Path: Backend/app/api/v1/endpoints/accounts.py -> Backend/.env
+env_path = Path(__file__).parent.parent.parent.parent / ".env"
+if not env_path.exists():
+    # Try current working directory (when running from Backend/)
+    env_path = Path(".env")
+if env_path.exists():
+    load_dotenv(env_path, override=True)  # Use override=True to ensure .env values are used
 
 logger = get_logger(__name__)
 router = APIRouter()
 
-
-@router.get("/", response_model=List[AccountResponse])
-async def get_accounts(skip: int = 0, limit: int = 1000, db: Session = Depends(get_db)):
-    """Get list of accounts."""
-    accounts = db.query(Account).offset(skip).limit(limit).all()
-    logger.info(f"Returning {len(accounts)} accounts (skip={skip}, limit={limit})")
-    return accounts
-
-
-@router.get("/{account_id}", response_model=AccountResponse)
-async def get_account(account_id: str, db: Session = Depends(get_db)):
-    """Get a specific account by ID."""
-    account = db.query(Account).filter(Account.id == account_id).first()
-    if not account:
-        raise HTTPException(status_code=404, detail="Account not found")
-    return account
-
-
-@router.post("/", response_model=AccountResponse)
-async def create_account(account: AccountCreate, db: Session = Depends(get_db)):
-    """Create a new account."""
-    db_account = Account(**account.model_dump())
-    db.add(db_account)
-    db.commit()
-    db.refresh(db_account)
-    return db_account
-
-
-@router.put("/{account_id}", response_model=AccountResponse)
-async def update_account(account_id: str, account_update: AccountUpdate, db: Session = Depends(get_db)):
-    """Update an account."""
-    db_account = db.query(Account).filter(Account.id == account_id).first()
-    if not db_account:
-        raise HTTPException(status_code=404, detail="Account not found")
+# Initialize Supabase client - use function to initialize lazily
+def get_supabase_client() -> Optional[Client]:
+    """Get or create Supabase client."""
+    # Try multiple ways to get credentials
+    supabase_url = os.getenv("SUPABASE_URL") or settings.SUPABASE_URL
+    supabase_key = (
+        os.getenv("SUPABASE_SERVICE_ROLE_SECRET") or 
+        os.getenv("SUPABASE_SERVICE_ROLE_KEY") or 
+        os.getenv("SUPABASE_KEY") or
+        os.getenv("SUPABASE_ANON_KEY") or
+        settings.SUPABASE_KEY
+    )
     
-    update_data = account_update.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(db_account, field, value)
+    if not supabase_url or not supabase_key:
+        logger.error(f"Supabase credentials not configured!")
+        logger.error(f"SUPABASE_URL: {'Set' if supabase_url else 'NOT SET'}")
+        logger.error(f"SUPABASE_KEY: {'Set' if supabase_key else 'NOT SET'}")
+        logger.error(f"Available env vars with SUPABASE: {[k for k in os.environ.keys() if 'SUPABASE' in k]}")
+        return None
     
-    db.commit()
-    db.refresh(db_account)
-    return db_account
+    try:
+        client = create_client(supabase_url, supabase_key)
+        logger.info(f"Supabase client initialized successfully (URL: {supabase_url[:50]}...)")
+        return client
+    except Exception as e:
+        logger.error(f"Failed to initialize Supabase client: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
+
+# Initialize client at module level
+supabase: Optional[Client] = get_supabase_client()
+
+
+@router.get("/")
+async def get_accounts(skip: int = 0, limit: int = 1000):
+    """Get list of accounts from Supabase."""
+    client = supabase or get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        # Query Supabase - get all fields matching the schema
+        result = client.table("accounts").select(
+            "id, name, domain, industry, company_size, arr, mrr, "
+            "contract_start_date, contract_end_date, renewal_date, last_contact_date, "
+            "status, renewal_stage, health_score, risk_score, relationship_score, "
+            "churn_probability, sentiment_score, sentiment_category, "
+            "licenses_total, licenses_used, utilization_percentage, "
+            "csm_name, csm_email, "
+            "primary_contact_name, primary_contact_email, primary_contact_phone, "
+            "created_at, updated_at"
+        ).range(skip, skip + limit - 1).execute()
+        
+        accounts = result.data if result.data else []
+        logger.info(f"Returning {len(accounts)} accounts (skip={skip}, limit={limit})")
+        
+        return accounts
+    except Exception as e:
+        logger.error(f"Error fetching accounts: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to fetch accounts: {str(e)}")
+
+
+@router.get("/{account_id}")
+async def get_account(account_id: str):
+    """Get a specific account by ID from Supabase."""
+    client = supabase or get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        result = client.table("accounts").select("*").eq("id", account_id).execute()
+        
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        return result.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching account {account_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch account: {str(e)}")
+
+
+@router.post("/")
+async def create_account(account: dict):
+    """Create a new account in Supabase."""
+    client = supabase or get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        result = client.table("accounts").insert(account).execute()
+        
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=400, detail="Failed to create account")
+        
+        return result.data[0]
+    except Exception as e:
+        logger.error(f"Error creating account: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create account: {str(e)}")
+
+
+@router.put("/{account_id}")
+async def update_account(account_id: str, account_update: dict):
+    """Update an account in Supabase."""
+    client = supabase or get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    try:
+        # Remove None values
+        update_data = {k: v for k, v in account_update.items() if v is not None}
+        
+        result = client.table("accounts").update(update_data).eq("id", account_id).execute()
+        
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=404, detail="Account not found")
+        
+        return result.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating account {account_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update account: {str(e)}")
 
 
 @router.delete("/{account_id}")
-async def delete_account(account_id: str, db: Session = Depends(get_db)):
-    """Delete an account."""
-    db_account = db.query(Account).filter(Account.id == account_id).first()
-    if not db_account:
-        raise HTTPException(status_code=404, detail="Account not found")
+async def delete_account(account_id: str):
+    """Delete an account from Supabase."""
+    client = supabase or get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
     
-    db.delete(db_account)
-    db.commit()
-    return {"message": "Account deleted successfully"}
+    try:
+        result = client.table("accounts").delete().eq("id", account_id).execute()
+        
+        return {"message": "Account deleted successfully"}
+    except Exception as e:
+        logger.error(f"Error deleting account {account_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete account: {str(e)}")

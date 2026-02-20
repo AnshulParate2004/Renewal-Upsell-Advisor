@@ -20,9 +20,10 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:8080", "http://localhost:3000"]
     
     # Database
-    DATABASE_URL: Optional[str] = None
-    SUPABASE_URL: Optional[str] = None
-    SUPABASE_KEY: Optional[str] = None
+    DATABASE_URL: Optional[str] = None  # PostgreSQL connection string (takes priority)
+    SUPABASE_URL: Optional[str] = None  # Supabase project URL
+    SUPABASE_KEY: Optional[str] = None  # Supabase anon key
+    SUPABASE_DB_PASSWORD: Optional[str] = None  # Supabase database password (for PostgreSQL connection)
     
     # ML Models Path
     ML_MODELS_PATH: Path = Path(__file__).parent.parent.parent / "ml_models"
@@ -38,6 +39,16 @@ class Settings(BaseSettings):
     SALESFORCE_CLIENT_SECRET: Optional[str] = None
     TWILIO_ACCOUNT_SID: Optional[str] = None
     TWILIO_AUTH_TOKEN: Optional[str] = None
+    
+    # Email Configuration
+    SMTP_HOST: Optional[str] = None  # e.g., smtp.gmail.com
+    SMTP_PORT: Optional[int] = None  # e.g., 587
+    SMTP_USERNAME: Optional[str] = None  # Email username
+    SMTP_PASSWORD: Optional[str] = None  # Email password or app password
+    FROM_EMAIL: Optional[str] = None  # From email address
+    FROM_NAME: Optional[str] = None  # From name
+    SENDGRID_API_KEY: Optional[str] = None  # SendGrid API key (alternative to SMTP)
+    EMAIL_SCHEDULE_INTERVAL_DAYS: int = 7  # Days between email sends
     
     # Azure Configurations
     AZURE_SPEECH_KEY: Optional[str] = None

@@ -28,13 +28,37 @@ from app.db.session import engine
 # Setup logging
 setup_logging()
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup
+    Base.metadata.create_all(bind=engine)
+    
+    # Start email scheduler background task
+    try:
+        from app.services.email.scheduler import run_email_scheduler
+        import asyncio
+        # Start email scheduler as background task
+        scheduler_task = asyncio.create_task(run_email_scheduler())
+        print("Email scheduler started")
+    except Exception as e:
+        print(f"Warning: Failed to start email scheduler: {e}")
+    
+    yield
+    
+    # Shutdown (if needed)
+    pass
+
 # Create FastAPI app
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="FastAPI backend for Renewal & Upsell Advisor",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS middleware
@@ -59,25 +83,6 @@ app.add_exception_handler(Exception, general_exception_handler)
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize application on startup."""
-    # Create database tables
-    Base.metadata.create_all(bind=engine)
-    
-    # Pre-load models (optional - can be lazy loaded)
-    # Uncomment to pre-load all models on startup
-    # try:
-    #     model_loader.load_model("churn")
-    #     model_loader.load_model("health_score")
-    #     model_loader.load_model("relationship")
-    #     model_loader.load_model("renewal")
-    #     model_loader.load_model("sentiment")
-    #     model_loader.load_model("upsell")
-    # except Exception as e:
-    #     print(f"Warning: Some models failed to load on startup: {e}")
 
 
 @app.get("/")
