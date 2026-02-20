@@ -41,10 +41,20 @@ async def lifespan(app: FastAPI):
         from app.services.email.scheduler import run_email_scheduler
         import asyncio
         # Start email scheduler as background task
-        scheduler_task = asyncio.create_task(run_email_scheduler())
-        print("Email scheduler started")
+        email_scheduler_task = asyncio.create_task(run_email_scheduler())
+        print("✅ Email scheduler started (runs daily at 12:00 PM IST)")
     except Exception as e:
         print(f"Warning: Failed to start email scheduler: {e}")
+    
+    # Start voice call scheduler background task
+    try:
+        from app.services.voice_agent.scheduler import run_voice_call_scheduler
+        import asyncio
+        # Start voice call scheduler as background task
+        voice_scheduler_task = asyncio.create_task(run_voice_call_scheduler())
+        print("✅ Voice call scheduler started (runs daily at 2:00 PM IST)")
+    except Exception as e:
+        print(f"Warning: Failed to start voice call scheduler: {e}")
     
     yield
     

@@ -233,6 +233,7 @@ CREATE TABLE IF NOT EXISTS voice_calls (
     completed_at TIMESTAMP,
     retry_count INTEGER DEFAULT 0,
     next_retry_at TIMESTAMP,
+    metadata JSONB, -- twilio_call_sid, usage_percentage, milestone, etc.
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

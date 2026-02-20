@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     SALESFORCE_CLIENT_SECRET: Optional[str] = None
     TWILIO_ACCOUNT_SID: Optional[str] = None
     TWILIO_AUTH_TOKEN: Optional[str] = None
+    TWILIO_PHONE_NUMBER: Optional[str] = None  # Twilio phone number for outbound calls
+    WEBHOOK_BASE_URL: Optional[str] = None  # Base URL for Twilio webhooks (must be publicly accessible)
     
     # Email Configuration
     SMTP_HOST: Optional[str] = None  # e.g., smtp.gmail.com

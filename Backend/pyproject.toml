@@ -13,21 +13,21 @@ dependencies = [
     "alembic>=1.13.0",
     "python-dotenv>=1.0.0",
     "python-multipart>=0.0.9",
-        # ML Dependencies
-        "scikit-learn>=1.8.0",
-        "joblib>=1.5.3",
-        "pandas>=3.0.0",
-        "numpy>=2.4.2",
-        "xgboost>=3.2.0",
-        "transformers>=5.1.0",
-        "torch>=2.10.0",
-        # Azure Services
-        "azure-cognitiveservices-speech>=1.40.0",
-        "openai>=1.54.0",
-        # LangChain
-        "langchain>=0.3.0",
-        "langchain-openai>=0.2.0",
-        "langchain-core>=0.3.0",
+    # ML Dependencies
+    "scikit-learn>=1.8.0",
+    "joblib>=1.5.3",
+    "pandas>=3.0.0",
+    "numpy>=2.4.2",
+    "xgboost>=3.2.0",
+    "transformers>=5.1.0",
+    "torch>=2.10.0",
+    # Azure Services
+    "azure-cognitiveservices-speech>=1.40.0",
+    "openai>=1.54.0",
+    # LangChain
+    "langchain>=0.3.0",
+    "langchain-openai>=0.2.0",
+    "langchain-core>=0.3.0",
     # Database
     "psycopg2-binary>=2.9.9",
     "supabase>=2.0.0",
@@ -39,6 +39,7 @@ dependencies = [
     "httpx>=0.27.0",
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
+    "pytz>=2025.2",
 ]
 
 [build-system]
