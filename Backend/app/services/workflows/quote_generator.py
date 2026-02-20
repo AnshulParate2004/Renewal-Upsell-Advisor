@@ -1,1 +1,1 @@
-# Quote Generator Workflow
+# Quote Generation Logic

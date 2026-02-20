@@ -1,15 +1,1 @@
-"""
-API v1 Router - Includes all endpoint routers.
-"""
-from fastapi import APIRouter
-from app.api.v1.endpoints import predictions, accounts, opportunities, analytics, contracts, webhooks
-
-api_router = APIRouter()
-
-# Include all endpoint routers
-api_router.include_router(predictions.router, prefix="/predictions", tags=["predictions"])
-api_router.include_router(accounts.router, prefix="/accounts", tags=["accounts"])
-api_router.include_router(opportunities.router, prefix="/opportunities", tags=["opportunities"])
-api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
-api_router.include_router(contracts.router, prefix="/contracts", tags=["contracts"])
-api_router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
+# Central Router Include
