@@ -8,6 +8,7 @@ import { useAccounts } from "@/hooks/useAccounts";
 const typeBadge: Record<string, { label: string; color: string; bg: string }> = {
   renewal: { label: "Renewal", color: "text-primary", bg: "bg-primary/10" },
   upsell: { label: "Upsell", color: "text-emerald-600", bg: "bg-emerald-500/10" },
+  expansion: { label: "Expansion", color: "text-violet-600", bg: "bg-violet-500/10" },
   cross_sell: { label: "Cross-sell", color: "text-amber-600", bg: "bg-amber-500/10" },
 };
 
@@ -16,9 +17,33 @@ const stageLabel: Record<string, string> = {
   qualification: "Qualification",
   proposal: "Proposal",
   negotiation: "Negotiation",
+  identified: "Identified",
   closed_won: "Won",
   closed_lost: "Lost",
 };
+
+const stageBadgeStyle: Record<string, string> = {
+  identified: "bg-sky-500/10 text-sky-600 border-sky-600/30",
+  prospecting: "bg-amber-500/10 text-amber-600 border-amber-600/30",
+  qualification: "bg-orange-500/10 text-orange-600 border-orange-600/30",
+  proposal: "bg-blue-500/10 text-blue-600 border-blue-600/30",
+  negotiation: "bg-purple-500/10 text-purple-600 border-purple-600/30",
+  closed_won: "bg-emerald-500/10 text-emerald-600 border-emerald-600/30",
+  closed_lost: "bg-destructive/10 text-destructive border-destructive/30",
+};
+
+/** Probability is 0–1 from API; returns percentage for display and bar width. */
+function probabilityPercent(prob: number): number {
+  return prob <= 1 && prob >= 0 ? Math.round(prob * 10000) / 100 : Math.min(100, Math.max(0, prob));
+}
+
+/** Color for probability: high=green, mid=amber, low=red. */
+function probabilityColor(prob: number): { bar: string; text: string } {
+  const p = typeof prob === "number" ? prob : 0;
+  if (p >= 0.7) return { bar: "bg-emerald-500", text: "text-emerald-600" };
+  if (p >= 0.4) return { bar: "bg-amber-500", text: "text-amber-600" };
+  return { bar: "bg-rose-400", text: "text-rose-600" };
+}
 
 export default function Opportunities() {
   const [typeFilter, setTypeFilter] = useState("all");
@@ -37,7 +62,10 @@ export default function Opportunities() {
   }, [enrichedOpportunities, typeFilter]);
 
   const totalPipeline = useMemo(() => enrichedOpportunities.reduce((s, o) => s + o.value, 0), [enrichedOpportunities]);
-  const weightedValue = useMemo(() => enrichedOpportunities.reduce((s, o) => s + o.value * (o.probability / 100), 0), [enrichedOpportunities]);
+  const weightedValue = useMemo(() => enrichedOpportunities.reduce((s, o) => {
+    const p = typeof o.probability === "number" ? (o.probability <= 1 ? o.probability : o.probability / 100) : 0;
+    return s + o.value * p;
+  }, 0), [enrichedOpportunities]);
   const avgDeal = enrichedOpportunities.length > 0 ? totalPipeline / enrichedOpportunities.length : 0;
   const conversionRate = Math.round((enrichedOpportunities.filter((o) => o.stage === "closed_won").length / enrichedOpportunities.length) * 100) || 15;
 
@@ -86,7 +114,7 @@ export default function Opportunities() {
         {/* Filters */}
         <div className="flex items-center gap-2">
           <div className="flex gap-0.5 bg-muted rounded-lg p-0.5 border-2 border-black">
-            {(['all', 'renewal', 'upsell', 'cross_sell'] as const).map((filter) => (
+            {(['all', 'renewal', 'upsell', 'expansion', 'cross_sell'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setTypeFilter(filter)}
@@ -127,25 +155,29 @@ export default function Opportunities() {
               ) : (
                 filtered.map((opp) => {
                   const badge = typeBadge[opp.type] || { label: opp.type, color: 'text-muted-foreground', bg: 'bg-muted' };
+                  const pct = probabilityPercent(opp.probability);
+                  const probStyle = probabilityColor(opp.probability);
+                  const stageStyle = stageBadgeStyle[opp.stage] ?? "bg-muted text-muted-foreground border-black/20";
+                  const valueColor = opp.value > 0 ? "text-emerald-600 font-semibold" : "text-muted-foreground";
                   return (
-                    <tr key={opp.id} className="hover:bg-muted/20 transition-colors group border-b-2 border-black">
+                    <tr key={opp.id} className="hover:bg-muted/20 transition-colors group border-b-2 border-black last:border-b-0">
                       <td className="pl-5 py-3.5 font-medium text-foreground group-hover:text-primary transition-colors">{opp.accountName}</td>
                       <td className="text-center py-3.5">
                         <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${badge.bg} ${badge.color}`}>
                           {badge.label}
                         </span>
                       </td>
-                      <td className="text-right py-3.5 font-medium text-foreground pr-4">{formatCurrency(opp.value)}</td>
+                      <td className={`text-right py-3.5 pr-4 ${valueColor}`}>{formatCurrency(opp.value)}</td>
                       <td className="text-center py-3.5">
                         <div className="flex items-center gap-2 justify-center">
                           <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden border border-black/10">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${opp.probability}%` }} />
+                            <div className={`h-full rounded-full ${probStyle.bar}`} style={{ width: `${pct}%` }} />
                           </div>
-                          <span className="text-xs text-muted-foreground">{opp.probability}%</span>
+                          <span className={`text-xs font-medium ${probStyle.text}`}>{pct}%</span>
                         </div>
                       </td>
                       <td className="text-center py-3.5">
-                        <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${opp.stage === 'closed_won' ? 'bg-emerald-500/10 text-emerald-600' : opp.stage === 'closed_lost' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
+                        <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 ${stageStyle}`}>
                           {stageLabel[opp.stage] || opp.stage}
                         </span>
                       </td>

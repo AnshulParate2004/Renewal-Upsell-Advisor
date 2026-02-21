@@ -68,24 +68,35 @@ class ModelLoader:
             return self._load_standard_model(model_dir, model_type)
     
     def _load_standard_model(self, model_dir: Path, model_type: str) -> tuple[Any, Optional[Any]]:
-        """Load standard .pkl model and preprocessing."""
-        # Find model file
-        model_files = list(model_dir.glob("*_model_best_*.pkl"))
+        """Load standard model and preprocessing (.pkl or .joblib from Research EDAs)."""
+        # Find model file: accept *_model_best*.joblib or *_model_best.joblib (and .pkl equivalents)
+        model_files = (
+            list(model_dir.glob("*_model_best_*.joblib"))
+            or list(model_dir.glob("*_model_best.joblib"))
+            or list(model_dir.glob("*_model_best_*.pkl"))
+            or list(model_dir.glob("*_model_best.pkl"))
+        )
         if not model_files:
             raise FileNotFoundError(f"No model file found in {model_dir}")
-        
         model_file = model_files[0]
         logger.debug(f"Loading model from: {model_file}")
         model = joblib.load(model_file)
-        
-        # Load preprocessing
+
+        # Load preprocessing: single .joblib/.pkl dict or separate scaler + feature_names
         preprocessing = None
-        preprocessing_files = list(model_dir.glob("*preprocessing*.pkl"))
-        if preprocessing_files:
-            preprocessing_file = preprocessing_files[0]
-            logger.debug(f"Loading preprocessing from: {preprocessing_file}")
-            preprocessing = joblib.load(preprocessing_file)
-        
+        for pattern in ("*preprocessing*.joblib", "*preprocessing*.pkl"):
+            preprocessing_files = list(model_dir.glob(pattern))
+            if preprocessing_files:
+                preprocessing = joblib.load(preprocessing_files[0])
+                logger.debug(f"Loading preprocessing from: {preprocessing_files[0]}")
+                break
+        if preprocessing is None and (model_dir / "scaler.joblib").exists():
+            # Fallback: build from scaler + feature_names (if present)
+            preprocessing = {"scaler": joblib.load(model_dir / "scaler.joblib")}
+            fn_path = model_dir / "feature_names.json"
+            if fn_path.exists():
+                with open(fn_path, "r", encoding="utf-8") as f:
+                    preprocessing["feature_names"] = json.load(f)
         return model, preprocessing
     
     def _load_sentiment_model(self, model_dir: Path) -> tuple[Any, Optional[Any]]:

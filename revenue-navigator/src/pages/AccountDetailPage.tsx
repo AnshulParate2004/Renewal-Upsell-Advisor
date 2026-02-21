@@ -81,7 +81,8 @@ export default function AccountDetailPage() {
     }
 
     // Generate historical data (accountWithPredictions is guaranteed to exist here)
-    const history = generateHistoricalData(accountWithPredictions);
+    // Historical data from API when available; no frontend demo data
+    const history = { sentiment: [], activities: [], metrics: [] as { date: string; healthScore: number; riskScore: number; relationshipScore: number; churnProbability: number; utilization: number; sentimentScore: number }[] };
 
     const getSentimentColor = (score: number) => {
         if (score > 0.5) return "text-emerald-600";

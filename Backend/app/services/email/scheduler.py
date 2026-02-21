@@ -73,6 +73,11 @@ async def send_scheduled_emails():
             return
         
         logger.info(f"Processing {len(accounts)} accounts for email campaign")
+        try:
+            from app.services.activity_log import log_activity
+            log_activity("email_scheduler_run", details={"accounts_count": len(accounts)})
+        except Exception:
+            pass
         
         sent_count = 0
         skipped_count = 0
@@ -447,7 +452,14 @@ async def send_scheduled_emails():
                 logger.error(traceback.format_exc())
         
         logger.info(f"Email campaign completed: {sent_count} sent, {skipped_count} skipped (within 7 days), {error_count} errors")
-        
+        try:
+            from app.services.activity_log import log_activity
+            log_activity(
+                "email_scheduler_completed",
+                details={"sent_count": sent_count, "skipped_count": skipped_count, "error_count": error_count},
+            )
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"Error in send_scheduled_emails: {e}")
         import traceback

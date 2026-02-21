@@ -331,7 +331,11 @@ async def process_scheduled_calls():
             return
         
         logger.info(f"Processing {len(accounts)} accounts for voice calls")
-        
+        try:
+            from app.services.activity_log import log_activity
+            log_activity("voice_scheduler_run", details={"accounts_count": len(accounts)})
+        except Exception:
+            pass
         # Process accounts one by one (sequential to avoid server load)
         calls_made = 0
         calls_skipped = 0
@@ -365,7 +369,14 @@ async def process_scheduled_calls():
                 continue
         
         logger.info(f"Voice call processing completed: {calls_made} calls made, {calls_skipped} skipped")
-        
+        try:
+            from app.services.activity_log import log_activity
+            log_activity(
+                "voice_scheduler_completed",
+                details={"accounts_processed": len(accounts), "calls_made": calls_made, "calls_skipped": calls_skipped},
+            )
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"Error processing scheduled calls: {e}")
         import traceback

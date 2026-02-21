@@ -46,6 +46,8 @@ export interface Account {
   csm: string;
   lastContact: string;
   contractStart: string;
+  /** Account status: active, churned, at_risk, renewed */
+  status?: string;
   // Contact information
   contactName?: string;
   contactEmail?: string;
@@ -108,3 +110,39 @@ export const getDaysUntil = (date: string) => {
   const diff = new Date(date).getTime() - new Date().getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
+
+/** Days since a date (e.g. contract start). Positive = past, negative = future. */
+export function getDaysSinceStart(date: string): number {
+  const diff = new Date().getTime() - new Date(date).getTime();
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
+
+/** Pipeline stage: plan % (0–30% T-30, 30–60% T-60, 60–100% T-90); past renewal or status=renewed → Renewed. */
+export type RenewalStage = "t90" | "t60" | "t30" | "renewed";
+
+export function getRenewalStageFromPlan(
+  contractStartDate: string | undefined | null,
+  renewalDate: string | undefined | null,
+  status?: string | null
+): RenewalStage {
+  if (status === "renewed") return "renewed";
+  const today = new Date().toISOString().split("T")[0];
+  const end = renewalDate && renewalDate.trim() ? renewalDate.trim() : today;
+  const endMs = new Date(end).getTime();
+  if (Number.isNaN(endMs)) return "t30";
+  // Past renewal (overdue) → Renewed so they don’t all sit in T-90
+  const daysUntilRenewal = getDaysUntil(end);
+  if (daysUntilRenewal <= 0) return "renewed";
+  const start = contractStartDate && contractStartDate.trim() ? contractStartDate.trim() : today;
+  const startMs = new Date(start).getTime();
+  if (Number.isNaN(startMs)) return "t30";
+  const planDurationDays = Math.max(1, Math.ceil((endMs - startMs) / (1000 * 60 * 60 * 24)));
+  const daysElapsed = getDaysSinceStart(start);
+  const percent = Number.isFinite(daysElapsed) && planDurationDays > 0
+    ? (daysElapsed / planDurationDays) * 100
+    : 0;
+  const p = Number.isFinite(percent) ? Math.max(0, percent) : 0;
+  if (p < 30) return "t30";
+  if (p < 60) return "t60";
+  return "t90";
+}

@@ -19,6 +19,8 @@ dependencies = [
     "pandas>=3.0.0",
     "numpy>=2.4.2",
     "xgboost>=3.2.0",
+    "lightgbm>=4.0.0",
+    "catboost>=1.0.0",
     "transformers>=5.1.0",
     "torch>=2.10.0",
     # Azure Services
@@ -40,8 +42,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "pytz>=2025.2",
-    # Audio processing
-    "pydub>=0.25.1",
+    # Audio: WebM/WAV conversion via ffmpeg (no pydub; avoids Python 3.13 audioop removal)
 ]
 
 [build-system]

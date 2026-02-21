@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Database, Bell, Save, ShieldCheck, ExternalLink, RefreshCw, Plus } from "lucide-react";
+import { Database, Bell, Save, ShieldCheck, ExternalLink, RefreshCw, Plus, Cpu } from "lucide-react";
+import { triggerMlPipeline } from "@/lib/api/ml";
 
 const integrations = [
   { name: "Salesforce", status: "connected", lastSync: "5m ago", icon: "CRM", color: "bg-blue-500/10 text-blue-600" },
@@ -15,9 +16,29 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState({
     highRisk: true, renewals: true, daily: false, failedCalls: true,
   });
+  const [mlLoading, setMlLoading] = useState(false);
+  const [mlMessage, setMlMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const toggleNotif = (key: keyof typeof notifications) =>
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  async function handleRunMlPipeline() {
+    setMlMessage(null);
+    setMlLoading(true);
+    try {
+      const res = await triggerMlPipeline();
+      setMlMessage({
+        type: res.success ? "success" : "error",
+        text: res.success
+          ? `Updated ${res.accounts_updated} accounts, ${res.churn_inserted} churn, ${res.upsell_inserted} upsell.`
+          : (res.errors?.[0]?.message || "Pipeline had errors."),
+      });
+    } catch (e) {
+      setMlMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to run ML pipeline." });
+    } finally {
+      setMlLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,6 +134,37 @@ export default function SettingsPage() {
                     />
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* ML Pipeline – manual trigger (also runs automatically at 12:00 AM daily) */}
+            <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
+                <Cpu size={15} className="text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">ML Predictions</h3>
+              </div>
+              <div className="p-4 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Run Relationship → Health → Churn → Upsell for all accounts and save to the database. Runs automatically at 12:00 AM daily.
+                </p>
+                <button
+                  onClick={handleRunMlPipeline}
+                  disabled={mlLoading}
+                  className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {mlLoading ? (
+                    <>Running…</>
+                  ) : (
+                    <>
+                      <RefreshCw size={12} /> Run ML pipeline now
+                    </>
+                  )}
+                </button>
+                {mlMessage && (
+                  <p className={`text-xs ${mlMessage.type === "success" ? "text-emerald-600" : "text-destructive"}`}>
+                    {mlMessage.text}
+                  </p>
+                )}
               </div>
             </div>
 

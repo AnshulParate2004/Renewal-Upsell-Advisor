@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2 } from "lucide-react";
-import { formatCurrency, getDaysUntil } from "@/data/mockData";
+import { formatCurrency, getDaysUntil, getRenewalStageFromPlan } from "@/data/mockData";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useUpdateAccount } from "@/hooks/useAccounts";
@@ -21,7 +21,9 @@ export default function Pipeline() {
   const updateAccount = useUpdateAccount();
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
-  const byStage = (stage: Stage) => accounts.filter((a) => a.renewalStage === stage);
+  // Bucket by plan percentage: 0–30% → T-30, 30–60% → T-60, 60–100% → T-90; status=renewed → Renewed
+  const byStage = (stage: Stage) =>
+    accounts.filter((a) => getRenewalStageFromPlan(a.contractStart, a.renewalDate, a.status) === stage);
   const stageArr = (stage: Stage) => byStage(stage).reduce((s, a) => s + a.arr, 0);
 
   const handleDragStart = (id: string) => setDraggedId(id);

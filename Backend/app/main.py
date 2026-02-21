@@ -55,6 +55,15 @@ async def lifespan(app: FastAPI):
         print("✅ Voice call scheduler started (runs daily at 2:00 PM IST)")
     except Exception as e:
         print(f"Warning: Failed to start voice call scheduler: {e}")
+
+    # Start ML pipeline scheduler (runs daily at 12:00 AM IST)
+    try:
+        from app.services.ml.ml_scheduler import run_ml_pipeline_scheduler
+        import asyncio
+        ml_scheduler_task = asyncio.create_task(run_ml_pipeline_scheduler())
+        print("✅ ML pipeline scheduler started (runs daily at 12:00 AM IST)")
+    except Exception as e:
+        print(f"Warning: Failed to start ML pipeline scheduler: {e}")
     
     yield
     
@@ -120,6 +129,8 @@ async def health_check():
 
 
 if __name__ == "__main__":
+    # Run with: uv run python app/main.py  (or uv run uvicorn app.main:app --host 0.0.0.0 --port 8000)
+    # so ML deps (e.g. lightgbm) from pyproject.toml are available.
     import uvicorn
     uvicorn.run(
         "app.main:app",

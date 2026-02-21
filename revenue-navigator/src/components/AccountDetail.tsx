@@ -17,7 +17,6 @@ export default function AccountDetail({ account, onClose }: AccountDetailProps) 
 
     if (!account) return null;
 
-    // Generate historical data
     const history = generateHistoricalData(account);
 
     const getSentimentColor = (score: number) => {
