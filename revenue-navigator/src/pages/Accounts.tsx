@@ -1,15 +1,18 @@
 import { useState, useMemo } from 'react';
-import { Search, Download, Plus, Loader2, ChevronRight } from 'lucide-react';
+import { Search, Download, Plus, Loader2, ChevronRight, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency, getDaysUntil } from '@/data/mockData';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAccounts } from '@/hooks/useAccounts';
+import { emailApi } from '@/lib/api/email';
 
 export default function Accounts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRisk, setFilterRisk] = useState<'all' | 'high' | 'safe'>('all');
+  const [sendingAccountId, setSendingAccountId] = useState<string | null>(null);
+  const [emailFeedback, setEmailFeedback] = useState<{ id: string; type: 'success' | 'error'; text: string } | null>(null);
   const navigate = useNavigate();
-  const { data: accounts = [], isLoading, error } = useAccounts();
+  const { data: accounts = [], isLoading, error, refetch } = useAccounts();
 
   const filteredClients = useMemo(() => {
     if (!accounts) return [];
@@ -102,7 +105,7 @@ export default function Accounts() {
                 <th className="text-center py-3">Churn</th>
                 <th className="text-center py-3">Sentiment</th>
                 <th className="text-center py-3">Status</th>
-                <th className="text-center py-3 pr-5"></th>
+                <th className="text-center py-3 pr-5 w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -161,8 +164,36 @@ export default function Accounts() {
                         {client.riskScore >= 70 ? 'High Risk' : 'Safe'}
                       </span>
                     </td>
-                    <td className="text-center py-3.5 pr-5">
-                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors inline-block" />
+                    <td className="text-center py-3.5 pr-5" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={async () => {
+                            if (sendingAccountId) return;
+                            setSendingAccountId(client.id);
+                            setEmailFeedback(null);
+                            try {
+                              const res = await emailApi.sendToAccount(client.id);
+                              setEmailFeedback({ id: client.id, type: 'success', text: res.message || 'Sent' });
+                              refetch();
+                            } catch (err: any) {
+                              setEmailFeedback({ id: client.id, type: 'error', text: err?.message || 'Failed' });
+                            } finally {
+                              setSendingAccountId(null);
+                            }
+                          }}
+                          disabled={!!sendingAccountId}
+                          title="Send email to this account"
+                          className="p-1.5 rounded-lg border-2 border-black bg-card hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
+                        >
+                          {sendingAccountId === client.id ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                        </button>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors inline-block" />
+                      </div>
+                      {emailFeedback?.id === client.id && (
+                        <p className={`text-[10px] mt-0.5 ${emailFeedback.type === 'success' ? 'text-emerald-600' : 'text-destructive'}`}>
+                          {emailFeedback.text}
+                        </p>
+                      )}
                     </td>
                   </tr>
                 ))

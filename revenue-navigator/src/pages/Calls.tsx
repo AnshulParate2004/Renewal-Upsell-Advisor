@@ -1,16 +1,23 @@
 import { useState, useMemo } from "react";
 import { Search, Phone, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { voiceApi, type VoiceCallRow } from "@/lib/api/voice";
 
 export default function Calls() {
   const [search, setSearch] = useState("");
   const [outcomeFilter, setOutcomeFilter] = useState("all");
-  const voiceCalls: any[] = [];
-  const isLoading = false;
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["voice-calls"],
+    queryFn: () => voiceApi.getCalls(0, 200),
+  });
+
+  const voiceCalls: VoiceCallRow[] = data?.calls ?? [];
 
   const filtered = useMemo(() => {
     return voiceCalls
-      .filter((c) => c.accountName?.toLowerCase().includes(search.toLowerCase()))
+      .filter((c) => c.account_name?.toLowerCase().includes(search.toLowerCase()))
       .filter((c) => outcomeFilter === "all" || c.outcome === outcomeFilter);
   }, [voiceCalls, search, outcomeFilter]);
 
@@ -67,12 +74,21 @@ export default function Calls() {
                 <tr className="border-b-2 border-black"><td colSpan={6} className="text-center py-12">
                   <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
                 </td></tr>
+              ) : error ? (
+                <tr className="border-b-2 border-black"><td colSpan={6} className="p-0">
+                  <EmptyState
+                    variant="default"
+                    title="Failed to load voice calls"
+                    message={error instanceof Error ? error.message : "Could not load data from the database."}
+                    icon={<Phone size={40} className="text-muted-foreground/40" />}
+                  />
+                </td></tr>
               ) : filtered.length === 0 ? (
                 <tr className="border-b-2 border-black"><td colSpan={6} className="p-0">
                   <EmptyState
                     variant="default"
-                    title="No Voice Calls Available"
-                    message="Voice call data will appear here when available."
+                    title="No Voice Calls"
+                    message={voiceCalls.length === 0 ? "Voice call data will appear here once calls are made (trigger from Manual Triggers)." : "No calls match the current filter."}
                     icon={<Phone size={40} className="text-muted-foreground/40" />}
                   />
                 </td></tr>
@@ -84,20 +100,20 @@ export default function Calls() {
                         <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center border-2 border-black">
                           <Phone size={12} className="text-primary" />
                         </div>
-                        {call.accountName}
+                        {call.account_name}
                       </div>
                     </td>
                     <td className="py-3.5 text-xs text-muted-foreground">{call.date}</td>
                     <td className="text-center py-3.5 text-sm font-medium text-foreground">{call.duration}</td>
                     <td className="text-center py-3.5">
                       <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${call.outcome === 'picked_up' ? 'bg-emerald-500/10 text-emerald-600' : call.outcome === 'missed' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
-                        {call.outcome?.replace('_', ' ')}
+                        {call.outcome.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="text-center py-3.5 text-base">
                       {call.sentiment === "positive" ? "😊" : call.sentiment === "neutral" ? "😐" : "😟"}
                     </td>
-                    <td className="text-center py-3.5 text-sm text-foreground pr-5">{call.retryCount}</td>
+                    <td className="text-center py-3.5 text-sm text-foreground pr-5">{call.retry_count}</td>
                   </tr>
                 ))
               )}

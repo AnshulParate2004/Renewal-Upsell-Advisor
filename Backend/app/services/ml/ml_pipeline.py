@@ -229,9 +229,19 @@ def run_pipeline_for_account(account: Dict[str, Any]) -> Dict[str, Any]:
         try:
             upsell_pred = _get_upsell_predictor().predict(upsell_features)
             prob = upsell_pred.get("probability", 0.0)
+            rec = (upsell_pred.get("recommendation") or "").lower()
+            # Map recommendation to opportunity_type for UI (renewal, upsell, expansion, cross_sell)
+            if "high_priority" in rec or prob >= 0.8:
+                opportunity_type = "expansion"
+            elif "medium_priority" in rec or prob >= 0.6:
+                opportunity_type = "upsell"
+            elif "low_priority" in rec or prob >= 0.5:
+                opportunity_type = "cross_sell"
+            else:
+                opportunity_type = "upsell"
             result["upsell_opportunity_row"] = {
                 "account_id": account_id,
-                "opportunity_type": "expansion",
+                "opportunity_type": opportunity_type,
                 "predicted_value": round(arr * 0.2, 2) if prob >= 0.5 else 0,
                 "probability": round(prob, 4),
                 "recommended_products": [],

@@ -1,8 +1,9 @@
 """
 Run ML pipeline for all accounts and push results to Supabase.
 Used by manual trigger (API) and by the daily 12:00 AM scheduler.
+Writes current scores to accounts and appends each run to ml_score_history.
 """
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any, Dict, List
 
 from app.core.logging import get_logger
@@ -56,8 +57,10 @@ def run_pipeline_and_push_to_supabase() -> Dict[str, Any]:
 
         result["accounts_processed"] = len(accounts)
         today = date.today().isoformat()
+        run_at_iso = datetime.now(timezone.utc).isoformat()
         churn_rows: List[Dict[str, Any]] = []
         upsell_rows: List[Dict[str, Any]] = []
+        history_rows: List[Dict[str, Any]] = []
 
         for account in accounts:
             account_id = account.get("id")
@@ -73,6 +76,16 @@ def run_pipeline_and_push_to_supabase() -> Dict[str, Any]:
                 try:
                     client.table("accounts").update(updates).eq("id", account_id).execute()
                     result["accounts_updated"] += 1
+                    # Append to history for this run (current scores + run_at)
+                    history_rows.append({
+                        "account_id": account_id,
+                        "run_at": run_at_iso,
+                        "relationship_score": updates.get("relationship_score"),
+                        "health_score": updates.get("health_score"),
+                        "risk_score": updates.get("risk_score"),
+                        "churn_probability": updates.get("churn_probability"),
+                        "model_version": "daily_pipeline_v1",
+                    })
                 except Exception as e:
                     result["errors"].append({"account_id": account_id, "message": f"Account update: {e}"})
 
@@ -83,6 +96,13 @@ def run_pipeline_and_push_to_supabase() -> Dict[str, Any]:
             ur = pipeline_result.get("upsell_opportunity_row")
             if ur:
                 upsell_rows.append(ur)
+
+        # Insert ML score history (one row per account per run)
+        for row in history_rows:
+            try:
+                client.table("ml_score_history").insert(row).execute()
+            except Exception as e:
+                logger.warning(f"ml_score_history insert failed (table may not exist yet): {e}")
 
         for row in churn_rows:
             try:

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, Users, Building2, Clock, BarChart3, ArrowLeft, Mail, Phone, Edit2, Loader2 } from "lucide-react";
+import { emailApi } from "@/lib/api/email";
 import { motion } from "framer-motion";
 import { formatCurrency, getDaysUntil } from "@/data/mockData";
 import { generateHistoricalData } from "@/data/historicalDataGenerator";
+import type { Account } from "@/data/mockData";
 import MetricsHistoryChart from "@/components/charts/MetricsHistoryChart";
 import SentimentTrendChart from "@/components/charts/SentimentTrendChart";
 import ActivityTimeline from "@/components/ActivityTimeline";
@@ -14,6 +16,8 @@ export default function AccountDetailPage() {
     const { accountId } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'analytics'>('overview');
+    const [sendingEmail, setSendingEmail] = useState(false);
+    const [emailMessage, setEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     const { data: account, isLoading, error } = useAccount(accountId || '');
 
@@ -80,9 +84,8 @@ export default function AccountDetailPage() {
         );
     }
 
-    // Generate historical data (accountWithPredictions is guaranteed to exist here)
-    // Historical data from API when available; no frontend demo data
-    const history = { sentiment: [], activities: [], metrics: [] as { date: string; healthScore: number; riskScore: number; relationshipScore: number; churnProbability: number; utilization: number; sentimentScore: number }[] };
+    // Generate historical data for timeline and analytics (synthetic until API provides GET /accounts/:id/history)
+    const history = generateHistoricalData(accountWithPredictions as Account);
 
     const getSentimentColor = (score: number) => {
         if (score > 0.5) return "text-emerald-600";
@@ -146,6 +149,32 @@ export default function AccountDetailPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
+                            {emailMessage && (
+                                <span className={`text-xs font-medium px-2 py-1 rounded border-2 border-black ${emailMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-destructive/10 text-destructive'}`}>
+                                    {emailMessage.text}
+                                </span>
+                            )}
+                            <button
+                                onClick={async (e) => {
+                                    e.preventDefault();
+                                    if (!accountId || sendingEmail) return;
+                                    setSendingEmail(true);
+                                    setEmailMessage(null);
+                                    try {
+                                        const res = await emailApi.sendToAccount(accountId);
+                                        setEmailMessage({ type: 'success', text: res.message || 'Email sent.' });
+                                    } catch (err: any) {
+                                        setEmailMessage({ type: 'error', text: err?.message || 'Failed to send email.' });
+                                    } finally {
+                                        setSendingEmail(false);
+                                    }
+                                }}
+                                disabled={sendingEmail || !accountId}
+                                className="px-6 py-3 bg-primary text-white border-2 border-black rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:pointer-events-none"
+                            >
+                                {sendingEmail ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
+                                {sendingEmail ? 'SENDING...' : 'SEND EMAIL'}
+                            </button>
                             <button className="px-6 py-3 bg-primary text-white border-2 border-black rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
                                 <Edit2 size={14} />
                                 MODIFY_DATA

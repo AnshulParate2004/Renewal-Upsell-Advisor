@@ -2,7 +2,7 @@ import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Kanban, Phone, DollarSign,
-  BarChart3, Settings, Zap, ChevronLeft,
+  BarChart3, Settings, Zap, ChevronLeft, PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const navItems = [
   { title: "Voice Calls", path: "/app/calls", icon: Phone },
   { title: "Opportunities", path: "/app/opportunities", icon: DollarSign },
   { title: "Analytics", path: "/app/analytics", icon: BarChart3 },
+  { title: "Manual Triggers", path: "/app/triggers", icon: PlayCircle },
   { title: "Settings", path: "/app/settings", icon: Settings },
 ];
 

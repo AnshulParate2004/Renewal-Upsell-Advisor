@@ -466,6 +466,180 @@ async def send_scheduled_emails():
         logger.error(traceback.format_exc())
 
 
+def _get_email_content_for_account(client: Any, account_id: str) -> Dict[str, Any]:
+    """
+    Build personalized email content for an account. Returns dict with subject, html_body, text_body,
+    email_type, recipient_email, account_name, account_id_val, account, or error key on failure.
+    """
+    result = client.table("accounts").select("*").eq("id", account_id).execute()
+    if not result.data or len(result.data) == 0:
+        return {"error": "Account not found."}
+    account = result.data[0]
+    account_id_val = account.get("id")
+    account_name = account.get("name", "Unknown")
+    recipient_email = (
+        account.get("primary_contact_email") or
+        account.get("contact_email") or
+        account.get("csm_email")
+    )
+    if not recipient_email:
+        return {"error": f"No email address for account {account_name}."}
+    contract_start_date = account.get("contract_start_date")
+    contract_end_date = account.get("contract_end_date")
+    renewal_date = account.get("renewal_date")
+    risk_score = account.get("risk_score") if account.get("risk_score") is not None else 0
+    churn_probability = account.get("churn_probability") if account.get("churn_probability") is not None else 0
+    opportunities_result = client.table("upsell_opportunities").select("*").eq("account_id", account_id_val).eq("status", "identified").limit(1).execute()
+    has_upsell_opportunity = opportunities_result.data and len(opportunities_result.data) > 0
+    email_type = "wellness_check"
+    plan_completion_percentage = None
+    if has_upsell_opportunity:
+        email_type = "upsell"
+    elif risk_score >= 70 or churn_probability >= 0.7:
+        email_type = "churn_prevention"
+    elif contract_start_date and contract_end_date:
+        try:
+            start_dt = datetime.fromisoformat(contract_start_date.replace("Z", "+00:00")) if isinstance(contract_start_date, str) else contract_start_date
+            end_dt = datetime.fromisoformat(contract_end_date.replace("Z", "+00:00")) if isinstance(contract_end_date, str) else contract_end_date
+            start_dt = start_dt.replace(tzinfo=None) if start_dt.tzinfo else start_dt
+            end_dt = end_dt.replace(tzinfo=None) if end_dt.tzinfo else end_dt
+            total_days = (end_dt - start_dt).days
+            days_elapsed = (datetime.now() - start_dt).days
+            if total_days > 0:
+                plan_completion_percentage = max(0, min(100, (days_elapsed / total_days) * 100))
+                email_type = "renewal_reminder" if plan_completion_percentage >= 90 else "wellness_check"
+        except Exception:
+            pass
+    elif renewal_date:
+        try:
+            renewal_dt = datetime.fromisoformat(renewal_date.replace("Z", "+00:00")) if isinstance(renewal_date, str) else renewal_date
+            days_until = (renewal_dt.replace(tzinfo=None) - datetime.now()).days if renewal_dt.tzinfo else (renewal_dt - datetime.now()).days
+            email_type = "renewal_reminder" if 0 <= days_until < 90 else "wellness_check"
+        except Exception:
+            pass
+    opportunity = opportunities_result.data[0] if (email_type == "upsell" and has_upsell_opportunity) else None
+    if email_type == "upsell" and opportunity:
+        base_subject, base_html_body, base_text_body = get_upsell_opportunity_template(account, opportunity)
+    elif email_type == "churn_prevention":
+        base_subject, base_html_body, base_text_body = get_churn_prevention_template(account)
+    elif email_type == "renewal_reminder":
+        base_subject, base_html_body, base_text_body = get_renewal_reminder_template(account)
+    else:
+        base_subject, base_html_body, base_text_body = get_wellness_check_template(account)
+    try:
+        subject, html_body, text_body = personalize_email_content(
+            account=account, email_type=email_type,
+            base_subject=base_subject, base_html_body=base_html_body, base_text_body=base_text_body,
+            opportunity=opportunity
+        )
+    except Exception as e:
+        logger.warning(f"LLM personalization failed for single account: {e}")
+        subject, html_body, text_body = base_subject, base_html_body, base_text_body
+    return {
+        "subject": subject, "html_body": html_body, "text_body": text_body,
+        "email_type": email_type, "recipient_email": recipient_email, "account_name": account_name,
+        "account_id_val": account_id_val, "account": account,
+    }
+
+
+async def generate_email_preview_for_account(account_id: str) -> Dict[str, Any]:
+    """
+    Generate personalized email content for an account (for UI preview/edit before sending).
+    Returns subject, html_body, text_body, email_type, recipient_email, account_name.
+    """
+    client = get_supabase_client()
+    if not client:
+        return {"error": "Supabase not configured."}
+    try:
+        content = _get_email_content_for_account(client, account_id)
+        if "error" in content:
+            return content
+        return {
+            "subject": content["subject"],
+            "html_body": content["html_body"],
+            "text_body": content["text_body"],
+            "email_type": content["email_type"],
+            "recipient_email": content["recipient_email"],
+            "account_name": content["account_name"],
+        }
+    except Exception as e:
+        logger.error(f"Error in generate_email_preview_for_account: {e}", exc_info=True)
+        return {"error": str(e)}
+
+
+async def send_email_to_single_account(
+    account_id: str,
+    subject: Optional[str] = None,
+    html_body: Optional[str] = None,
+    text_body: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Send a single email to the selected account (manual trigger).
+    If subject/html_body/text_body are provided, send that content; otherwise generate personalized content.
+    Does not apply the 7-day throttle.
+    """
+    client = get_supabase_client()
+    if not client:
+        return {"success": False, "error": "Supabase not configured."}
+    if not email_service.is_configured:
+        return {"success": False, "error": "Email service not configured."}
+    try:
+        if subject is not None and html_body is not None and text_body is not None:
+            # Custom content: fetch account for recipient only (schema has primary_contact_*, csm_email; no contact_email/contact_name)
+            result = client.table("accounts").select(
+                "id, name, primary_contact_email, csm_email, primary_contact_name"
+            ).eq("id", account_id).limit(1).execute()
+            if not result.data or len(result.data) == 0:
+                return {"success": False, "error": "Account not found."}
+            account = result.data[0]
+            recipient_email = account.get("primary_contact_email") or account.get("csm_email")
+            if not recipient_email:
+                return {"success": False, "error": f"No email address for account {account.get('name', 'Unknown')}."}
+            account_name = account.get("name", "Unknown")
+            account_id_val = account.get("id")
+            recipient_name = account.get("primary_contact_name")
+            email_type = "manual_custom"
+        else:
+            # Generate personalized content
+            content = _get_email_content_for_account(client, account_id)
+            if "error" in content:
+                return {"success": False, "error": content["error"]}
+            subject = content["subject"]
+            html_body = content["html_body"]
+            text_body = content["text_body"]
+            email_type = content["email_type"]
+            recipient_email = content["recipient_email"]
+            account_name = content["account_name"]
+            account_id_val = content["account_id_val"]
+            recipient_name = content["account"].get("primary_contact_name") or content["account"].get("contact_name")
+
+        success = email_service.send_email(
+            to_email=recipient_email, subject=subject, html_body=html_body, text_body=text_body, to_name=recipient_name
+        )
+        if not success:
+            return {"success": False, "error": f"Failed to send email to {recipient_email}."}
+        current_time = datetime.now(timezone.utc)
+        sent_at_iso = current_time.isoformat()
+        client.table("email_campaigns").insert({
+            "account_id": account_id_val, "campaign_type": email_type, "subject": subject,
+            "body": text_body, "sent_at": sent_at_iso, "status": "sent", "metadata": {
+                "sent_at": sent_at_iso, "email_type": email_type, "recipient_email": recipient_email,
+                "account_id": str(account_id_val), "account_name": account_name, "scheduled_at": "manual",
+            }
+        }).execute()
+        client.table("accounts").update({"last_contact_date": sent_at_iso}).eq("id", account_id_val).execute()
+        try:
+            from app.services.activity_log import log_activity
+            log_activity("send_email", account_id=account_id_val, entity_type="email_campaign", details={"campaign_type": email_type, "recipient_email": recipient_email})
+        except Exception:
+            pass
+        logger.info(f"Manual email sent to {recipient_email} for account {account_name} (Type: {email_type})")
+        return {"success": True, "message": f"Email sent to {recipient_email} ({account_name}).", "email_type": email_type}
+    except Exception as e:
+        logger.error(f"Error in send_email_to_single_account: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
+
+
 def get_next_12pm_ist():
     """
     Calculate the next 12:00 PM IST (UTC+5:30) time.

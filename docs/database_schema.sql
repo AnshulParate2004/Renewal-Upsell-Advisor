@@ -1,44 +1,11 @@
 -- ============================================================================
 -- RENEWAL-UPSELL-ADVISOR DATABASE SCHEMA (PostgreSQL)
 -- ============================================================================
--- Recommendation: Keep everything in PostgreSQL instead of MongoDB
--- Reasons:
---   1. ACID compliance for critical business data
---   2. Complex queries and joins across tables
---   3. Better data integrity and consistency
---   4. PostgreSQL has excellent JSON support (JSONB) for flexible log storage
---   5. Simpler architecture with one database system
--- ============================================================================
---
--- IMPORTANT: If you get "relation does not exist" errors, you may need to
--- drop existing tables first. Uncomment the DROP statements below if needed.
+-- Run in Supabase SQL Editor to create tables, indexes, triggers, views, FKs.
+-- To reset DB first, run docs/drop_all_tables.sql then this file.
 -- ============================================================================
 
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- ============================================================================
--- DROP EXISTING TABLES (Uncomment if you need to start fresh)
--- ============================================================================
--- WARNING: This will delete all data! Only use for fresh setup.
--- ============================================================================
--- DROP TABLE IF EXISTS webhook_events CASCADE;
--- DROP TABLE IF EXISTS ml_training_logs CASCADE;
--- DROP TABLE IF EXISTS activity_logs CASCADE;
--- DROP TABLE IF EXISTS salesforce_sync_log CASCADE;
--- DROP TABLE IF EXISTS transactions CASCADE;
--- DROP TABLE IF EXISTS renewal_events CASCADE;
--- DROP TABLE IF EXISTS renewal_quotes CASCADE;
--- DROP TABLE IF EXISTS voice_calls CASCADE;
--- DROP TABLE IF EXISTS email_campaigns CASCADE;
--- DROP TABLE IF EXISTS sentiment_analysis CASCADE;
--- DROP TABLE IF EXISTS upsell_opportunities CASCADE;
--- DROP TABLE IF EXISTS churn_predictions CASCADE;
--- DROP TABLE IF EXISTS support_tickets CASCADE;
--- DROP TABLE IF EXISTS usage_metrics CASCADE;
--- DROP TABLE IF EXISTS contacts CASCADE;
--- DROP TABLE IF EXISTS accounts CASCADE;
--- ============================================================================
 
 -- ============================================================================
 -- CORE ENTITIES
@@ -193,6 +160,21 @@ CREATE TABLE IF NOT EXISTS sentiment_analysis (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(account_id, analysis_date, source)
 );
+
+-- ML Score History (one row per account per pipeline run; current scores stay on accounts)
+CREATE TABLE IF NOT EXISTS ml_score_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    account_id UUID NOT NULL,
+    run_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (CURRENT_TIMESTAMP AT TIME ZONE 'UTC'),
+    relationship_score INTEGER CHECK (relationship_score >= 0 AND relationship_score <= 100),
+    health_score INTEGER CHECK (health_score >= 0 AND health_score <= 100),
+    risk_score INTEGER CHECK (risk_score >= 0 AND risk_score <= 100),
+    churn_probability DECIMAL(5, 4) CHECK (churn_probability >= 0 AND churn_probability <= 1),
+    model_version VARCHAR(50) DEFAULT 'daily_pipeline_v1',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ml_score_history_account_id ON ml_score_history(account_id);
+CREATE INDEX IF NOT EXISTS idx_ml_score_history_run_at ON ml_score_history(run_at DESC);
 
 -- ============================================================================
 -- COMMUNICATION & OUTREACH

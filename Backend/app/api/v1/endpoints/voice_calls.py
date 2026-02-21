@@ -1,8 +1,9 @@
 """
 Voice call API endpoints for handling Twilio webhooks and call management.
 """
-from fastapi import APIRouter, Request, Form, Query
-from typing import Optional, Dict, Any
+from fastapi import APIRouter, Request, Form, Query, HTTPException
+from fastapi.responses import Response
+from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 from app.services.email.scheduler import get_supabase_client
 from app.services.voice_agent.twilio_call_service import twilio_call_service
@@ -101,6 +102,106 @@ Summary:"""
         logger.error(f"Failed to generate call summary: {e}")
         # Fallback summary
         return f"Call completed with outcome: {outcome}. Usage: {usage_percentage:.1f}%. Customer discussed: {len(transcript.split())} words exchanged."
+
+
+def _outcome_for_ui(status: Optional[str], outcome: Optional[str], retry_count: int) -> str:
+    """Map DB status/outcome to UI filter: picked_up, missed, retry."""
+    status = (status or "").lower()
+    outcome = (outcome or "").lower()
+    if status == "completed":
+        return "picked_up"
+    if status in ("no_answer", "busy") or outcome in ("no_answer", "voicemail"):
+        return "missed"
+    if status == "failed" or (retry_count and retry_count > 0) or status == "scheduled":
+        return "retry"
+    return "picked_up"  # default for in_progress etc.
+
+
+@router.get("/calls")
+async def list_voice_calls(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+):
+    """
+    List voice calls from the database for the Voice Calls page.
+    Returns calls with account name, normalized for UI (outcome, date, duration).
+    """
+    client = get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+
+    try:
+        result = (
+            client.table("voice_calls")
+            .select("id, account_id, duration_seconds, status, outcome, attempted_at, completed_at, created_at, retry_count, metadata")
+            .order("created_at", desc=True)
+            .range(skip, skip + limit - 1)
+            .execute()
+        )
+        rows = result.data or []
+        if not rows:
+            return {"calls": [], "total": 0}
+
+        account_ids = list({r["account_id"] for r in rows if r.get("account_id")})
+        account_map: Dict[str, str] = {}
+        if account_ids:
+            acc_result = (
+                client.table("accounts")
+                .select("id, name")
+                .in_("id", account_ids)
+                .execute()
+            )
+            for a in acc_result.data or []:
+                account_map[str(a["id"])] = a.get("name") or "Unknown"
+
+        calls: List[Dict[str, Any]] = []
+        for r in rows:
+            completed = r.get("completed_at") or r.get("attempted_at") or r.get("created_at")
+            if isinstance(completed, str) and "T" in completed:
+                date_str = completed.split("T")[0]
+                try:
+                    dt = datetime.fromisoformat(completed.replace("Z", "+00:00"))
+                    date_display = dt.strftime("%b %d, %Y %H:%M")
+                except Exception:
+                    date_display = date_str
+            else:
+                date_display = str(completed) if completed else "—"
+
+            dur_sec = r.get("duration_seconds")
+            if dur_sec is not None:
+                duration_display = f"{int(dur_sec) // 60}m {int(dur_sec) % 60}s" if int(dur_sec) >= 0 else "—"
+            else:
+                duration_display = "—"
+
+            meta = r.get("metadata") or {}
+            sentiment_category = (meta.get("sentiment_category") or "").lower()
+            if "positive" in sentiment_category or "very_positive" in sentiment_category:
+                sentiment = "positive"
+            elif "negative" in sentiment_category or "very_negative" in sentiment_category:
+                sentiment = "negative"
+            else:
+                sentiment = "neutral"
+
+            outcome_ui = _outcome_for_ui(r.get("status"), r.get("outcome"), r.get("retry_count") or 0)
+
+            calls.append({
+                "id": r["id"],
+                "account_id": r.get("account_id"),
+                "account_name": account_map.get(str(r.get("account_id") or ""), "Unknown"),
+                "date": date_display,
+                "duration": duration_display,
+                "duration_seconds": dur_sec,
+                "status": r.get("status"),
+                "outcome": outcome_ui,
+                "outcome_raw": r.get("outcome"),
+                "sentiment": sentiment,
+                "retry_count": r.get("retry_count") or 0,
+            })
+
+        return {"calls": calls, "total": len(calls)}
+    except Exception as e:
+        logger.error(f"Error listing voice calls: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to load voice calls")
 
 
 @router.post("/handle-call")
@@ -411,10 +512,11 @@ async def handle_input(
                 
                 sentiment_analysis_id = sentiment_result.data[0]["id"] if sentiment_result.data else None
                 
-                # Update account sentiment score
+                # Update account sentiment score and last contact date (voice contact)
                 client.table("accounts").update({
                     "sentiment_score": sentiment_data["sentiment_score"],
-                    "sentiment_category": sentiment_data["sentiment_category"]
+                    "sentiment_category": sentiment_data["sentiment_category"],
+                    "last_contact_date": completed_at
                 }).eq("id", account_id).execute()
                 
                 # Log activity to activity_logs table for audit trail
@@ -636,13 +738,30 @@ async def call_status(
 @router.post("/trigger-calls")
 async def trigger_calls():
     """
-    Manually trigger voice call processing.
+    Manually trigger voice call processing for all eligible accounts (same as scheduled logic).
     """
     from app.services.voice_agent.voice_call_scheduler import process_scheduled_calls
-    
+
     try:
         await process_scheduled_calls()
         return {"status": "success", "message": "Voice call processing completed"}
     except Exception as e:
         logger.error(f"Error triggering calls: {e}")
         return {"status": "error", "message": str(e)}
+
+
+@router.post("/trigger-call-to-account")
+async def trigger_call_to_account(body: dict):
+    """
+    Manually trigger a voice call to a single account (e.g. from Settings).
+    Skips eligibility/milestone checks. Body: {"account_id": "<uuid>"}.
+    """
+    from app.services.voice_agent.voice_call_scheduler import trigger_voice_call_for_account
+
+    account_id = body.get("account_id") if isinstance(body, dict) else None
+    if not account_id:
+        raise HTTPException(status_code=400, detail="account_id is required")
+    result = await trigger_voice_call_for_account(account_id)
+    if result.get("success"):
+        return {"status": "success", "message": result.get("message"), "call_sid": result.get("call_sid")}
+    raise HTTPException(status_code=400, detail=result.get("error", "Failed to trigger call"))

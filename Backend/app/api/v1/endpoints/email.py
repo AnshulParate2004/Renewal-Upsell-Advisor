@@ -7,7 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from app.core.logging import get_logger
 from app.services.email.email_service import email_service
-from app.services.email.scheduler import send_scheduled_emails
+from app.services.email.scheduler import send_scheduled_emails, send_email_to_single_account, generate_email_preview_for_account
 import os
 
 # Load .env file
@@ -49,13 +49,40 @@ async def send_test_email(to_email: str):
 
 @router.post("/trigger-campaign")
 async def trigger_email_campaign():
-    """Manually trigger email campaign (sends personalized emails to customers)."""
+    """Manually trigger email campaign (sends personalized emails to all eligible customers)."""
     try:
         await send_scheduled_emails()
         return {"status": "success", "message": "Email campaign triggered successfully"}
     except Exception as e:
         logger.error(f"Error triggering email campaign: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to trigger email campaign: {str(e)}")
+
+
+@router.get("/preview")
+async def get_email_preview(account_id: str):
+    """Generate personalized email preview for an account (subject, html_body, text_body). User can edit before sending."""
+    result = await generate_email_preview_for_account(account_id)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
+
+
+@router.post("/send-to-account")
+async def send_email_to_account(body: dict):
+    """
+    Send email to one account. Body: {"account_id": "<uuid>"} for auto-generated personalized email,
+    or {"account_id": "<uuid>", "subject": "...", "html_body": "...", "text_body": "..."} for custom content.
+    """
+    account_id = body.get("account_id") if isinstance(body, dict) else None
+    if not account_id:
+        raise HTTPException(status_code=400, detail="account_id is required")
+    subject = body.get("subject") if isinstance(body, dict) else None
+    html_body = body.get("html_body") if isinstance(body, dict) else None
+    text_body = body.get("text_body") if isinstance(body, dict) else None
+    result = await send_email_to_single_account(account_id, subject=subject, html_body=html_body, text_body=text_body)
+    if result.get("success"):
+        return {"status": "success", "message": result.get("message", "Email sent."), "email_type": result.get("email_type")}
+    raise HTTPException(status_code=400, detail=result.get("error", "Failed to send email"))
 
 
 @router.get("/status")

@@ -87,7 +87,16 @@ export default function Pipeline() {
                 <div className="flex-1 bg-muted/30 border-2 border-black rounded-xl p-3 space-y-3 min-h-[500px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                   {byStage(stage).map((account) => {
                     const days = getDaysUntil(account.renewalDate);
+                    const isRenewed = stage === "renewed";
                     const isCritical = account.riskScore >= 70;
+                    const renewalLabel = isRenewed
+                      ? (days < 0 ? `${Math.abs(days)}d since renewal` : "Renewed")
+                      : `${days}d to renewal`;
+                    const renewalBadgeStyle = isRenewed
+                      ? "text-emerald-600 bg-emerald-500/10"
+                      : days <= 30
+                        ? "text-destructive bg-destructive/10"
+                        : "text-muted-foreground bg-muted/50";
                     return (
                       <div
                         key={account.id}
@@ -95,7 +104,7 @@ export default function Pipeline() {
                         onDragStart={() => handleDragStart(account.id)}
                         className="cursor-grab bg-card border-2 border-black rounded-xl p-4 group transition-all active:cursor-grabbing relative overflow-hidden"
                       >
-                        {isCritical && <div className="absolute top-0 left-0 w-1 h-full bg-destructive rounded-l-xl" />}
+                        {isCritical && !isRenewed && <div className="absolute top-0 left-0 w-1 h-full bg-destructive rounded-l-xl" />}
 
                         <div className="flex items-start justify-between mb-3">
                           <div>
@@ -106,11 +115,11 @@ export default function Pipeline() {
                         </div>
 
                         <div className="flex items-center justify-between">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black ${isCritical ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600'}`}>
-                            {isCritical ? 'Critical' : 'Healthy'}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black ${isCritical && !isRenewed ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                            {isCritical && !isRenewed ? 'Critical' : 'Healthy'}
                           </span>
-                          <span className={`text-xs font-medium border-2 border-black px-2 py-0.5 rounded ${days <= 30 ? 'text-destructive bg-destructive/10' : 'text-muted-foreground bg-muted/50'}`}>
-                            {days}d to renewal
+                          <span className={`text-xs font-medium border-2 border-black px-2 py-0.5 rounded ${renewalBadgeStyle}`}>
+                            {renewalLabel}
                           </span>
                         </div>
                       </div>

@@ -185,35 +185,41 @@ def should_make_call(
     return False, "No call needed"
 
 
-async def make_voice_call(account: Dict[str, Any], client) -> Optional[str]:
+async def make_voice_call(
+    account: Dict[str, Any],
+    client,
+    *,
+    skip_eligibility_check: bool = False,
+) -> Optional[str]:
     """
     Make a voice call to an account.
-    
+
     Args:
         account: Account dictionary
         client: Supabase client
-        
+        skip_eligibility_check: If True, do not check milestones/history (e.g. for manual trigger).
+
     Returns:
         Call SID if successful, None otherwise
     """
     account_id = account.get('id')
     account_name = account.get('name', 'Customer')
     phone_number = account.get('primary_contact_phone')
-    
+
     if not phone_number:
         logger.warning(f"No phone number for account {account_name}")
         return None
-    
+
     # Calculate usage percentage
     usage_percentage = calculate_plan_completion_percentage(account)
     call_type = get_call_type_for_percentage(usage_percentage)
-    
-    # Check if we should make the call
-    should_call, reason = should_make_call(account, usage_percentage, client)
-    
-    if not should_call:
-        logger.info(f"Skipping call to {account_name}: {reason}")
-        return None
+
+    # Check if we should make the call (skip for manual single-account trigger)
+    if not skip_eligibility_check:
+        should_call, reason = should_make_call(account, usage_percentage, client)
+        if not should_call:
+            logger.info(f"Skipping call to {account_name}: {reason}")
+            return None
     
     # Get webhook URL from environment (.env first, then settings, then default)
     from app.core.config import settings as app_settings
@@ -381,3 +387,29 @@ async def process_scheduled_calls():
         logger.error(f"Error processing scheduled calls: {e}")
         import traceback
         logger.error(traceback.format_exc())
+
+
+async def trigger_voice_call_for_account(account_id: str) -> Dict[str, Any]:
+    """
+    Manually trigger a voice call to a single account (e.g. from Settings).
+    Skips eligibility/milestone checks. Returns {"success": True, "message": "...", "call_sid": "..."} or {"success": False, "error": "..."}.
+    """
+    client = get_supabase_client()
+    if not client:
+        return {"success": False, "error": "Supabase not configured."}
+    try:
+        result = client.table("accounts").select(
+            "id, name, primary_contact_phone, contract_start_date, contract_end_date"
+        ).eq("id", account_id).limit(1).execute()
+        if not result.data or len(result.data) == 0:
+            return {"success": False, "error": "Account not found."}
+        account = result.data[0]
+        if not account.get("primary_contact_phone"):
+            return {"success": False, "error": f"No phone number for account {account.get('name', 'Unknown')}."}
+        call_sid = await make_voice_call(account, client, skip_eligibility_check=True)
+        if call_sid:
+            return {"success": True, "message": f"Voice call initiated to {account.get('name')}.", "call_sid": call_sid}
+        return {"success": False, "error": "Failed to initiate call (Twilio or internal error)."}
+    except Exception as e:
+        logger.error(f"Error in trigger_voice_call_for_account: {e}", exc_info=True)
+        return {"success": False, "error": str(e)}
