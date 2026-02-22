@@ -9,7 +9,7 @@ from datetime import datetime
 class OpportunityBase(BaseModel):
     """Base opportunity schema."""
     account_id: str
-    type: str  # renewal, upsell, cross_sell
+    type: str  # upsell, expansion
     value: float
     probability: int = Field(..., ge=0, le=100)
     stage: str  # identified, quote_sent, negotiation, closed_won, closed_lost

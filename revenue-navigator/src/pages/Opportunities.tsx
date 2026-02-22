@@ -6,10 +6,8 @@ import { useOpportunities } from "@/hooks/useOpportunities";
 import { useAccounts } from "@/hooks/useAccounts";
 
 const typeBadge: Record<string, { label: string; color: string; bg: string }> = {
-  renewal: { label: "Renewal", color: "text-primary", bg: "bg-primary/10" },
   upsell: { label: "Upsell", color: "text-emerald-600", bg: "bg-emerald-500/10" },
   expansion: { label: "Expansion", color: "text-violet-600", bg: "bg-violet-500/10" },
-  cross_sell: { label: "Cross-sell", color: "text-amber-600", bg: "bg-amber-500/10" },
 };
 
 const stageLabel: Record<string, string> = {
@@ -114,7 +112,7 @@ export default function Opportunities() {
         {/* Filters */}
         <div className="flex items-center gap-2">
           <div className="flex gap-0.5 bg-muted rounded-lg p-0.5 border-2 border-black">
-            {(['all', 'renewal', 'upsell', 'expansion', 'cross_sell'] as const).map((filter) => (
+            {(['all', 'upsell', 'expansion'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setTypeFilter(filter)}

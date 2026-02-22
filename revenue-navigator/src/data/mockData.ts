@@ -76,7 +76,7 @@ export interface Opportunity {
   id: string;
   accountId: string;
   accountName: string;
-  type: "renewal" | "upsell" | "cross_sell";
+  type: "upsell" | "expansion";
   value: number;
   probability: number;
   stage: "identified" | "quote_sent" | "negotiation" | "closed_won" | "closed_lost";

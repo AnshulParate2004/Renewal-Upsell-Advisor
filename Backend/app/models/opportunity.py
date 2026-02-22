@@ -13,7 +13,7 @@ class Opportunity(Base):
     
     id = Column(String, primary_key=True, index=True)
     account_id = Column(String, ForeignKey("accounts.id"), nullable=False, index=True)
-    type = Column(String, nullable=False)  # renewal, upsell, cross_sell
+    type = Column(String, nullable=False)  # upsell, expansion
     value = Column(Float, nullable=False)
     probability = Column(Integer)  # 0-100
     stage = Column(String)  # identified, quote_sent, negotiation, closed_won, closed_lost

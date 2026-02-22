@@ -2,8 +2,10 @@ import { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 
 interface PageHeaderProps {
-  title: string;
+  title: ReactNode;
   subtitle?: string;
+  /** Alias for subtitle (used by Features, Pricing, Demo pages) */
+  description?: string;
   badge?: string;
   actions?: ReactNode;
   className?: string;
@@ -12,10 +14,12 @@ interface PageHeaderProps {
 export function PageHeader({ 
   title, 
   subtitle, 
+  description,
   badge, 
   actions,
   className = '' 
 }: PageHeaderProps) {
+  const sub = subtitle ?? description;
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}
@@ -34,9 +38,9 @@ export function PageHeader({
             </span>
           )}
         </div>
-        {subtitle && (
+        {sub && (
           <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider">
-            {subtitle}
+            {sub}
           </p>
         )}
       </div>

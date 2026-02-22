@@ -20,6 +20,16 @@ if env_path.exists():
 logger = get_logger(__name__)
 router = APIRouter()
 
+# Only these two types are supported (frontend and API)
+ALLOWED_OPPORTUNITY_TYPES = ("upsell", "expansion")
+
+
+def _normalize_type(opportunity_type: Optional[str]) -> str:
+    """Return only 'upsell' or 'expansion'. Legacy values map to expansion."""
+    if opportunity_type in ALLOWED_OPPORTUNITY_TYPES:
+        return opportunity_type
+    return "expansion"  # renewal, cross_sell, or any other legacy value
+
 
 def get_supabase_client() -> Optional[Client]:
     """Get or create Supabase client."""
@@ -74,7 +84,7 @@ async def get_opportunities(skip: int = 0, limit: int = 100):
                 "id": opp.get("id"),
                 "account_id": opp.get("account_id"),
                 "account_name": account_name,
-                "type": opp.get("opportunity_type", "upsell"),  # opportunity_type -> type
+                "type": _normalize_type(opp.get("opportunity_type")),  # only upsell or expansion
                 "value": float(opp.get("predicted_value", 0)),  # predicted_value -> value
                 "probability": float(opp.get("probability", 0)),
                 "stage": opp.get("status", "identified"),  # status -> stage
@@ -122,7 +132,7 @@ async def get_opportunity(opportunity_id: str):
             "id": opp.get("id"),
             "account_id": opp.get("account_id"),
             "account_name": account_name,
-            "type": opp.get("opportunity_type", "upsell"),
+            "type": _normalize_type(opp.get("opportunity_type")),
             "value": float(opp.get("predicted_value", 0)),
             "probability": float(opp.get("probability", 0)),
             "stage": opp.get("status", "identified"),
@@ -147,10 +157,16 @@ async def create_opportunity(opportunity: dict):
         raise HTTPException(status_code=503, detail="Supabase not configured")
     
     try:
+        opp_type = opportunity.get("type", "upsell")
+        if opp_type not in ALLOWED_OPPORTUNITY_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"type must be one of: {', '.join(ALLOWED_OPPORTUNITY_TYPES)}",
+            )
         # Transform frontend format to Supabase format
         supabase_data = {
             "account_id": opportunity.get("account_id"),
-            "opportunity_type": opportunity.get("type", "upsell"),
+            "opportunity_type": opp_type,
             "predicted_value": opportunity.get("value", 0),
             "probability": opportunity.get("probability", 0),
             "status": opportunity.get("stage", "identified"),
@@ -165,7 +181,7 @@ async def create_opportunity(opportunity: dict):
         return {
             "id": opp.get("id"),
             "account_id": opp.get("account_id"),
-            "type": opp.get("opportunity_type", "upsell"),
+            "type": _normalize_type(opp.get("opportunity_type")),
             "value": float(opp.get("predicted_value", 0)),
             "probability": float(opp.get("probability", 0)),
             "stage": opp.get("status", "identified"),
@@ -173,6 +189,8 @@ async def create_opportunity(opportunity: dict):
             "created_at": opp.get("created_at", ""),
             "updated_at": opp.get("updated_at"),
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating opportunity: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create opportunity: {str(e)}")
@@ -195,7 +213,13 @@ async def update_opportunity(opportunity_id: str, opportunity_update: dict):
         if "stage" in opportunity_update:
             update_data["status"] = opportunity_update["stage"]
         if "type" in opportunity_update:
-            update_data["opportunity_type"] = opportunity_update["type"]
+            t = opportunity_update["type"]
+            if t not in ALLOWED_OPPORTUNITY_TYPES:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"type must be one of: {', '.join(ALLOWED_OPPORTUNITY_TYPES)}",
+                )
+            update_data["opportunity_type"] = t
         
         # Remove None values
         update_data = {k: v for k, v in update_data.items() if v is not None}
@@ -209,7 +233,7 @@ async def update_opportunity(opportunity_id: str, opportunity_update: dict):
         return {
             "id": opp.get("id"),
             "account_id": opp.get("account_id"),
-            "type": opp.get("opportunity_type", "upsell"),
+            "type": _normalize_type(opp.get("opportunity_type")),
             "value": float(opp.get("predicted_value", 0)),
             "probability": float(opp.get("probability", 0)),
             "stage": opp.get("status", "identified"),

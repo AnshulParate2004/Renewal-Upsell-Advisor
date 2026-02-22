@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS churn_predictions (
 CREATE TABLE IF NOT EXISTS upsell_opportunities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     account_id UUID, -- FK added later
-    opportunity_type VARCHAR(100), -- expansion, cross_sell, upgrade
+    opportunity_type VARCHAR(100), -- upsell, expansion
     predicted_value DECIMAL(15, 2),
     probability DECIMAL(5, 4) CHECK (probability >= 0 AND probability <= 1),
     recommended_products JSONB, -- ["premium_plan", "add_on_a", ...]

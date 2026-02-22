@@ -4,7 +4,11 @@ Real-time voice conversation API endpoints using base64 audio streaming.
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Optional, Dict, Any
 from pydantic import BaseModel
-from app.services.voicebot_frontend.audio_handler import process_audio_conversation, text_to_speech_base64
+from app.services.voicebot_frontend.audio_handler import (
+    process_audio_conversation,
+    process_audio_conversation_streaming,
+    text_to_speech_base64,
+)
 from app.services.voicebot_frontend.conversation_handler import frontend_voice_bot_handler
 from app.services.email.scheduler import get_supabase_client
 from app.core.logging import get_logger
@@ -183,31 +187,32 @@ async def audio_websocket_endpoint(websocket: WebSocket):
             
             elif message_type == "audio":
                 audio_base64 = data.get("audio_base64", "")
-                
                 if not audio_base64:
                     continue
-                
                 try:
-                    # Process audio conversation
-                    audio_response_base64, transcribed_text = process_audio_conversation(
+                    # Streaming: STT -> stream LLM by sentence -> TTS per phrase -> send chunks
+                    for chunk_b64, chunk_index, is_final, transcribed_text in process_audio_conversation_streaming(
                         audio_base64=audio_base64,
                         session_id=session_id,
-                        user_context=user_context
-                    )
-                    
-                    if audio_response_base64:
-                        # Send audio response
-                        await websocket.send_json({
-                            "type": "audio_response",
-                            "audio_base64": audio_response_base64,
-                            "transcribed_text": transcribed_text,
-                            "session_id": session_id
-                        })
+                        user_context=user_context,
+                        audio_format="webm",
+                    ):
+                        payload = {
+                            "type": "audio_chunk",
+                            "chunk_index": chunk_index,
+                            "is_final": is_final,
+                            "session_id": session_id,
+                        }
+                        if chunk_b64:
+                            payload["audio_base64"] = chunk_b64
+                        if is_final and transcribed_text:
+                            payload["transcribed_text"] = transcribed_text
+                        await websocket.send_json(payload)
                 except Exception as e:
                     logger.error(f"Error processing audio in WebSocket: {e}", exc_info=True)
                     await websocket.send_json({
                         "type": "error",
-                        "message": "Error processing audio"
+                        "message": "Error processing audio",
                     })
             
             elif message_type == "clear":

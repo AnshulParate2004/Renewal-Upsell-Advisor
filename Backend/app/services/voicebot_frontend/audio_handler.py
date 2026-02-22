@@ -1,9 +1,10 @@
 """
 Audio handler for real-time voice conversation using Azure Speech Service.
 Handles base64 audio encoding/decoding and speech processing.
+Supports streaming: STT once, then stream LLM by sentence and TTS each phrase for fast start.
 """
 import base64
-from typing import Optional
+from typing import Optional, Generator, Tuple
 from app.services.voice_agent.azure_speech import azure_speech
 from app.services.voicebot_frontend.conversation_handler import frontend_voice_bot_handler
 from app.services.voicebot_frontend.audio_converter import convert_to_pcm_wav
@@ -85,6 +86,64 @@ def process_audio_conversation(
         
     except Exception as e:
         logger.error(f"Error processing audio conversation: {e}", exc_info=True)
+        raise
+
+
+def process_audio_conversation_streaming(
+    audio_base64: str,
+    session_id: str,
+    user_context: Optional[dict] = None,
+    audio_format: str = "webm",
+) -> Generator[Tuple[str, int, bool, str], None, None]:
+    """
+    Process audio with streaming response: STT once, then stream LLM by sentence and TTS each phrase.
+    Yields (audio_base64_chunk, chunk_index, is_final, transcribed_text).
+    transcribed_text is non-empty only on the final chunk (is_final=True).
+    """
+    transcribed_text = ""
+    try:
+        audio_bytes = base64.b64decode(audio_base64)
+        if audio_format.lower() == "webm":
+            try:
+                audio_bytes = convert_to_pcm_wav(audio_bytes, input_format="webm", sample_rate=16000, channels=1)
+                audio_format = "wav"
+            except Exception as e:
+                logger.error(f"Failed to convert WebM to WAV: {e}", exc_info=True)
+
+        transcribed_text = azure_speech.speech_to_text(
+            audio_bytes, language="en-US", audio_format=audio_format
+        )
+        if not transcribed_text or not transcribed_text.strip():
+            logger.warning("No speech detected in audio")
+            return
+
+        logger.info(f"Transcribed: {transcribed_text}")
+        conversation_history = frontend_voice_bot_handler.get_conversation_history(session_id)
+        stream = frontend_voice_bot_handler.generate_response_stream(
+            user_input=transcribed_text,
+            session_id=session_id,
+            conversation_history=conversation_history,
+            user_context=user_context,
+        )
+        chunk_index = 0
+        for sentence in stream:
+            if not sentence.strip():
+                continue
+            try:
+                audio_bytes = azure_speech.text_to_speech(sentence, voice_name="en-US-AriaNeural")
+                chunk_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+                is_final = False  # will send one more iteration to know
+                yield (chunk_b64, chunk_index, False, "")
+                chunk_index += 1
+            except Exception as e:
+                logger.error(f"TTS failed for chunk: {e}", exc_info=True)
+        # Re-yield last chunk index with is_final and transcribed_text (no extra audio)
+        if chunk_index > 0:
+            yield ("", chunk_index - 1, True, transcribed_text)
+        else:
+            yield ("", 0, True, transcribed_text)
+    except Exception as e:
+        logger.error(f"Error in streaming audio conversation: {e}", exc_info=True)
         raise
 
 

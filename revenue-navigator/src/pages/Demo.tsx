@@ -1,4 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+
+function useScrollToTop() {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+}
 import { Mic, MicOff, Volume2, VolumeX, Sparkles, Phone, TrendingUp, RefreshCw, Shield, ArrowLeft, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -76,6 +82,7 @@ const callDemos: CallDemo[] = [
 ];
 
 export default function Demo() {
+  useScrollToTop();
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -89,37 +96,19 @@ export default function Demo() {
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const audioQueueRef = useRef<string[]>([]);
+  const isPlayingQueueRef = useRef(false);
+  const isMutedRef = useRef(isMuted);
+  isMutedRef.current = isMuted;
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Initialize audio context and get greeting
+  // Single source of session: client-generated ID so WebSocket is the only place we get/play greeting (avoids double greeting)
   useEffect(() => {
-    const initialize = async () => {
-      try {
-        // Get greeting audio
-        const data = await voicebotApi.getGreetingAudio();
-        
-        if (data.audio_base64 && data.session_id) {
-          setSessionId(data.session_id);
-          // Play greeting audio
-          if (!isMuted) {
-            await playBase64Audio(data.audio_base64);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to initialize:", error);
-        toast({
-          title: "Error",
-          description: "Failed to initialize voice bot. Please check your microphone permissions.",
-          variant: "destructive",
-        });
-      }
-    };
+    setSessionId(crypto.randomUUID());
+  }, []);
 
-    initialize();
-  }, [toast, isMuted]);
-
-  // WebSocket connection for real-time audio streaming
+  // WebSocket connection for real-time audio streaming (greeting is sent once by server on connect)
   useEffect(() => {
     if (!sessionId) return;
 
@@ -137,13 +126,17 @@ export default function Demo() {
     ws.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        
-        if (data.type === "greeting" || data.type === "audio_response") {
-          if (data.audio_base64 && !isMuted) {
+
+        if (data.type === "greeting") {
+          if (data.audio_base64 && !isMutedRef.current) {
             setIsSpeaking(true);
             await playBase64Audio(data.audio_base64);
             setIsSpeaking(false);
           }
+        } else if (data.type === "audio_chunk") {
+          if (data.audio_base64) enqueueAndPlay(data.audio_base64);
+        } else if (data.type === "audio_response") {
+          if (data.audio_base64) enqueueAndPlay(data.audio_base64);
         } else if (data.type === "error") {
           toast({
             title: "Error",
@@ -169,34 +162,60 @@ export default function Demo() {
     return () => {
       ws.close();
     };
-  }, [sessionId, toast, isMuted]);
+  }, [sessionId, toast]);
 
-  // Play base64 audio
-  const playBase64Audio = async (audioBase64: string): Promise<void> => {
+  // Play a single base64 audio and resolve when ended
+  const playBase64Audio = (audioBase64: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       try {
-        const audioData = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
-        const blob = new Blob([audioData], { type: 'audio/wav' });
+        const audioData = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
+        const blob = new Blob([audioData], { type: "audio/wav" });
         const audioUrl = URL.createObjectURL(blob);
-        
         const audio = new Audio(audioUrl);
         audioElementRef.current = audio;
-        
+
         audio.onended = () => {
           URL.revokeObjectURL(audioUrl);
           resolve();
         };
-        
         audio.onerror = (error) => {
           URL.revokeObjectURL(audioUrl);
           reject(error);
         };
-        
         audio.play();
       } catch (error) {
         reject(error);
       }
     });
+  };
+
+  // Play next chunk in queue (streaming: start TTS playback on first phrase)
+  const playNextInQueue = async () => {
+    if (isPlayingQueueRef.current || audioQueueRef.current.length === 0) {
+      if (audioQueueRef.current.length === 0) setIsSpeaking(false);
+      return;
+    }
+    isPlayingQueueRef.current = true;
+    setIsSpeaking(true);
+    const chunk = audioQueueRef.current.shift();
+    if (!chunk) {
+      isPlayingQueueRef.current = false;
+      setIsSpeaking(false);
+      return;
+    }
+    try {
+      await playBase64Audio(chunk);
+    } catch (e) {
+      console.error("Playback error:", e);
+    }
+    isPlayingQueueRef.current = false;
+    playNextInQueue();
+  };
+
+  const enqueueAndPlay = (audioBase64: string) => {
+    if (!audioBase64 || isMutedRef.current) return;
+    audioQueueRef.current.push(audioBase64);
+    playNextInQueue();
   };
 
   // Start recording
@@ -256,8 +275,8 @@ export default function Demo() {
         reader.readAsDataURL(audioBlob);
       };
       
-      // Start recording
-      mediaRecorder.start(1000); // Collect data every second
+      // Start recording (short timeslice for responsive stop; full blob still sent on stop)
+      mediaRecorder.start(200);
       setIsListening(true);
       
     } catch (error) {
@@ -321,31 +340,27 @@ export default function Demo() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Back Button */}
-      <div className="p-6 pb-0">
-        <div className="max-w-6xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="mb-4 border-2 border-black hover:bg-muted"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </div>
-      </div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4 border-2 border-black hover:bg-muted"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
 
-      <PageHeader
-        title={
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <span>Voice Bot Demo</span>
-          </div>
-        }
-        description="Real-time voice conversation with AI-powered assistant"
-      />
+        <PageHeader
+          title={
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-primary" />
+              <span>Voice Bot Demo</span>
+            </div>
+          }
+          description="Real-time voice conversation with AI-powered assistant"
+        />
 
-      <div className="p-6 space-y-8">
+        <div className="pt-6 space-y-8">
         {/* Real-time Voice Conversation */}
         <section>
           <div className="max-w-4xl mx-auto">
@@ -520,6 +535,7 @@ export default function Demo() {
             </div>
           </div>
         </section>
+        </div>
       </div>
     </div>
   );

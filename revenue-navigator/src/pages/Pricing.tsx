@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { CheckCircle, Zap, Crown, Building2, ArrowRight, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -100,28 +101,28 @@ const faqs = [
 export default function Pricing() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Back Button */}
-      <div className="p-6 pb-0">
-        <div className="max-w-6xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="mb-4 border-2 border-black hover:bg-muted"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </div>
-      </div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4 border-2 border-black hover:bg-muted"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
 
-      <PageHeader
-        title="Pricing"
-        description="Simple, transparent pricing for teams of all sizes"
-      />
+        <PageHeader
+          title="Pricing"
+          description="Simple, transparent pricing for teams of all sizes"
+        />
 
-      <div className="p-6 space-y-12">
+        <div className="pt-6 space-y-12">
         {/* Pricing Cards */}
         <section>
           <div className="max-w-6xl mx-auto">
@@ -273,6 +274,7 @@ export default function Pricing() {
             </div>
           </div>
         </section>
+        </div>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Target, BarChart3, RefreshCw, Cpu, Shield, TrendingUp, Zap, CheckCircle, Sparkles, Activity, Bell, DollarSign, Phone, ArrowRight, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -174,28 +175,28 @@ const useCases = [
 export default function Features() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Back Button */}
-      <div className="p-6 pb-0">
-        <div className="max-w-6xl mx-auto">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-            className="mb-4 border-2 border-black hover:bg-muted"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
-        </div>
-      </div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-4 border-2 border-black hover:bg-muted"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
 
-      <PageHeader
-        title="Features"
-        description="Everything you need to maximize revenue and prevent churn"
-      />
+        <PageHeader
+          title="Features"
+          description="Everything you need to maximize revenue and prevent churn"
+        />
 
-      <div className="p-6 space-y-12">
+        <div className="pt-6 space-y-12">
         {/* Hero Section */}
         <section>
           <div className="max-w-6xl mx-auto">
@@ -365,6 +366,7 @@ export default function Features() {
             </Card>
           </div>
         </section>
+        </div>
       </div>
     </div>
   );
