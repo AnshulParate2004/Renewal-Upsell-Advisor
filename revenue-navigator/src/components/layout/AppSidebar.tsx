@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard, Users, Kanban, Phone, DollarSign,
-  BarChart3, Settings, Zap, ChevronLeft, PlayCircle,
+  LayoutDashboard,
+  Users,
+  Kanban,
+  Phone,
+  DollarSign,
+  BarChart3,
+  Settings,
+  Zap,
+  ChevronLeft,
+  PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,13 +65,14 @@ export function AppSidebar() {
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path ||
-            (item.path === "/app" && location.pathname === "/app");
+            (item.path === "/app" && location.pathname === "/app") ||
+            (item.path === "/demo" && location.pathname === "/demo");
 
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              end={item.path === "/app"}
+              end={item.path === "/app" || item.path === "/demo"}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium rounded-lg transition-all border-2 border-transparent",
                 collapsed && "justify-center px-0 py-2.5",

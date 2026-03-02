@@ -1,6 +1,7 @@
 """
 Email scheduler service - sends automated emails daily at 12:00 PM IST.
-Checks if 7 days have passed since last email before sending.
+Checks if N days have passed since last email before sending, where N is
+configurable via settings (followUpDays) or EMAIL_SCHEDULE_INTERVAL_DAYS.
 """
 import asyncio
 from datetime import datetime, timedelta, timezone
@@ -8,6 +9,7 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 from dotenv import load_dotenv
 from app.core.logging import get_logger
+from app.core.config import settings as app_settings
 from app.services.email.email_service import email_service
 from app.services.email.templates import (
     get_renewal_reminder_template,
@@ -44,6 +46,69 @@ def get_supabase_client():
     
     if not supabase_url or not supabase_key:
         return None
+
+
+def _get_app_settings_config(client: Any) -> Dict[str, Any]:
+    """
+    Internal helper to read the app-wide settings config from Supabase.
+    Safe to call even if the table does not exist; returns {} on failure.
+    """
+    try:
+        result = (
+            client.table("app_settings")
+            .select("config")
+            .eq("key", "default")
+            .limit(1)
+            .execute()
+        )
+        rows = result.data or []
+        if not rows:
+            return {}
+        raw_config = rows[0].get("config") or {}
+        return raw_config if isinstance(raw_config, dict) else {}
+    except Exception as e:
+        logger.error(f"Failed to read app_settings config for scheduler: {e}")
+        return {}
+
+
+def get_email_interval_days(client: Any | None = None) -> int:
+    """
+    Determine how many days must pass between automated emails.
+
+    Priority:
+    1) Supabase app_settings.schedule.followUpDays (UI-driven)
+    2) EMAIL_SCHEDULE_INTERVAL_DAYS env var
+    3) Settings.EMAIL_SCHEDULE_INTERVAL_DAYS (backend config)
+    4) Fallback default of 7 days
+    """
+    # 1) From Supabase settings (if available)
+    if client is not None:
+        cfg = _get_app_settings_config(client)
+        schedule_cfg = cfg.get("schedule") or {}
+        follow_up_days = schedule_cfg.get("followUpDays")
+        if isinstance(follow_up_days, int) and follow_up_days > 0:
+            return follow_up_days
+
+    # 2) From environment variable
+    env_val = os.getenv("EMAIL_SCHEDULE_INTERVAL_DAYS")
+    if env_val:
+        try:
+            env_days = int(env_val)
+            if env_days > 0:
+                return env_days
+        except ValueError:
+            logger.warning(f"Invalid EMAIL_SCHEDULE_INTERVAL_DAYS value: {env_val}")
+
+    # 3) From typed settings
+    try:
+        settings_days = int(getattr(app_settings, "EMAIL_SCHEDULE_INTERVAL_DAYS", 7))
+        if settings_days > 0:
+            return settings_days
+    except Exception:
+        pass
+
+    # 4) Hard fallback
+    return 7
     
     try:
         return create_client(supabase_url, supabase_key)
@@ -85,6 +150,10 @@ async def send_scheduled_emails():
         
         # Current time in UTC
         current_time = datetime.now(timezone.utc)
+
+        # Determine dynamic throttle interval (in days) for follow-ups
+        interval_days = get_email_interval_days(client)
+        logger.info(f"Email scheduler using interval of {interval_days} day(s) between emails.")
         
         for account in accounts:
             try:
@@ -124,14 +193,20 @@ async def send_scheduled_emails():
                             
                             days_since_email = (current_time - last_email_sent).days
                             
-                            # Only send if 7 or more days have passed
-                            if days_since_email >= 7:
+                            # Only send if N or more days have passed
+                            if days_since_email >= interval_days:
                                 should_send = True
-                                logger.info(f"Account {account_name}: Last email sent {days_since_email} days ago. Will send email.")
+                                logger.info(
+                                    f"Account {account_name}: Last email sent {days_since_email} days ago. "
+                                    f"Threshold is {interval_days} days. Will send email."
+                                )
                             else:
                                 should_send = False
                                 skipped_count += 1
-                                logger.debug(f"Account {account_name}: Last email sent {days_since_email} days ago. Skipping (need 7 days).")
+                                logger.debug(
+                                    f"Account {account_name}: Last email sent {days_since_email} days ago. "
+                                    f"Skipping (need {interval_days} days)."
+                                )
                         except Exception as e:
                             logger.warning(f"Error parsing last email date for account {account_name}: {e}. Will send email.")
                             should_send = True

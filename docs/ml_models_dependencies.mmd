@@ -1,0 +1,62 @@
+%% ML Models Dependency Diagram — Renewal-Upsell-Advisor (color)
+%% Pipeline runs in this order; downstream models use upstream outputs (never DB-stored scores).
+
+flowchart TB
+    subgraph inputs["📥 Inputs (raw / engineered)"]
+        F_contact["days_since_last_contact"]
+        sentiment["sentiment_score, sentiment_category"]
+        util["utilization, licenses_used/total"]
+        F_renewal["days_until_renewal"]
+        industry["industry"]
+        arr_mrr["arr, mrr, company_size"]
+    end
+
+    subgraph pipeline["🤖 ML pipeline (run order)"]
+        M_Rel["1. Relationship Score\n(M_Rel)"]
+        M_Health["2. Health Score\n(M_Health)"]
+        M_Churn["3. Churn Predictor\n(C_Churn)"]
+        M_Upsell["4. Upsell Detector\n(C_Upsell)"]
+    end
+
+    subgraph outputs["📤 Outputs"]
+        rel_out["relationship_score"]
+        health_out["health_score"]
+        churn_out["churn_probability, risk_score"]
+        upsell_out["upsell_opportunity"]
+    end
+
+    F_contact --> M_Rel
+    sentiment --> M_Rel
+    util --> M_Rel
+    M_Rel --> rel_out
+    rel_out --> M_Health
+    util --> M_Health
+    M_Health --> health_out
+    health_out --> M_Churn
+    health_out --> M_Upsell
+    F_renewal --> M_Churn
+    industry --> M_Churn
+    util --> M_Upsell
+    arr_mrr --> M_Upsell
+    M_Churn --> churn_out
+    M_Upsell --> upsell_out
+
+    %% Input nodes — light blue
+    classDef inputStyle fill:#B3E5FC,stroke:#0277BD,stroke-width:2px,color:#01579B
+    %% Model 1 — teal
+    classDef model1 fill:#80CBC4,stroke:#00695C,stroke-width:2px,color:#004D40
+    %% Model 2 — green
+    classDef model2 fill:#A5D6A7,stroke:#2E7D32,stroke-width:2px,color:#1B5E20
+    %% Model 3 — amber
+    classDef model3 fill:#FFE082,stroke:#F9A825,stroke-width:2px,color:#F57F17
+    %% Model 4 — purple
+    classDef model4 fill:#CE93D8,stroke:#7B1FA2,stroke-width:2px,color:#4A148C
+    %% Output nodes — peach/orange
+    classDef outputStyle fill:#FFCC80,stroke:#E65100,stroke-width:2px,color:#BF360C
+
+    class F_contact,sentiment,util,F_renewal,industry,arr_mrr inputStyle
+    class M_Rel model1
+    class M_Health model2
+    class M_Churn model3
+    class M_Upsell model4
+    class rel_out,health_out,churn_out,upsell_out outputStyle

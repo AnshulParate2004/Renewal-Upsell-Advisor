@@ -3,8 +3,15 @@ import { X, Menu } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Users, Kanban, Phone, DollarSign,
-  BarChart3, Settings, Zap, PlayCircle,
+  LayoutDashboard,
+  Users,
+  Kanban,
+  Phone,
+  DollarSign,
+  BarChart3,
+  Settings,
+  Zap,
+  PlayCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -71,7 +78,7 @@ export function MobileSidebar() {
                   <NavLink
                     key={item.path}
                     to={item.path}
-                    end={item.path === "/app"}
+                    end={item.path === "/app" || item.path === "/demo"}
                     onClick={() => setIsOpen(false)}
                     className={({ isActive }) => cn(
                       "flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-muted-foreground rounded-xl transition-all hover:bg-muted hover:text-foreground border-[0.5px] border-black",
