@@ -364,6 +364,13 @@ CREATE TABLE IF NOT EXISTS ml_training_logs (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- App settings (single row: key = 'default', config = JSON for schedule + metrics)
+CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    config JSONB NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ============================================================================
 -- ADDITIONAL INDEXES FOR PERFORMANCE
 -- ============================================================================

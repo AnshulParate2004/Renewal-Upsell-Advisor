@@ -120,10 +120,16 @@ export function getDaysSinceStart(date: string): number {
 /** Pipeline stage: plan % (0–30% T-30, 30–60% T-60, 60–100% T-90); past renewal or status=renewed → Renewed. */
 export type RenewalStage = "t90" | "t60" | "t30" | "renewed";
 
+export interface RenewalStageOptions {
+  milestonePercents?: number[];
+  reminderDaysBeforeRenewal?: number;
+}
+
 export function getRenewalStageFromPlan(
   contractStartDate: string | undefined | null,
   renewalDate: string | undefined | null,
-  status?: string | null
+  status?: string | null,
+  options?: RenewalStageOptions | null
 ): RenewalStage {
   if (status === "renewed") return "renewed";
   const today = new Date().toISOString().split("T")[0];
@@ -133,6 +139,8 @@ export function getRenewalStageFromPlan(
   // Past renewal (overdue) → Renewed so they don’t all sit in T-90
   const daysUntilRenewal = getDaysUntil(end);
   if (daysUntilRenewal <= 0) return "renewed";
+  const reminderDays = options?.reminderDaysBeforeRenewal ?? 1;
+  if (reminderDays >= 0 && daysUntilRenewal <= reminderDays) return "t90";
   const start = contractStartDate && contractStartDate.trim() ? contractStartDate.trim() : today;
   const startMs = new Date(start).getTime();
   if (Number.isNaN(startMs)) return "t30";
@@ -142,7 +150,12 @@ export function getRenewalStageFromPlan(
     ? (daysElapsed / planDurationDays) * 100
     : 0;
   const p = Number.isFinite(percent) ? Math.max(0, percent) : 0;
-  if (p < 30) return "t30";
-  if (p < 60) return "t60";
+  const defaultMilestones = [30, 60, 90, 95];
+  const raw = options?.milestonePercents;
+  const milestones = raw?.length ? raw : defaultMilestones;
+  const m0 = milestones[0];
+  const m1 = milestones.length >= 2 ? milestones[1] : 100;
+  if (p < m0) return "t30";
+  if (p < m1) return "t60";
   return "t90";
 }

@@ -14,8 +14,48 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Usage percentage milestones for calls
-USAGE_MILESTONES = [20, 40, 60, 80, 90, 95]
+# Default usage percentage milestones for calls (used when callMilestonePercents not set)
+DEFAULT_CALL_MILESTONES = [30, 60, 90, 95]
+
+
+def _get_app_config(client) -> Dict[str, Any]:
+    """Read full app_settings config. Returns {} if unavailable."""
+    if not client:
+        return {}
+    try:
+        result = (
+            client.table("app_settings")
+            .select("config")
+            .eq("key", "default")
+            .limit(1)
+            .execute()
+        )
+        rows = result.data or []
+        if not rows:
+            return {}
+        return rows[0].get("config") or {}
+    except Exception:
+        return {}
+
+
+def _get_metrics_config(client) -> Dict[str, Any]:
+    """Read metrics from app_settings. Returns {} if unavailable."""
+    config = _get_app_config(client)
+    return config.get("metrics") or {}
+
+
+def _get_usage_milestones(client) -> List[int]:
+    """Milestones to use for calls (from settings callMilestonePercents or default 30,60,90,95). Filtered by minUsagePercentForCall."""
+    cfg = _get_metrics_config(client)
+    raw = cfg.get("callMilestonePercents")
+    if isinstance(raw, list) and len(raw) > 0:
+        base = [int(x) for x in raw if isinstance(x, (int, float)) and 0 <= int(x) <= 100]
+        base = sorted(set(base)) if base else list(DEFAULT_CALL_MILESTONES)
+    else:
+        base = list(DEFAULT_CALL_MILESTONES)
+    min_pct = int(cfg.get("minUsagePercentForCall", 0))
+    min_pct = max(0, min(100, min_pct))
+    return [m for m in base if m >= min_pct] or ([min_pct] if min_pct <= 100 else base)
 
 
 def calculate_plan_completion_percentage(account: Dict[str, Any]) -> float:
@@ -114,14 +154,15 @@ def should_make_call(
     if not phone_number:
         return False, "No phone number"
     
-    # Determine which milestone we're at
+    milestones = _get_usage_milestones(client)
+    min_threshold = min(milestones) if milestones else 20
     current_milestone = None
-    for milestone in USAGE_MILESTONES:
+    for milestone in milestones:
         if usage_percentage >= milestone:
             current_milestone = milestone
-    
+
     if current_milestone is None:
-        return False, f"Usage {usage_percentage:.1f}% below 20% threshold"
+        return False, f"Usage {usage_percentage:.1f}% below {min_threshold}% threshold"
     
     # Check if we've already called for this milestone
     try:
@@ -158,7 +199,11 @@ def should_make_call(
         logger.error(f"Error checking call history: {e}")
         # Continue to check other conditions
     
-    # Special check: if 1 day before renewal
+    # Special check: within configured days before renewal (e.g. 1 day before)
+    full_config = _get_app_config(client)
+    schedule = full_config.get("schedule") or {}
+    reminder_days = int(schedule.get("reminderDaysBeforeRenewal", 1))
+    reminder_days = max(0, min(365, reminder_days))
     renewal_date = account.get('renewal_date')
     if renewal_date:
         try:
@@ -166,15 +211,14 @@ def should_make_call(
                 renewal_dt = datetime.fromisoformat(renewal_date.replace('Z', '+00:00'))
             else:
                 renewal_dt = renewal_date
-            
+
             if renewal_dt.tzinfo is None:
                 renewal_dt = renewal_dt.replace(tzinfo=timezone.utc)
-            
+
             days_until_renewal = (renewal_dt - datetime.now(timezone.utc)).days
-            
-            if days_until_renewal == 1:
-                # One day left - make urgent renewal call
-                return True, "1 day until renewal - urgent call needed"
+
+            if 0 <= days_until_renewal <= reminder_days:
+                return True, f"Within {reminder_days} day(s) of renewal - urgent call needed"
         except Exception as e:
             logger.error(f"Error checking renewal date: {e}")
     
@@ -220,6 +264,8 @@ async def make_voice_call(
         if not should_call:
             logger.info(f"Skipping call to {account_name}: {reason}")
             return None
+
+    milestones = _get_usage_milestones(client)
     
     # Get webhook URL from environment (.env first, then settings, then default)
     from app.core.config import settings as app_settings
@@ -242,7 +288,7 @@ async def make_voice_call(
         try:
             insert_data["metadata"] = {
                 "usage_percentage": usage_percentage,
-                "milestone": next((m for m in USAGE_MILESTONES if usage_percentage >= m), None),
+                "milestone": next((m for m in milestones if usage_percentage >= m), None),
                 "account_name": account_name
             }
         except:
@@ -293,7 +339,7 @@ async def make_voice_call(
                         "call_type": call_type,
                         "phone_number": phone_number,
                         "usage_percentage": usage_percentage,
-                        "milestone": next((m for m in USAGE_MILESTONES if usage_percentage >= m), None),
+                        "milestone": next((m for m in milestones if usage_percentage >= m), None),
                         "twilio_call_sid": call_sid,
                         "attempted_at": attempted_at
                     }

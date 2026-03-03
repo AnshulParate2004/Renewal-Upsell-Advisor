@@ -94,11 +94,12 @@ def process_audio_conversation_streaming(
     session_id: str,
     user_context: Optional[dict] = None,
     audio_format: str = "webm",
-) -> Generator[Tuple[str, int, bool, str], None, None]:
+) -> Generator[Tuple[str, int, bool, str, Optional[str]], None, None]:
     """
     Process audio with streaming response: STT once, then stream LLM by sentence and TTS each phrase.
-    Yields (audio_base64_chunk, chunk_index, is_final, transcribed_text).
+    Yields (audio_base64_chunk, chunk_index, is_final, transcribed_text, response_sentence).
     transcribed_text is non-empty only on the final chunk (is_final=True).
+    response_sentence is the bot text for this chunk (for real-time transcript).
     """
     transcribed_text = ""
     try:
@@ -132,16 +133,14 @@ def process_audio_conversation_streaming(
             try:
                 audio_bytes = azure_speech.text_to_speech(sentence, voice_name="en-US-AriaNeural")
                 chunk_b64 = base64.b64encode(audio_bytes).decode("utf-8")
-                is_final = False  # will send one more iteration to know
-                yield (chunk_b64, chunk_index, False, "")
+                yield (chunk_b64, chunk_index, False, "", sentence.strip())
                 chunk_index += 1
             except Exception as e:
                 logger.error(f"TTS failed for chunk: {e}", exc_info=True)
-        # Re-yield last chunk index with is_final and transcribed_text (no extra audio)
         if chunk_index > 0:
-            yield ("", chunk_index - 1, True, transcribed_text)
+            yield ("", chunk_index - 1, True, transcribed_text, None)
         else:
-            yield ("", 0, True, transcribed_text)
+            yield ("", 0, True, transcribed_text, None)
     except Exception as e:
         logger.error(f"Error in streaming audio conversation: {e}", exc_info=True)
         raise

@@ -1,29 +1,51 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2 } from "lucide-react";
 import { formatCurrency, getDaysUntil, getRenewalStageFromPlan } from "@/data/mockData";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useUpdateAccount } from "@/hooks/useAccounts";
+import { useAppSettings } from "@/hooks/useSettings";
 
 type Stage = "t90" | "t60" | "t30" | "renewed";
 
-const stageConfig: Record<Stage, { title: string; color: string; icon: React.ReactNode }> = {
-  t90: { title: "T-90 Horizon", color: "text-primary", icon: <Clock size={14} /> },
-  t60: { title: "T-60 Critical", color: "text-amber-500", icon: <Clock size={14} /> },
-  t30: { title: "T-30 Immediate", color: "text-destructive", icon: <ShieldAlert size={14} /> },
+const stages: Stage[] = ["t90", "t60", "t30", "renewed"];
+
+/** Default column titles when milestones not yet loaded. */
+const defaultStageConfig: Record<Stage, { title: string; color: string; icon: React.ReactNode }> = {
+  t90: { title: "60%+", color: "text-primary", icon: <Clock size={14} /> },
+  t60: { title: "30–60%", color: "text-amber-500", icon: <Clock size={14} /> },
+  t30: { title: "0–30%", color: "text-destructive", icon: <ShieldAlert size={14} /> },
   renewed: { title: "Renewed", color: "text-emerald-600", icon: <CheckCircle2 size={14} /> },
 };
 
-const stages: Stage[] = ["t90", "t60", "t30", "renewed"];
-
 export default function Pipeline() {
   const { data: accounts = [], isLoading } = useAccounts();
+  const { data: appSettings } = useAppSettings();
   const updateAccount = useUpdateAccount();
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
-  // Bucket by plan percentage: 0–30% → T-30, 30–60% → T-60, 60–100% → T-90; status=renewed → Renewed
+  const stageOptions = useMemo(() => {
+    const schedule = appSettings?.schedule;
+    const metrics = appSettings?.metrics;
+    return {
+      milestonePercents: (metrics?.callMilestonePercents?.length ? metrics.callMilestonePercents : [30, 60, 90, 95]) as number[],
+      reminderDaysBeforeRenewal: schedule?.reminderDaysBeforeRenewal ?? 1,
+    };
+  }, [appSettings]);
+
+  const stageConfig = useMemo(() => {
+    const m = stageOptions.milestonePercents;
+    const m0 = m[0] ?? 30;
+    const m1 = m.length >= 2 ? (m[1] ?? 60) : 100;
+    return {
+      t30: { ...defaultStageConfig.t30, title: `0–${m0}%` },
+      t60: { ...defaultStageConfig.t60, title: `${m0}–${m1}%` },
+      t90: { ...defaultStageConfig.t90, title: `${m1}%+` },
+      renewed: defaultStageConfig.renewed,
+    };
+  }, [stageOptions.milestonePercents]);
+
   const byStage = (stage: Stage) =>
-    accounts.filter((a) => getRenewalStageFromPlan(a.contractStart, a.renewalDate, a.status) === stage);
+    accounts.filter((a) => getRenewalStageFromPlan(a.contractStart, a.renewalDate, a.status, stageOptions) === stage);
   const stageArr = (stage: Stage) => byStage(stage).reduce((s, a) => s + a.arr, 0);
 
   const handleDragStart = (id: string) => setDraggedId(id);

@@ -5,12 +5,19 @@ function useScrollToTop() {
     window.scrollTo(0, 0);
   }, []);
 }
-import { Mic, MicOff, Volume2, VolumeX, Sparkles, Phone, TrendingUp, RefreshCw, Shield, ArrowLeft, Play, Pause } from "lucide-react";
+
+type TranscriptEntry = {
+  id: string;
+  role: "bot" | "user";
+  text: string;
+};
+
+import { Mic, MicOff, Volume2, VolumeX, Sparkles, Phone, TrendingUp, RefreshCw, Shield, ArrowLeft, Play, Pause, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { voicebotApi } from "@/lib/api/voicebot";
 
@@ -89,7 +96,9 @@ export default function Demo() {
   const [isConnected, setIsConnected] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [playingDemo, setPlayingDemo] = useState<string | null>(null);
-  
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+
+  const transcriptEndRef = useRef<HTMLDivElement | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -128,12 +137,37 @@ export default function Demo() {
         const data = JSON.parse(event.data);
 
         if (data.type === "greeting") {
+          const greetingText = data.text || data.greeting_text || "";
+          if (greetingText) {
+            setTranscript((prev) => [
+              ...prev,
+              { id: crypto.randomUUID(), role: "bot", text: greetingText },
+            ]);
+          }
           if (data.audio_base64 && !isMutedRef.current) {
             setIsSpeaking(true);
             await playBase64Audio(data.audio_base64);
             setIsSpeaking(false);
           }
         } else if (data.type === "audio_chunk") {
+          if (data.response_text) {
+            setTranscript((prev) => {
+              const last = prev[prev.length - 1];
+              if (last?.role === "bot") {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, text: last.text + (last.text ? " " : "") + data.response_text },
+                ];
+              }
+              return [...prev, { id: crypto.randomUUID(), role: "bot", text: data.response_text }];
+            });
+          }
+          if (data.transcribed_text) {
+            setTranscript((prev) => [
+              ...prev,
+              { id: crypto.randomUUID(), role: "user", text: data.transcribed_text },
+            ]);
+          }
           if (data.audio_base64) enqueueAndPlay(data.audio_base64);
         } else if (data.type === "audio_response") {
           if (data.audio_base64) enqueueAndPlay(data.audio_base64);
@@ -328,6 +362,11 @@ export default function Demo() {
     }
   };
 
+  // Smooth scroll transcript to bottom when new messages arrive
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [transcript]);
+
   const handlePlayDemo = (demoId: string) => {
     if (playingDemo === demoId) {
       setPlayingDemo(null);
@@ -463,6 +502,53 @@ export default function Demo() {
                         <Volume2 className="w-6 h-6" />
                       )}
                     </Button>
+                  </div>
+
+                  {/* Live transcript – real-time, smooth updates */}
+                  <div className="mt-6 w-full border-t-2 border-black pt-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MessageSquare className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium text-foreground">Live transcript</span>
+                    </div>
+                    <div
+                      className="h-40 overflow-y-auto rounded-xl border-2 border-black bg-muted/30 p-3 space-y-2 scroll-smooth"
+                      style={{ scrollBehavior: "smooth" }}
+                    >
+                      <AnimatePresence initial={false}>
+                        {transcript.length === 0 ? (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-xs text-muted-foreground italic"
+                          >
+                            Conversation will appear here as you talk…
+                          </motion.p>
+                        ) : (
+                          transcript.map((entry) => (
+                            <motion.div
+                              key={entry.id}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                              className={`flex ${entry.role === "user" ? "justify-end" : "justify-start"}`}
+                            >
+                              <span
+                                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${
+                                  entry.role === "bot"
+                                    ? "bg-primary/10 text-foreground"
+                                    : "bg-primary text-primary-foreground"
+                                }`}
+                              >
+                                {entry.role === "bot" && <span className="font-medium text-primary text-xs mr-1">Bot:</span>}
+                                {entry.role === "user" && <span className="font-medium text-primary-foreground/90 text-xs mr-1">You:</span>}
+                                {entry.text}
+                              </span>
+                            </motion.div>
+                          ))
+                        )}
+                      </AnimatePresence>
+                      <div ref={transcriptEndRef} />
+                    </div>
                   </div>
                 </div>
               </div>

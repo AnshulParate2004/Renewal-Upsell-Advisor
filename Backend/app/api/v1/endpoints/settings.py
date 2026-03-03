@@ -12,7 +12,7 @@ with at least the following columns:
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from app.core.logging import get_logger
 from app.services.email.scheduler import get_supabase_client
@@ -27,6 +27,7 @@ class ScheduleConfig(BaseModel):
   Call & email scheduling preferences.
 
   Times are stored in 24h "HH:MM" format (no timezone attached).
+  Auto schedule times define when the daily email and call jobs run (e.g. IST).
   """
 
   callWindowStart: str = Field("09:00", description="Preferred call window start time (HH:MM, 24h)")
@@ -34,16 +35,27 @@ class ScheduleConfig(BaseModel):
   emailWindowStart: str = Field("08:00", description="Preferred email window start time (HH:MM, 24h)")
   emailWindowEnd: str = Field("18:00", description="Preferred email window end time (HH:MM, 24h)")
   followUpDays: int = Field(3, ge=1, le=60, description="Default days between follow-ups (throttle interval)")
+  autoEmailScheduleTime: str = Field("12:00", description="Daily time to run auto email campaign (HH:MM, 24h)")
+  autoCallScheduleTime: str = Field("14:00", description="Daily time to run auto call processing (HH:MM, 24h)")
+  reminderDaysBeforeRenewal: int = Field(1, ge=0, le=365, description="Trigger call/email when this many days before renewal (e.g. 1 = 1 day before)")
 
 
 class MetricsConfig(BaseModel):
   """
-  Default metric guardrails used by dashboards & alerts.
+  Default metric guardrails and percentage-wise thresholds.
   """
 
   churnRiskThreshold: int = Field(30, ge=0, le=100, description="Churn risk % above which accounts are high-risk")
   renewalTarget: int = Field(90, ge=0, le=100, description="Target renewal rate % for the portfolio")
   upsellPipelineTarget: int = Field(100_000, ge=0, description="Upsell pipeline ARR target used in dashboards")
+  # Percentage-wise thresholds
+  renewalReminderAtCompletionPercent: int = Field(90, ge=0, le=100, description="Send renewal reminder when plan completion >= this %")
+  highRiskScoreThresholdPercent: int = Field(70, ge=0, le=100, description="Risk score >= this % treated as high-risk")
+  churnProbabilityThresholdPercent: int = Field(70, ge=0, le=100, description="Churn probability >= this % (e.g. 70 = 0.70) triggers churn prevention")
+  minUsagePercentForCall: int = Field(20, ge=0, le=100, description="Minimum plan completion % to trigger first call")
+  healthScoreAtRiskBelowPercent: int = Field(50, ge=0, le=100, description="Health score below this % treated as at-risk")
+  callMilestonePercents: List[int] = Field(default=[30, 60, 90, 95], description="Plan completion % at which to trigger calls (e.g. 30, 60, 90, 95)")
+  emailMilestonePercents: List[int] = Field(default=[30, 60, 90, 95], description="Plan completion % at which to send emails (e.g. 30, 60, 90, 95)")
 
 
 class AppSettings(BaseModel):

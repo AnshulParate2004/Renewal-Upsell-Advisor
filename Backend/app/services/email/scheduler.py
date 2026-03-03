@@ -31,20 +31,27 @@ logger = get_logger(__name__)
 
 
 def get_supabase_client():
-    """Get Supabase client."""
+    """Get Supabase client or None if not configured."""
     from supabase import create_client
     from app.core.config import settings
-    
+
     supabase_url = os.getenv("SUPABASE_URL") or settings.SUPABASE_URL
     supabase_key = (
-        os.getenv("SUPABASE_SERVICE_ROLE_SECRET") or 
-        os.getenv("SUPABASE_SERVICE_ROLE_KEY") or 
-        os.getenv("SUPABASE_KEY") or
-        os.getenv("SUPABASE_ANON_KEY") or
-        settings.SUPABASE_KEY
+        os.getenv("SUPABASE_SERVICE_ROLE_SECRET")
+        or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_KEY")
+        or os.getenv("SUPABASE_ANON_KEY")
+        or settings.SUPABASE_KEY
     )
-    
+
     if not supabase_url or not supabase_key:
+        logger.warning("Supabase URL/key missing; returning no client for scheduler/settings.")
+        return None
+
+    try:
+        return create_client(supabase_url, supabase_key)
+    except Exception as e:
+        logger.error("Failed to create Supabase client: %s", e)
         return None
 
 
@@ -69,6 +76,14 @@ def _get_app_settings_config(client: Any) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Failed to read app_settings config for scheduler: {e}")
         return {}
+
+
+def _get_metrics_config(client: Any | None) -> Dict[str, Any]:
+    """Read metrics (including percentage thresholds) from app_settings. Returns {} if unavailable."""
+    if client is None:
+        return {}
+    cfg = _get_app_settings_config(client)
+    return cfg.get("metrics") or {}
 
 
 def get_email_interval_days(client: Any | None = None) -> int:
@@ -154,6 +169,18 @@ async def send_scheduled_emails():
         # Determine dynamic throttle interval (in days) for follow-ups
         interval_days = get_email_interval_days(client)
         logger.info(f"Email scheduler using interval of {interval_days} day(s) between emails.")
+        metrics_cfg = _get_metrics_config(client)
+        schedule_cfg = _get_app_settings_config(client).get("schedule") or {}
+        reminder_days_before_renewal = int(schedule_cfg.get("reminderDaysBeforeRenewal", 1))
+        reminder_days_before_renewal = max(0, min(365, reminder_days_before_renewal))
+        email_milestones = metrics_cfg.get("emailMilestonePercents")
+        if isinstance(email_milestones, list) and len(email_milestones) > 0:
+            renewal_pct = int(max(email_milestones))
+        else:
+            renewal_pct = int(metrics_cfg.get("renewalReminderAtCompletionPercent", 95))
+        risk_threshold_pct = int(metrics_cfg.get("highRiskScoreThresholdPercent", 70))
+        churn_threshold_pct = int(metrics_cfg.get("churnProbabilityThresholdPercent", 70))
+        churn_prob_threshold = churn_threshold_pct / 100.0
         
         for account in accounts:
             try:
@@ -252,7 +279,7 @@ async def send_scheduled_emails():
                 
                 if has_upsell_opportunity:
                     email_type = "upsell"
-                elif risk_score >= 70 or churn_probability >= 0.7:
+                elif risk_score >= risk_threshold_pct or churn_probability >= churn_prob_threshold:
                     email_type = "churn_prevention"
                 elif contract_start_date and contract_end_date:
                     # Calculate plan completion percentage
@@ -286,8 +313,8 @@ async def send_scheduled_emails():
                             
                             logger.info(f"Account {account_name}: Plan {plan_completion_percentage:.1f}% completed ({days_elapsed}/{total_days} days)")
                             
-                            # If 90% or more of plan is completed, send renewal reminder
-                            if plan_completion_percentage >= 90:
+                            # If configured % or more of plan is completed, send renewal reminder
+                            if plan_completion_percentage >= renewal_pct:
                                 email_type = "renewal_reminder"
                             else:
                                 # Less than 90% completed - send wellness check
@@ -307,9 +334,9 @@ async def send_scheduled_emails():
                         else:
                             renewal_dt = renewal_date
                         days_until_renewal = (renewal_dt.replace(tzinfo=None) - datetime.now()).days
-                        
-                        # If less than 90 days until renewal, send renewal reminder
-                        if 0 <= days_until_renewal < 90:
+
+                        # If within configured days before renewal (e.g. 1 day before), send renewal reminder
+                        if 0 <= days_until_renewal <= reminder_days_before_renewal:
                             email_type = "renewal_reminder"
                         else:
                             email_type = "wellness_check"
@@ -559,6 +586,18 @@ def _get_email_content_for_account(client: Any, account_id: str) -> Dict[str, An
     )
     if not recipient_email:
         return {"error": f"No email address for account {account_name}."}
+    metrics_cfg = _get_metrics_config(client)
+    full_cfg = _get_app_settings_config(client)
+    schedule_cfg = full_cfg.get("schedule") or {}
+    reminder_days_before_renewal = max(0, min(365, int(schedule_cfg.get("reminderDaysBeforeRenewal", 1))))
+    email_milestones = metrics_cfg.get("emailMilestonePercents")
+    if isinstance(email_milestones, list) and len(email_milestones) > 0:
+        renewal_pct = int(max(email_milestones))
+    else:
+        renewal_pct = int(metrics_cfg.get("renewalReminderAtCompletionPercent", 95))
+    risk_threshold_pct = int(metrics_cfg.get("highRiskScoreThresholdPercent", 70))
+    churn_threshold_pct = int(metrics_cfg.get("churnProbabilityThresholdPercent", 70))
+    churn_prob_threshold = churn_threshold_pct / 100.0
     contract_start_date = account.get("contract_start_date")
     contract_end_date = account.get("contract_end_date")
     renewal_date = account.get("renewal_date")
@@ -570,7 +609,7 @@ def _get_email_content_for_account(client: Any, account_id: str) -> Dict[str, An
     plan_completion_percentage = None
     if has_upsell_opportunity:
         email_type = "upsell"
-    elif risk_score >= 70 or churn_probability >= 0.7:
+    elif risk_score >= risk_threshold_pct or churn_probability >= churn_prob_threshold:
         email_type = "churn_prevention"
     elif contract_start_date and contract_end_date:
         try:
@@ -582,14 +621,14 @@ def _get_email_content_for_account(client: Any, account_id: str) -> Dict[str, An
             days_elapsed = (datetime.now() - start_dt).days
             if total_days > 0:
                 plan_completion_percentage = max(0, min(100, (days_elapsed / total_days) * 100))
-                email_type = "renewal_reminder" if plan_completion_percentage >= 90 else "wellness_check"
+                email_type = "renewal_reminder" if plan_completion_percentage >= renewal_pct else "wellness_check"
         except Exception:
             pass
     elif renewal_date:
         try:
             renewal_dt = datetime.fromisoformat(renewal_date.replace("Z", "+00:00")) if isinstance(renewal_date, str) else renewal_date
             days_until = (renewal_dt.replace(tzinfo=None) - datetime.now()).days if renewal_dt.tzinfo else (renewal_dt - datetime.now()).days
-            email_type = "renewal_reminder" if 0 <= days_until < 90 else "wellness_check"
+            email_type = "renewal_reminder" if 0 <= days_until <= reminder_days_before_renewal else "wellness_check"
         except Exception:
             pass
     opportunity = opportunities_result.data[0] if (email_type == "upsell" and has_upsell_opportunity) else None
@@ -715,60 +754,79 @@ async def send_email_to_single_account(
         return {"success": False, "error": str(e)}
 
 
+def _parse_schedule_time(value: Any) -> tuple[int, int]:
+    """Parse 'HH:MM' string to (hour, minute). Default (12, 0) on error."""
+    if not value or not isinstance(value, str):
+        return (12, 0)
+    parts = value.strip().split(":")
+    try:
+        h = int(parts[0]) if len(parts) > 0 else 12
+        m = int(parts[1]) if len(parts) > 1 else 0
+        return (max(0, min(23, h)), max(0, min(59, m)))
+    except (ValueError, TypeError):
+        return (12, 0)
+
+
+def get_auto_email_schedule_hm(client: Any | None) -> tuple[int, int]:
+    """Get (hour, minute) for daily email run from app_settings. Default (12, 0) IST."""
+    if client is None:
+        return (12, 0)
+    cfg = _get_app_settings_config(client)
+    schedule = cfg.get("schedule") or {}
+    return _parse_schedule_time(schedule.get("autoEmailScheduleTime") or "12:00")
+
+
+def get_next_scheduled_ist(hour: int, minute: int):
+    """
+    Next occurrence of given hour:minute in IST (UTC+5:30).
+    Returns datetime in UTC timezone.
+    """
+    ist_offset = timedelta(hours=5, minutes=30)
+    ist_timezone = timezone(ist_offset)
+    current_utc = datetime.now(timezone.utc)
+    current_ist = current_utc.astimezone(ist_timezone)
+    target_ist = current_ist.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if current_ist >= target_ist:
+        target_ist += timedelta(days=1)
+    return target_ist.astimezone(timezone.utc)
+
+
 def get_next_12pm_ist():
     """
     Calculate the next 12:00 PM IST (UTC+5:30) time.
     Returns datetime in UTC timezone.
     """
-    # IST is UTC+5:30
-    ist_offset = timedelta(hours=5, minutes=30)
-    ist_timezone = timezone(ist_offset)
-    
-    # Get current time in IST
-    current_utc = datetime.now(timezone.utc)
-    current_ist = current_utc.astimezone(ist_timezone)
-    
-    # Target time: 12:00 PM IST today
-    target_ist = current_ist.replace(hour=12, minute=0, second=0, microsecond=0)
-    
-    # If 12:00 PM IST has already passed today, schedule for tomorrow
-    if current_ist >= target_ist:
-        target_ist += timedelta(days=1)
-    
-    # Convert back to UTC
-    target_utc = target_ist.astimezone(timezone.utc)
-    
-    return target_utc
+    return get_next_scheduled_ist(12, 0)
 
 
 async def run_email_scheduler():
     """
-    Run email scheduler - checks daily at 12:00 PM IST.
-    Sends emails only if 7 days have passed since last email (checked from Supabase).
-    This should be run as a background task.
+    Run email scheduler - checks daily at configured time (app_settings.autoEmailScheduleTime, default 12:00 IST).
+    Sends emails only if N days have passed since last email (followUpDays from settings).
     """
-    logger.info("Email scheduler started - will run daily at 12:00 PM IST")
-    
+    client = get_supabase_client()
+    hour, minute = get_auto_email_schedule_hm(client)
+    logger.info("Email scheduler started - will run daily at %02d:%02d IST", hour, minute)
+
     while True:
         try:
-            # Calculate next run time (12:00 PM IST)
-            next_run = get_next_12pm_ist()
+            next_run = get_next_scheduled_ist(hour, minute)
             current_utc = datetime.now(timezone.utc)
             wait_seconds = (next_run - current_utc).total_seconds()
-            
+
             if wait_seconds > 0:
-                logger.info(f"Next email check scheduled for {next_run.strftime('%Y-%m-%d %H:%M:%S UTC')} (12:00 PM IST)")
+                logger.info("Next email check at %s UTC (%02d:%02d IST)", next_run.strftime("%Y-%m-%d %H:%M:%S"), hour, minute)
                 await asyncio.sleep(wait_seconds)
             else:
-                # If somehow we're past the time, wait a short period and recalculate
                 await asyncio.sleep(60)
                 continue
-            
-            # Run email check at 12:00 PM IST
-            logger.info("Running scheduled email check at 12:00 PM IST")
+
+            logger.info("Running scheduled email check at %02d:%02d IST", hour, minute)
             await send_scheduled_emails()
-            
-            # After sending, wait until next day's 12:00 PM IST
+
+            # Re-read schedule time so user changes take effect next run
+            client = get_supabase_client()
+            hour, minute = get_auto_email_schedule_hm(client)
             # The loop will recalculate and wait automatically
             
         except Exception as e:

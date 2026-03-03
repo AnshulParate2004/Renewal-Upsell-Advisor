@@ -191,7 +191,7 @@ async def audio_websocket_endpoint(websocket: WebSocket):
                     continue
                 try:
                     # Streaming: STT -> stream LLM by sentence -> TTS per phrase -> send chunks
-                    for chunk_b64, chunk_index, is_final, transcribed_text in process_audio_conversation_streaming(
+                    for chunk_b64, chunk_index, is_final, transcribed_text, response_sentence in process_audio_conversation_streaming(
                         audio_base64=audio_base64,
                         session_id=session_id,
                         user_context=user_context,
@@ -205,6 +205,8 @@ async def audio_websocket_endpoint(websocket: WebSocket):
                         }
                         if chunk_b64:
                             payload["audio_base64"] = chunk_b64
+                        if response_sentence:
+                            payload["response_text"] = response_sentence
                         if is_final and transcribed_text:
                             payload["transcribed_text"] = transcribed_text
                         await websocket.send_json(payload)
