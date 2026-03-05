@@ -374,10 +374,12 @@ function ContactInfoSection({ account }: { account: any }) {
     const [contactName, setContactName] = useState(account.contactName || "");
     const [contactEmail, setContactEmail] = useState(account.contactEmail || "");
     const [contactPhone, setContactPhone] = useState(account.contactPhone || "");
+    const [contactCity, setContactCity] = useState(account.contactCity || "");
+    const [contactState, setContactState] = useState(account.contactState || "");
 
     const handleSave = () => {
         // In real app, this would call an API
-        console.log("Saving contact:", { contactName, contactEmail, contactPhone });
+        console.log("Saving contact:", { contactName, contactEmail, contactPhone, contactCity, contactState });
         setIsEditing(false);
     };
 
@@ -385,6 +387,8 @@ function ContactInfoSection({ account }: { account: any }) {
         setContactName(account.contactName || "");
         setContactEmail(account.contactEmail || "");
         setContactPhone(account.contactPhone || "");
+        setContactCity(account.contactCity || "");
+        setContactState(account.contactState || "");
         setIsEditing(false);
     };
 
@@ -508,6 +512,53 @@ function ContactInfoSection({ account }: { account: any }) {
                                 </a>
                             </div>
                         )}
+                    </div>
+
+                    {/* Location: City and State */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                            <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">CITY</label>
+                            {isEditing ? (
+                                <input
+                                    type="text"
+                                    value={contactCity}
+                                    onChange={(e) => setContactCity(e.target.value)}
+                                    placeholder="City"
+                                    className="w-full px-4 py-2 bg-white border-2 border-black rounded-lg text-sm font-black text-foreground uppercase tracking-wide focus:outline-none focus:bg-primary/5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                />
+                            ) : (
+                                <div className="bg-white border-2 border-black rounded-lg p-3 group shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+                                    <div className="text-sm font-black text-foreground flex items-center gap-2 uppercase tracking-wide">
+                                        <div className="w-6 h-6 p-1 bg-white border-2 border-black rounded-md text-foreground/60 flex items-center justify-center shrink-0 shadow-sm">
+                                            <Building2 size={12} />
+                                        </div>
+                                        <span className="truncate">{contactCity || "N/A"}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">STATE</label>
+                            {isEditing ? (
+                                <input
+                                    type="text"
+                                    value={contactState}
+                                    onChange={(e) => setContactState(e.target.value)}
+                                    placeholder="State"
+                                    className="w-full px-4 py-2 bg-white border-2 border-black rounded-lg text-sm font-black text-foreground uppercase tracking-wide focus:outline-none focus:bg-primary/5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                                />
+                            ) : (
+                                <div className="bg-white border-2 border-black rounded-lg p-3 group shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+                                    <div className="text-sm font-black text-foreground flex items-center gap-2 uppercase tracking-wide">
+                                        <div className="w-6 h-6 p-1 bg-white border-2 border-black rounded-md text-foreground/60 flex items-center justify-center shrink-0 shadow-sm">
+                                            <Building2 size={12} />
+                                        </div>
+                                        <span className="truncate">{contactState || "N/A"}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="bg-white border-2 border-black rounded-lg p-4 flex items-center gap-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">

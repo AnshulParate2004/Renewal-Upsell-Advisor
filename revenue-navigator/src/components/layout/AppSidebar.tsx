@@ -21,7 +21,7 @@ const navItems = [
   { title: "Voice Calls", path: "/app/calls", icon: Phone },
   { title: "Opportunities", path: "/app/opportunities", icon: DollarSign },
   { title: "Analytics", path: "/app/analytics", icon: BarChart3 },
-  { title: "Manual Triggers", path: "/app/triggers", icon: PlayCircle },
+  { title: "Campaigns", path: "/app/triggers", icon: PlayCircle },
   { title: "Settings", path: "/app/settings", icon: Settings },
 ];
 

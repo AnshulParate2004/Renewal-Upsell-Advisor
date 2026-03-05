@@ -1,10 +1,12 @@
 import { Bell, User, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { useRevenue } from "@/contexts/RevenueContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { SearchDropdown } from "@/components/SearchDropdown";
 
 export function TopBar() {
   const { theme, toggle } = useTheme();
+  const { revenueType, setRevenueType } = useRevenue();
 
   return (
     <header className="sticky top-0 z-30 h-14 flex items-center justify-between border-b-2 border-black bg-card/90 backdrop-blur-sm px-5 shrink-0">
@@ -15,6 +17,21 @@ export function TopBar() {
           <Bell className="h-4 w-4" />
           <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-destructive rounded-full" />
         </button>
+
+        <div className="flex bg-muted rounded-lg p-0.5 border-[0.5px] border-black h-8 shrink-0 mx-1">
+          <button
+            onClick={() => setRevenueType('ARR')}
+            className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors ${revenueType === 'ARR' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-black/5'}`}
+          >
+            ARR
+          </button>
+          <button
+            onClick={() => setRevenueType('MRR')}
+            className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors ${revenueType === 'MRR' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-black/5'}`}
+          >
+            MRR
+          </button>
+        </div>
 
         <button
           onClick={toggle}

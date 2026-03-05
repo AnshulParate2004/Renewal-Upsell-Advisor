@@ -54,8 +54,6 @@ class MetricsConfig(BaseModel):
   churnProbabilityThresholdPercent: int = Field(70, ge=0, le=100, description="Churn probability >= this % (e.g. 70 = 0.70) triggers churn prevention")
   minUsagePercentForCall: int = Field(20, ge=0, le=100, description="Minimum plan completion % to trigger first call")
   healthScoreAtRiskBelowPercent: int = Field(50, ge=0, le=100, description="Health score below this % treated as at-risk")
-  callMilestonePercents: List[int] = Field(default=[30, 60, 90, 95], description="Plan completion % at which to trigger calls (e.g. 30, 60, 90, 95)")
-  emailMilestonePercents: List[int] = Field(default=[30, 60, 90, 95], description="Plan completion % at which to send emails (e.g. 30, 60, 90, 95)")
 
 
 class AppSettings(BaseModel):

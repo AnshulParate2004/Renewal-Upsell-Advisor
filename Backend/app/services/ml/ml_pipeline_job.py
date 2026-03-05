@@ -83,8 +83,7 @@ def run_pipeline_and_push_to_supabase() -> Dict[str, Any]:
                         "relationship_score": updates.get("relationship_score"),
                         "health_score": updates.get("health_score"),
                         "risk_score": updates.get("risk_score"),
-                        "churn_probability": updates.get("churn_probability"),
-                        "model_version": "daily_pipeline_v1",
+                        "churn_probability": updates.get("churn_probability")
                     })
                 except Exception as e:
                     result["errors"].append({"account_id": account_id, "message": f"Account update: {e}"})
@@ -117,6 +116,14 @@ def run_pipeline_and_push_to_supabase() -> Dict[str, Any]:
 
         if upsell_rows:
             try:
+                # First delete existing 'identified' opportunities for these accounts to avoid duplicates
+                account_ids_with_upsell = list(set([row["account_id"] for row in upsell_rows]))
+                if account_ids_with_upsell:
+                    try:
+                        client.table("upsell_opportunities").delete().in_("account_id", account_ids_with_upsell).eq("status", "identified").execute()
+                    except Exception as e:
+                        logger.warning(f"Failed to delete old identified opportunities: {e}")
+                        
                 client.table("upsell_opportunities").insert(upsell_rows).execute()
                 result["upsell_inserted"] = len(upsell_rows)
             except Exception as e:

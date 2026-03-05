@@ -22,40 +22,44 @@ import AccountDetailPage from "./pages/AccountDetailPage";
 import NotFound from "./pages/NotFound";
 import "./styles/animations.css";
 
+import { RevenueProvider } from "@/contexts/RevenueContext";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <CustomCursor />
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/signin" element={<SignIn />} />
-          <Route path="/features" element={<Features />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/demo" element={<Demo />} />
+    <RevenueProvider>
+      <TooltipProvider>
+        <CustomCursor />
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/signin" element={<SignIn />} />
+            <Route path="/features" element={<Features />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/demo" element={<Demo />} />
 
-          {/* App Routes */}
-          <Route path="/app" element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="accounts" element={<Accounts />} />
-            <Route path="pipeline" element={<Pipeline />} />
-            <Route path="calls" element={<Calls />} />
-            <Route path="opportunities" element={<Opportunities />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="triggers" element={<ManualTriggersPage />} />
-            <Route path="accounts/:accountId" element={<AccountDetailPage />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
+            {/* App Routes */}
+            <Route path="/app" element={<AppLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="accounts" element={<Accounts />} />
+              <Route path="pipeline" element={<Pipeline />} />
+              <Route path="calls" element={<Calls />} />
+              <Route path="opportunities" element={<Opportunities />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="triggers" element={<ManualTriggersPage />} />
+              <Route path="accounts/:accountId" element={<AccountDetailPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </RevenueProvider>
   </QueryClientProvider>
 );
 

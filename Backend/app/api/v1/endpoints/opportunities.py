@@ -63,7 +63,7 @@ async def get_opportunities(skip: int = 0, limit: int = 100):
         # Query upsell_opportunities table
         result = client.table("upsell_opportunities").select(
             "id, account_id, opportunity_type, predicted_value, probability, "
-            "recommended_products, reasoning, status, created_at, updated_at"
+            "status, created_at, updated_at"
         ).range(skip, skip + limit - 1).execute()
         
         opportunities = result.data if result.data else []
@@ -91,8 +91,6 @@ async def get_opportunities(skip: int = 0, limit: int = 100):
                 "created_date": opp.get("created_at", ""),
                 "created_at": opp.get("created_at", ""),
                 "updated_at": opp.get("updated_at"),
-                "recommended_products": opp.get("recommended_products"),
-                "reasoning": opp.get("reasoning"),
             })
         
         logger.info(f"Returning {len(transformed)} opportunities (skip={skip}, limit={limit})")
@@ -139,8 +137,6 @@ async def get_opportunity(opportunity_id: str):
             "created_date": opp.get("created_at", ""),
             "created_at": opp.get("created_at", ""),
             "updated_at": opp.get("updated_at"),
-            "recommended_products": opp.get("recommended_products"),
-            "reasoning": opp.get("reasoning"),
         }
     except HTTPException:
         raise

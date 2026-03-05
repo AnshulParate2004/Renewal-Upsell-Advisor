@@ -78,7 +78,6 @@ class RelationshipScorePredictor:
         # Apply scaler
         if 'scaler' in self.preprocessing:
             scaled_features = self.preprocessing['scaler'].transform(feature_df)
-        else:
-            scaled_features = feature_df.values
+            return pd.DataFrame(scaled_features, columns=feature_names)
         
-        return scaled_features
+        return feature_df

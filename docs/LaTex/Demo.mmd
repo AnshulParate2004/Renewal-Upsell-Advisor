@@ -1,0 +1,31 @@
+sequenceDiagram
+    participant User as CSM (User)
+    participant UI as Frontend (React/WebSockets)
+    participant API as Backend (FastAPI)
+    participant DB as Postgres (Supabase)
+    participant ML as ML Pipeline
+    participant Bot as Voice/Email Agents
+
+    User->>UI: 1. Sign in to Dashboard
+    User->>UI: 2. Upload Database / Excel Data
+    UI->>API: Send raw customer data
+    API->>DB: Store standardized records
+    
+    User->>UI: 3. Customize Formulas & Settings
+    UI->>API: Save configuration
+    
+    API->>ML: 4. Trigger ML Pipeline
+    ML->>DB: Fetch Account Data
+    ML-->>ML: Calculate Health, Churn & Upsell
+    ML->>DB: Update Opportunities & Scores
+    
+    DB-->>API: Data updated
+    API-->>UI: Dashboard stats updated
+    
+    API->>Bot: 5. Trigger Automated Campaigns
+    Bot->>Bot: Engage customer (Voice/Email)
+    Bot->>API: 6. Webhooks (Call Status/Transcripts)
+    
+    API->>DB: Save interaction logs & sentiment
+    API-->>UI: 7. Real-time WebSocket Alert (Call Finished/Risk Detected)
+    UI-->>User: Display Live Alerts & Updated Dashboard

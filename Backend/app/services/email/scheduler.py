@@ -520,8 +520,7 @@ async def send_scheduled_emails():
                             client.table("activity_logs").insert({
                                 "account_id": account_id,
                                 "action": "send_email",
-                                "entity_type": "email_campaign",
-                                "entity_id": email_campaign_id,
+                                "title": f"Sent {email_type} email",
                                 "details": {
                                     "campaign_type": email_type,
                                     "recipient_email": recipient_email,
@@ -744,7 +743,7 @@ async def send_email_to_single_account(
         client.table("accounts").update({"last_contact_date": sent_at_iso}).eq("id", account_id_val).execute()
         try:
             from app.services.activity_log import log_activity
-            log_activity("send_email", account_id=account_id_val, entity_type="email_campaign", details={"campaign_type": email_type, "recipient_email": recipient_email})
+            log_activity("send_email", account_id=account_id_val, title=f"Sent {email_type} email", details={"campaign_type": email_type, "recipient_email": recipient_email})
         except Exception:
             pass
         logger.info(f"Manual email sent to {recipient_email} for account {account_name} (Type: {email_type})")

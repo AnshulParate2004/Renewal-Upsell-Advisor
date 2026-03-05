@@ -133,7 +133,7 @@ async def list_voice_calls(
     try:
         result = (
             client.table("voice_calls")
-            .select("id, account_id, duration_seconds, status, outcome, attempted_at, completed_at, created_at, retry_count, metadata")
+            .select("id, account_id, duration, status, outcome, scheduled_at, completed_at, created_at, retry_count, sentiment")
             .order("created_at", desc=True)
             .range(skip, skip + limit - 1)
             .execute()
@@ -156,7 +156,7 @@ async def list_voice_calls(
 
         calls: List[Dict[str, Any]] = []
         for r in rows:
-            completed = r.get("completed_at") or r.get("attempted_at") or r.get("created_at")
+            completed = r.get("completed_at") or r.get("scheduled_at") or r.get("created_at")
             if isinstance(completed, str) and "T" in completed:
                 date_str = completed.split("T")[0]
                 try:
@@ -167,14 +167,22 @@ async def list_voice_calls(
             else:
                 date_display = str(completed) if completed else "—"
 
-            dur_sec = r.get("duration_seconds")
-            if dur_sec is not None:
-                duration_display = f"{int(dur_sec) // 60}m {int(dur_sec) % 60}s" if int(dur_sec) >= 0 else "—"
+            # Use duration directly if string, otherwise calculate from seconds
+            dur = r.get("duration")
+            dur_sec = None
+            if dur is not None:
+                if isinstance(dur, str) and "m" in dur:
+                    duration_display = dur
+                else:
+                    try:
+                        dur_sec = int(dur)
+                        duration_display = f"{dur_sec // 60}m {dur_sec % 60}s" if dur_sec >= 0 else "—"
+                    except:
+                        duration_display = str(dur)
             else:
                 duration_display = "—"
 
-            meta = r.get("metadata") or {}
-            sentiment_category = (meta.get("sentiment_category") or "").lower()
+            sentiment_category = (r.get("sentiment") or "").lower()
             if "positive" in sentiment_category or "very_positive" in sentiment_category:
                 sentiment = "positive"
             elif "negative" in sentiment_category or "very_negative" in sentiment_category:
@@ -524,8 +532,7 @@ async def handle_input(
                     client.table("activity_logs").insert({
                         "account_id": account_id,
                         "action": "voice_call_completed",
-                        "entity_type": "voice_call",
-                        "entity_id": call_id,
+                        "title": "Voice Call Completed",
                         "details": {
                             "call_type": call_type,
                             "phone_number": account.get("primary_contact_phone"),
@@ -715,8 +722,7 @@ async def call_status(
                 client.table("activity_logs").insert({
                     "account_id": account_id,
                     "action": action_name,
-                    "entity_type": "voice_call",
-                    "entity_id": call_id,
+                    "title": f"Voice Call {status_lower.capitalize()}",
                     "details": activity_details
                 }).execute()
                 

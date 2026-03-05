@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant Platform as Renewal & Upsell Platform
+    participant Bot as AI Agent (Voice / Email)
+    participant Customer as End Customer
+    participant CSM as Customer Success Manager
+
+    Platform->>Bot: 1. Trigger automated campaign (Renewal / Upsell)
+    Bot->>Customer: 2. Outbound engagement (Call or Email)
+    
+    alt Customer Answers / Engages
+        Customer->>Bot: 3. Interacts with the AI Agent
+        Bot->>Customer: 4. AI responds dynamically to inquiries or objections
+        Customer->>Bot: 5. Expresses intent & sentiment (e.g., Positive / Ready to Renew)
+    else Customer Ignores
+        Bot->>Platform: Log unresponsiveness / voicemail
+    end
+
+    Bot->>Platform: 6. Streams real-time transcript & sentiment data
+    
+    Platform->>CSM: 7. Push instant WebSocket alerts to CSM dashboard
+    Platform->>Platform: 8. Update Account Health & Relationship Score automatically
+    
+    opt Human Escalation
+        CSM->>Customer: 9. Manual follow-up to close deal or resolve high risk
+    end

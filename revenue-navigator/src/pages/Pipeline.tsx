@@ -1,52 +1,36 @@
 import { useMemo, useState } from "react";
-import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2 } from "lucide-react";
+import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2, Settings } from "lucide-react";
 import { formatCurrency, getDaysUntil, getRenewalStageFromPlan } from "@/data/mockData";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useUpdateAccount } from "@/hooks/useAccounts";
 import { useAppSettings } from "@/hooks/useSettings";
+import { useRevenue } from "@/contexts/RevenueContext";
+import { QuarterlyFlowSheet } from "@/components/QuarterlyFlowSheet";
 
-type Stage = "t90" | "t60" | "t30" | "renewed";
+type Stage = "q1" | "q2" | "q3" | "q4" | "renewed";
 
-const stages: Stage[] = ["t90", "t60", "t30", "renewed"];
+const stages: Stage[] = ["q1", "q2", "q3", "q4", "renewed"];
 
-/** Default column titles when milestones not yet loaded. */
-const defaultStageConfig: Record<Stage, { title: string; color: string; icon: React.ReactNode }> = {
-  t90: { title: "60%+", color: "text-primary", icon: <Clock size={14} /> },
-  t60: { title: "30–60%", color: "text-amber-500", icon: <Clock size={14} /> },
-  t30: { title: "0–30%", color: "text-destructive", icon: <ShieldAlert size={14} /> },
+const stageConfig: Record<Stage, { title: string; color: string; icon: React.ReactNode }> = {
+  q1: { title: "Q1", color: "text-emerald-500", icon: <CheckCircle2 size={14} /> },
+  q2: { title: "Q2", color: "text-blue-500", icon: <Clock size={14} /> },
+  q3: { title: "Q3", color: "text-amber-500", icon: <Clock size={14} /> },
+  q4: { title: "Q4", color: "text-destructive", icon: <ShieldAlert size={14} /> },
   renewed: { title: "Renewed", color: "text-emerald-600", icon: <CheckCircle2 size={14} /> },
 };
 
 export default function Pipeline() {
   const { data: accounts = [], isLoading } = useAccounts();
-  const { data: appSettings } = useAppSettings();
   const updateAccount = useUpdateAccount();
   const [draggedId, setDraggedId] = useState<string | null>(null);
-
-  const stageOptions = useMemo(() => {
-    const schedule = appSettings?.schedule;
-    const metrics = appSettings?.metrics;
-    return {
-      milestonePercents: (metrics?.callMilestonePercents?.length ? metrics.callMilestonePercents : [30, 60, 90, 95]) as number[],
-      reminderDaysBeforeRenewal: schedule?.reminderDaysBeforeRenewal ?? 1,
-    };
-  }, [appSettings]);
-
-  const stageConfig = useMemo(() => {
-    const m = stageOptions.milestonePercents;
-    const m0 = m[0] ?? 30;
-    const m1 = m.length >= 2 ? (m[1] ?? 60) : 100;
-    return {
-      t30: { ...defaultStageConfig.t30, title: `0–${m0}%` },
-      t60: { ...defaultStageConfig.t60, title: `${m0}–${m1}%` },
-      t90: { ...defaultStageConfig.t90, title: `${m1}%+` },
-      renewed: defaultStageConfig.renewed,
-    };
-  }, [stageOptions.milestonePercents]);
+  const [flowModalOpen, setFlowModalOpen] = useState(false);
+  const [selectedQuarter, setSelectedQuarter] = useState<Stage | null>(null);
+  const { revenueType } = useRevenue();
 
   const byStage = (stage: Stage) =>
-    accounts.filter((a) => getRenewalStageFromPlan(a.contractStart, a.renewalDate, a.status, stageOptions) === stage);
+    accounts.filter((a) => getRenewalStageFromPlan(a.contractStart, a.renewalDate, a.status) === stage);
   const stageArr = (stage: Stage) => byStage(stage).reduce((s, a) => s + a.arr, 0);
+  const stageMrr = (stage: Stage) => byStage(stage).reduce((s, a) => s + (a.mrr || 0), 0);
 
   const handleDragStart = (id: string) => setDraggedId(id);
 
@@ -87,7 +71,7 @@ export default function Pipeline() {
             {stages.map((stage) => (
               <div
                 key={stage}
-                className="min-w-[300px] flex-1 snap-start flex flex-col gap-3"
+                className="min-w-[300px] w-full max-w-[350px] shrink-0 xl:shrink xl:max-w-none flex-1 basis-0 snap-start flex flex-col gap-3"
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => handleDrop(stage)}
               >
@@ -96,12 +80,25 @@ export default function Pipeline() {
                   <div className="flex items-center gap-2">
                     <span className={stageConfig[stage].color}>{stageConfig[stage].icon}</span>
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">{stageConfig[stage].title}</h3>
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        {stageConfig[stage].title}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedQuarter(stage);
+                            setFlowModalOpen(true);
+                          }}
+                          className="px-1.5 py-1 hover:bg-black/5 rounded-md transition-colors text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0"
+                          title={`Configure ${stageConfig[stage].title} Flow`}
+                        >
+                          <Settings className="w-3.5 h-3.5" />
+                        </button>
+                      </h3>
                       <p className="text-[11px] text-muted-foreground">{byStage(stage).length} accounts</p>
                     </div>
                   </div>
                   <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md border-2 border-black">
-                    {formatCurrency(stageArr(stage))}
+                    {formatCurrency(revenueType === 'MRR' ? stageMrr(stage) : stageArr(stage))}
                   </span>
                 </div>
 
@@ -131,7 +128,9 @@ export default function Pipeline() {
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{account.name}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{formatCurrency(account.arr)} ARR</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {formatCurrency(revenueType === 'MRR' ? (account.mrr || account.arr / 12) : account.arr)} {revenueType}
+                            </p>
                           </div>
                           <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground transition-opacity" />
                         </div>
@@ -162,6 +161,13 @@ export default function Pipeline() {
           </div>
         )}
       </div>
+
+      {/* Quarterly Flow Modal */}
+      <QuarterlyFlowSheet
+        stage={selectedQuarter}
+        isOpen={flowModalOpen}
+        onOpenChange={setFlowModalOpen}
+      />
     </div>
   );
 }

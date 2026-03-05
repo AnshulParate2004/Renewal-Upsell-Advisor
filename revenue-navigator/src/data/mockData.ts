@@ -30,6 +30,7 @@ export interface Account {
   id: string;
   name: string;
   arr: number;
+  mrr: number; // Added explicit MRR field
   healthScore: number;
   riskScore: number;
   sentiment: "positive" | "neutral" | "negative";
@@ -40,7 +41,7 @@ export interface Account {
   licensesUsed: number;
   licensesTotal: number;
   renewalDate: string;
-  renewalStage: "t90" | "t60" | "t30" | "renewed" | "lost";
+  renewalStage: "q1" | "q2" | "q3" | "q4" | "renewed" | "lost";
   industry: string;
   company_size?: string; // Added to match Supabase schema
   csm: string;
@@ -52,6 +53,8 @@ export interface Account {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  contactCity?: string;
+  contactState?: string;
   // Historical data
   sentimentHistory?: SentimentHistory[];
   activityTimeline?: AccountActivity[];
@@ -117,8 +120,8 @@ export function getDaysSinceStart(date: string): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-/** Pipeline stage: plan % (0–30% T-30, 30–60% T-60, 60–100% T-90); past renewal or status=renewed → Renewed. */
-export type RenewalStage = "t90" | "t60" | "t30" | "renewed";
+/** Pipeline stage: Q1 (0-25%), Q2 (25-50%), Q3 (50-75%), Q4 (75-100%); past renewal or status=renewed → Renewed. */
+export type RenewalStage = "q1" | "q2" | "q3" | "q4" | "renewed";
 
 export interface RenewalStageOptions {
   milestonePercents?: number[];
@@ -135,27 +138,25 @@ export function getRenewalStageFromPlan(
   const today = new Date().toISOString().split("T")[0];
   const end = renewalDate && renewalDate.trim() ? renewalDate.trim() : today;
   const endMs = new Date(end).getTime();
-  if (Number.isNaN(endMs)) return "t30";
-  // Past renewal (overdue) → Renewed so they don’t all sit in T-90
+  if (Number.isNaN(endMs)) return "q4";
+
+  // Past renewal (overdue) → Renewed
   const daysUntilRenewal = getDaysUntil(end);
   if (daysUntilRenewal <= 0) return "renewed";
-  const reminderDays = options?.reminderDaysBeforeRenewal ?? 1;
-  if (reminderDays >= 0 && daysUntilRenewal <= reminderDays) return "t90";
+
   const start = contractStartDate && contractStartDate.trim() ? contractStartDate.trim() : today;
   const startMs = new Date(start).getTime();
-  if (Number.isNaN(startMs)) return "t30";
+  if (Number.isNaN(startMs)) return "q4";
+
   const planDurationDays = Math.max(1, Math.ceil((endMs - startMs) / (1000 * 60 * 60 * 24)));
   const daysElapsed = getDaysSinceStart(start);
   const percent = Number.isFinite(daysElapsed) && planDurationDays > 0
     ? (daysElapsed / planDurationDays) * 100
     : 0;
   const p = Number.isFinite(percent) ? Math.max(0, percent) : 0;
-  const defaultMilestones = [30, 60, 90, 95];
-  const raw = options?.milestonePercents;
-  const milestones = raw?.length ? raw : defaultMilestones;
-  const m0 = milestones[0];
-  const m1 = milestones.length >= 2 ? milestones[1] : 100;
-  if (p < m0) return "t30";
-  if (p < m1) return "t60";
-  return "t90";
+
+  if (p < 25) return "q1";
+  if (p < 50) return "q2";
+  if (p < 75) return "q3";
+  return "q4";
 }

@@ -25,7 +25,7 @@ const integrations = [
 
 export default function SettingsPage() {
   const toastHook = useToast();
-  const toast = toastHook?.toast ?? (() => {});
+  const toast = toastHook?.toast ?? (() => { });
   const { data: appSettings } = useAppSettings();
   const updateSettings = useUpdateAppSettings();
 
@@ -53,8 +53,6 @@ export default function SettingsPage() {
     churnProbabilityThresholdPercent: 70,
     minUsagePercentForCall: 20,
     healthScoreAtRiskBelowPercent: 50,
-    callMilestonePercents: [30, 60, 90, 95] as number[],
-    emailMilestonePercents: [30, 60, 90, 95] as number[],
   });
 
   const [isDirty, setIsDirty] = useState(false);
@@ -70,27 +68,15 @@ export default function SettingsPage() {
     setIsDirty(true);
   }
 
-  function updateMetric(key: keyof typeof metricDefaults, value: number | number[]) {
-    setMetricDefaults((prev) => {
-      const next = { ...prev };
-      if (Array.isArray(value)) {
-        (next as Record<string, number[]>)[key as string] = value;
-      } else {
-        (next as Record<string, number>)[key as string] = isNaN(value) ? (prev[key] as number) : value;
-      }
-      return next;
-    });
+  function updateMetric(key: keyof typeof metricDefaults, value: number) {
+    setMetricDefaults((prev) => ({
+      ...prev,
+      [key]: isNaN(value) ? prev[key] : value,
+    }));
     setIsDirty(true);
   }
 
-  /** Parse "30, 60, 90, 95" to [30, 60, 90, 95] (0-100 only). */
-  function parseMilestonePercents(s: string): number[] {
-    return s
-      .split(",")
-      .map((n) => parseInt(n.trim(), 10))
-      .filter((n) => !isNaN(n) && n >= 0 && n <= 100)
-      .sort((a, b) => a - b);
-  }
+
 
   // Hydrate local editable state from backend settings when available
   useEffect(() => {
@@ -116,12 +102,6 @@ export default function SettingsPage() {
       churnProbabilityThresholdPercent: metrics.churnProbabilityThresholdPercent ?? 70,
       minUsagePercentForCall: metrics.minUsagePercentForCall ?? 20,
       healthScoreAtRiskBelowPercent: metrics.healthScoreAtRiskBelowPercent ?? 50,
-      callMilestonePercents: Array.isArray(metrics.callMilestonePercents) && metrics.callMilestonePercents.length
-        ? metrics.callMilestonePercents
-        : [30, 60, 90, 95],
-      emailMilestonePercents: Array.isArray(metrics.emailMilestonePercents) && metrics.emailMilestonePercents.length
-        ? metrics.emailMilestonePercents
-        : [30, 60, 90, 95],
     });
     setIsDirty(false);
   }, [appSettings]);
@@ -148,8 +128,6 @@ export default function SettingsPage() {
           churnProbabilityThresholdPercent: metricDefaults.churnProbabilityThresholdPercent,
           minUsagePercentForCall: metricDefaults.minUsagePercentForCall,
           healthScoreAtRiskBelowPercent: metricDefaults.healthScoreAtRiskBelowPercent,
-          callMilestonePercents: metricDefaults.callMilestonePercents,
-          emailMilestonePercents: metricDefaults.emailMilestonePercents,
         },
       });
       setIsDirty(false);
@@ -381,60 +359,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Renewal Pipeline Scheduler */}
-            <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
-                <Kanban size={15} className="text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Renewal Pipeline Scheduler</h3>
-              </div>
-              <div className="p-4 space-y-3 text-xs">
-                <p className="text-[11px] text-muted-foreground">
-                  These values define the Renewal Pipeline columns and when auto calls and emails run. The pipeline page shows stages based on the first two milestones (e.g. 0–30%, 30–60%, 60%+). Add any plan completion % values you want (comma-separated, 0–100).
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">Call milestones (%)</Label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 30, 60, 90, 95 or 20, 50, 80, 100"
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={metricDefaults.callMilestonePercents.join(", ")}
-                      onChange={(e) => {
-                        const parsed = parseMilestonePercents(e.target.value);
-                        if (parsed.length) updateMetric("callMilestonePercents", parsed);
-                      }}
-                      onBlur={(e) => {
-                        const parsed = parseMilestonePercents(e.target.value);
-                        updateMetric("callMilestonePercents", parsed.length ? parsed : [30, 60, 90, 95]);
-                      }}
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Triggers at these plan % values plus reminder day(s) before renewal.
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">Email milestones (%)</Label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 30, 60, 90, 95 or 20, 50, 80, 100"
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={metricDefaults.emailMilestonePercents.join(", ")}
-                      onChange={(e) => {
-                        const parsed = parseMilestonePercents(e.target.value);
-                        if (parsed.length) updateMetric("emailMilestonePercents", parsed);
-                      }}
-                      onBlur={(e) => {
-                        const parsed = parseMilestonePercents(e.target.value);
-                        updateMetric("emailMilestonePercents", parsed.length ? parsed : [30, 60, 90, 95]);
-                      }}
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Sends at these plan % values plus reminder day(s) before renewal.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+
           </div>
 
           {/* Right Col */}

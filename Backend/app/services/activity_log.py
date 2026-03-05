@@ -23,8 +23,8 @@ def log_activity(
     action: str,
     *,
     account_id: Optional[str] = None,
-    entity_type: Optional[str] = None,
-    entity_id: Optional[str] = None,
+    title: Optional[str] = None,
+    sentiment: Optional[str] = None,
     details: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """
@@ -33,8 +33,8 @@ def log_activity(
     Args:
         action: Action name (e.g. ml_pipeline_trigger, email_scheduler_run, email_sent, voice_scheduler_run, voice_call_initiated).
         account_id: Optional account UUID (string).
-        entity_type: Optional entity type (e.g. account, voice_call, email_campaign).
-        entity_id: Optional entity UUID (string).
+        title: Optional title for the activity log.
+        sentiment: Optional sentiment string (positive, neutral, negative).
         details: Optional JSON-serializable dict (counts, source, campaign_type, etc.).
 
     Returns:
@@ -47,10 +47,12 @@ def log_activity(
 
     row = {
         "action": action,
-        "entity_type": entity_type,
-        "entity_id": entity_id,
         "details": details or {},
     }
+    if title is not None:
+        row["title"] = title
+    if sentiment is not None:
+        row["sentiment"] = sentiment
     if account_id is not None:
         row["account_id"] = str(account_id) if isinstance(account_id, UUID) else account_id
 

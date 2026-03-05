@@ -14,8 +14,8 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Default usage percentage milestones for calls (used when callMilestonePercents not set)
-DEFAULT_CALL_MILESTONES = [30, 60, 90, 95]
+# Default usage percentage milestones for Quarterly calls (Q1, Q2, Q3, Renewal)
+DEFAULT_CALL_MILESTONES = [25, 50, 75, 95]
 
 
 def _get_app_config(client) -> Dict[str, Any]:
@@ -45,14 +45,10 @@ def _get_metrics_config(client) -> Dict[str, Any]:
 
 
 def _get_usage_milestones(client) -> List[int]:
-    """Milestones to use for calls (from settings callMilestonePercents or default 30,60,90,95). Filtered by minUsagePercentForCall."""
+    """Milestones to use for calls based on Quarterly boundaries."""
     cfg = _get_metrics_config(client)
-    raw = cfg.get("callMilestonePercents")
-    if isinstance(raw, list) and len(raw) > 0:
-        base = [int(x) for x in raw if isinstance(x, (int, float)) and 0 <= int(x) <= 100]
-        base = sorted(set(base)) if base else list(DEFAULT_CALL_MILESTONES)
-    else:
-        base = list(DEFAULT_CALL_MILESTONES)
+    base = list(DEFAULT_CALL_MILESTONES)
+    
     min_pct = int(cfg.get("minUsagePercentForCall", 0))
     min_pct = max(0, min(100, min_pct))
     return [m for m in base if m >= min_pct] or ([min_pct] if min_pct <= 100 else base)
@@ -333,8 +329,7 @@ async def make_voice_call(
                 client.table("activity_logs").insert({
                     "account_id": account_id,
                     "action": "voice_call_initiated",
-                    "entity_type": "voice_call",
-                    "entity_id": call_id,
+                    "title": "Voice Call Initiated",
                     "details": {
                         "call_type": call_type,
                         "phone_number": phone_number,

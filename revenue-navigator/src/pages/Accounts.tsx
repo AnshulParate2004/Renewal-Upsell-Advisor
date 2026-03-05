@@ -104,7 +104,7 @@ export default function Accounts() {
                 <th className="text-center py-3">Rel. Score</th>
                 <th className="text-center py-3">Churn</th>
                 <th className="text-center py-3">Sentiment</th>
-                <th className="text-center py-3">Status</th>
+                <th className="text-center py-3">Location</th>
                 <th className="text-center py-3 pr-5 w-24">Actions</th>
               </tr>
             </thead>
@@ -160,8 +160,8 @@ export default function Accounts() {
                       {client.sentimentScore > 0.5 ? '😊' : client.sentimentScore > 0 ? '🙂' : client.sentimentScore > -0.5 ? '😐' : '😟'}
                     </td>
                     <td className="text-center py-3.5">
-                      <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${client.riskScore >= 70 ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600'}`}>
-                        {client.riskScore >= 70 ? 'High Risk' : 'Safe'}
+                      <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-widest">
+                        {[client.contactCity, client.contactState].filter(Boolean).join(', ') || 'N/A'}
                       </span>
                     </td>
                     <td className="text-center py-3.5 pr-5" onClick={(e) => e.stopPropagation()}>

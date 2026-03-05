@@ -1,49 +1,34 @@
 """
-Prediction Pydantic schemas.
+Prediction API schemas.
 """
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from pydantic import BaseModel
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 
 
 class PredictionRequest(BaseModel):
-    """Schema for prediction request."""
     account_id: str
-    features: Dict[str, Any] = Field(..., description="Input features for prediction")
+    features: Dict[str, Any]
 
 
 class PredictionResponse(BaseModel):
-    """Schema for prediction response."""
     account_id: str
     model_type: str
     prediction_value: float
     confidence: Optional[float] = None
-    model_version: Optional[str] = None
     timestamp: datetime
-    
-    class Config:
-        from_attributes = True
 
 
 class BatchPredictionRequest(BaseModel):
-    """Schema for batch prediction request."""
-    account_ids: list[str]
-    model_types: Optional[list[str]] = Field(
-        default=None,
-        description="List of model types to run. If None, runs all models."
-    )
+    account_ids: List[str]
+    model_types: Optional[List[str]] = None
 
 
 class BatchPredictionResponse(BaseModel):
-    """Schema for batch prediction response."""
-    predictions: Dict[str, Dict[str, PredictionResponse]] = Field(
-        ...,
-        description="Dictionary mapping account_id to model_type to prediction"
-    )
+    predictions: Dict[str, Dict[str, PredictionResponse]]
 
 
 class ModelHealthResponse(BaseModel):
-    """Schema for model health check."""
     model_type: str
     loaded: bool
     version: Optional[str] = None
