@@ -9,7 +9,8 @@ export const useAccounts = (skip = 0, limit = 1000) => {
   return useQuery({
     queryKey: ['accounts', skip, limit],
     queryFn: () => accountsApi.getAll(skip, limit),
-    staleTime: 30000, // 30 seconds
+    staleTime: 0, // Always refetch so DB changes (e.g. renewal/contract dates) show up
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 };

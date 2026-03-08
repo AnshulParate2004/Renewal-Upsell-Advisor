@@ -46,7 +46,8 @@ def personalize_email_content(
     base_subject: str,
     base_html_body: str,
     base_text_body: str,
-    opportunity: Optional[Dict[str, Any]] = None
+    opportunity: Optional[Dict[str, Any]] = None,
+    user_purpose: Optional[str] = None,
 ) -> tuple[str, str, str]:
     """
     Personalize email content using LangChain and Azure OpenAI based on account data.
@@ -113,6 +114,104 @@ Opportunity Details:
 - Potential Value: ${opportunity_value:,.2f}
 - Probability: {opportunity_probability:.2%}
 """
+        if user_purpose and str(user_purpose).strip():
+            context += f"""
+User's stated purpose for this message (tailor subject and body to this intent):
+"{user_purpose.strip()}"
+
+IMPORTANT: Generate subject and enhancement that match the above purpose.
+"""
+        
+        # When user gave a custom purpose (e.g. "10% discount"), generate full email from that prompt only
+        if user_purpose and str(user_purpose).strip():
+            system_custom = """You are a professional writing a short customer email. Use ONLY the account data provided for names/emails. CRITICAL: Use the user's purpose EXACTLY — do not change any numbers (e.g. if they say 10% you must write 10%, not 15% or 20%), percentages, timeframes, or key terms. Return only Subject and Body in the exact format below."""
+            human_custom = '''Generate an email that fulfills EXACTLY this purpose (use the same numbers and terms — do not substitute different percentages or amounts): "{purpose}"
+
+Account context:
+{context}
+
+Use CSM name and email from context. Return ONLY in this format:
+Subject: [one line subject, under 60 chars; must reflect the purpose exactly, e.g. "10% discount" not "15% discount"]
+Body: [2-5 sentences; must use the exact numbers/terms from the purpose above]'''
+            prompt_custom = ChatPromptTemplate.from_messages([
+                ("system", system_custom),
+                ("human", human_custom)
+            ])
+            chain_custom = prompt_custom | llm | StrOutputParser()
+            try:
+                out = chain_custom.invoke({
+                    "purpose": user_purpose.strip(),
+                    "context": context,
+                })
+                lines = out.split("\n")
+                subj, body_text = "", ""
+                current = None
+                for line in lines:
+                    low = line.strip().lower()
+                    if low.startswith("subject:"):
+                        current = "subject"
+                        subj = line.split(":", 1)[-1].strip().strip('"\'')
+                    elif low.startswith("body:"):
+                        current = "body"
+                        body_text = line.split(":", 1)[-1].strip()
+                    elif current == "subject" and subj and not subj.endswith("..."):
+                        subj = (subj + " " + line.strip()).strip()[:100]
+                    elif current == "body":
+                        body_text = (body_text + " " + line.strip()).strip()
+                if subj:
+                    personalized_subject = subj[:97] + "..." if len(subj) > 100 else subj
+                else:
+                    personalized_subject = base_subject
+                if body_text and len(body_text) > 10:
+                    body_escaped = body_text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                    mailto = f'mailto:{csm_email}' if csm_email else '#'
+                    csm_link = f'<a href="mailto:{csm_email}">{csm_email}</a>' if csm_email else ''
+                    personalized_html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 0; background: #fff; }}
+.header {{ background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 28px 24px; text-align: center; border-radius: 10px 10px 0 0; }}
+.header h1 {{ margin: 0; font-size: 22px; font-weight: 600; }}
+.content {{ background: #ffffff; padding: 30px 24px; border-radius: 0 0 10px 10px; }}
+.content p {{ margin: 0 0 16px 0; text-align: left; }}
+.highlight {{ background: #d4edda; padding: 16px 20px; border-left: 4px solid #28a745; margin: 20px 0; border-radius: 4px; }}
+.highlight p {{ margin: 0; font-size: 15px; }}
+.button-wrap {{ text-align: center; margin: 24px 0; }}
+.button {{ display: inline-block; padding: 14px 32px; background: #f5576c; color: white !important; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; }}
+.csm-block {{ margin-top: 24px; }}
+.csm-block a {{ color: #0066cc; text-decoration: underline; }}
+.footer {{ margin-top: 28px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #666; }}
+</style>
+</head>
+<body>
+<div class="header"><h1>Quick follow-up</h1></div>
+<div class="content">
+<p>Hi {account_name} team,</p>
+<p>{body_escaped}</p>
+<div class="highlight"><p>We'd love to hear from you — just reply to this email or reach out to your CSM below.</p></div>
+<div class="button-wrap"><a href="{mailto}" class="button">Reply or contact your CSM</a></div>
+<p class="csm-block">Your Customer Success Manager:<br><strong>{csm_name}</strong><br>{csm_link}</p>
+<p>Best regards,<br>Renewal &amp; Upsell Advisor Team</p>
+</div>
+<div class="footer"><p>This is an automated email. Please do not reply directly to this message.</p></div>
+</body>
+</html>"""
+                    personalized_text = f"""Hi {account_name} team,
+
+{body_text}
+
+Your Customer Success Manager: {csm_name}
+{f'Email: {csm_email}' if csm_email else ''}
+
+Best regards,
+Renewal & Upsell Advisor Team"""
+                    logger.info(f"Generated email from purpose for {account_name}")
+                    return personalized_subject, personalized_html, personalized_text
+            except Exception as e:
+                logger.warning(f"Purpose-only generation failed: {e}, falling back to template enhancement")
         
         # Create LangChain prompts based on email type
         if email_type == "renewal_reminder":
@@ -152,24 +251,24 @@ Subject: [your personalized subject]
 Enhancement: [2-3 sentences to personalize the greeting/opening paragraph]"""
         
         elif email_type == "upsell":
-            system_template = """You are a professional sales representative writing an upsell opportunity email.
+            system_template = """You are a friendly customer success contact writing a short follow-up email.
 IMPORTANT RULES:
 1. DO NOT create fake names, email addresses, or contact information
 2. DO NOT replace the entire email - only enhance specific phrases
-3. Keep the same structure and format as the base template
+3. Keep the same structure and tone: conversational, asking how the review went
 4. Use ONLY the account data provided - do not invent information
 5. Keep CSM names and emails exactly as provided in the account data
 
 Your goal is to:
-1. Personalize the subject line (compelling, under 60 characters)
-2. Enhance a few key phrases to highlight value
-3. Keep the same professional structure
+1. Personalize the subject line (conversational, under 60 characters)
+2. Add 1-2 short sentences that feel natural — e.g. reference their review, ask for feedback, or offer to chat
+3. Keep the tone warm and human, not salesy. Focus on "how was the review" and "we'd love to hear from you".
 
 Return ONLY:
 - Subject: [personalized subject line]
-- Enhancement: [2-3 sentences to personalize the value proposition]"""
+- Enhancement: [1-2 sentences to personalize the review follow-up]"""
             
-            human_template = """Personalize ONLY the subject line and provide 2-3 enhancement sentences for this upsell email:
+            human_template = """Personalize ONLY the subject line and provide 1-2 enhancement sentences for this review follow-up email:
 
 Account Context:
 {context}
@@ -181,9 +280,10 @@ CRITICAL:
 - Use the CSM name from account data: {csm_name}
 - Use the CSM email from account data: {csm_email}
 - DO NOT create fake names or emails
+- Tone: ask how the review went, invite feedback, offer support. Do NOT mention "Potential Value", "Confidence Level", or "Recommended Products".
 - Return format:
 Subject: [your personalized subject]
-Enhancement: [2-3 sentences about value/opportunity]"""
+Enhancement: [1-2 sentences for a natural review follow-up]"""
         
         elif email_type == "churn_prevention":
             system_template = """You are a customer success manager writing a churn prevention email.
@@ -347,18 +447,18 @@ Enhancement: [2-3 personalized sentences]"""
         personalized_text = base_text_body
         
         if enhancement_text and len(enhancement_text) > 20:
-            # Replace generic opening in HTML
-            generic_greeting = f"<p>Dear {account_name} Team,</p>"
-            if generic_greeting in personalized_html:
-                # Add enhancement after greeting
-                enhanced_greeting = f"{generic_greeting}\n            <p>{enhancement_text}</p>"
-                personalized_html = personalized_html.replace(generic_greeting, enhanced_greeting, 1)
-            
+            # Replace generic opening in HTML (support "Hi ... team" or "Dear ... Team")
+            for html_greeting in [f"<p>Hi {account_name} team,</p>", f"<p>Dear {account_name} Team,</p>"]:
+                if html_greeting in personalized_html:
+                    enhanced_greeting = f"{html_greeting}\n            <p>{enhancement_text}</p>"
+                    personalized_html = personalized_html.replace(html_greeting, enhanced_greeting, 1)
+                    break
             # Replace generic opening in text
-            generic_text_greeting = f"Dear {account_name} Team,"
-            if generic_text_greeting in personalized_text:
-                enhanced_text_greeting = f"{generic_text_greeting}\n\n{enhancement_text}"
-                personalized_text = personalized_text.replace(generic_text_greeting, enhanced_text_greeting, 1)
+            for text_greeting in [f"Hi {account_name} team,", f"Dear {account_name} Team,"]:
+                if text_greeting in personalized_text:
+                    enhanced_text_greeting = f"{text_greeting}\n\n{enhancement_text}"
+                    personalized_text = personalized_text.replace(text_greeting, enhanced_text_greeting, 1)
+                    break
         
         logger.info(f"Personalized email for {account_name} (type: {email_type}) using LangChain")
         

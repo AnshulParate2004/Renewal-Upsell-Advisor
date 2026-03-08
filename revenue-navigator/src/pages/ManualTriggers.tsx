@@ -4,28 +4,47 @@ import { Cpu, Mail, Send, Sparkles, Phone, RefreshCw } from "lucide-react";
 import { triggerMlPipeline } from "@/lib/api/ml";
 import { emailApi } from "@/lib/api/email";
 import { voiceApi } from "@/lib/api/voice";
-import { campaignsApi, AutoCampaign } from "@/lib/api/campaigns";
+import { campaignsApi, AutoCampaign, type CampaignFilterConfig } from "@/lib/api/campaigns";
 import { useAccounts } from "@/hooks/useAccounts";
+import { getRenewalInDays, getRenewalStageFromPlan } from "@/data/mockData";
 
 type EmailMode = "all" | "single";
 type VoiceMode = "all" | "single";
 type CampaignMode = "manual" | "auto";
-type TargetFilter = "days_range" | "health_range" | "quarter" | "usage_drop" | "month";
 type Recurrence = "daily" | "weekly" | "month";
+
+type RangeKey = "risk" | "healthScore" | "arr" | "renewal" | "utilization" | "relationshipScore" | "churn";
+const defaultRange = () => ({ min: "", max: "" });
 
 export default function ManualTriggersPage() {
   const [campaignMode, setCampaignMode] = useState<CampaignMode>("manual");
-  const [targetFilter, setTargetFilter] = useState<TargetFilter>("days_range");
   const [recurrence, setRecurrence] = useState<Recurrence>("weekly");
   const [campaignName, setCampaignName] = useState("");
   const [campaignDescription, setCampaignDescription] = useState("");
-  const [filterMin, setFilterMin] = useState("");
-  const [filterMax, setFilterMax] = useState("");
+  const [campaignStartDate, setCampaignStartDate] = useState("");
+  const [campaignEndDate, setCampaignEndDate] = useState("");
+  const [campaignStartTime, setCampaignStartTime] = useState("");
+  const [campaignEndTime, setCampaignEndTime] = useState("");
+  const [campaignFollowUpOffsetDays, setCampaignFollowUpOffsetDays] = useState(3);
+  const [rangeFilters, setRangeFilters] = useState<Record<RangeKey, { min: string; max: string }>>({
+    risk: defaultRange(),
+    healthScore: defaultRange(),
+    arr: defaultRange(),
+    renewal: defaultRange(),
+    utilization: defaultRange(),
+    relationshipScore: defaultRange(),
+    churn: defaultRange(),
+  });
+  const [locationKeyword, setLocationKeyword] = useState("");
+  const [partnerNameKeyword, setPartnerNameKeyword] = useState("");
+  const [pipelineStage, setPipelineStage] = useState<string>("");
   const [actionType, setActionType] = useState("email_sequence");
 
   const [campaignsList, setCampaignsList] = useState<AutoCampaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignSaving, setCampaignSaving] = useState(false);
+  const [campaignRunNowLoading, setCampaignRunNowLoading] = useState(false);
+  const [campaignRunNowMessage, setCampaignRunNowMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [mlLoading, setMlLoading] = useState(false);
   const [mlMessage, setMlMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -35,6 +54,10 @@ export default function ManualTriggersPage() {
   const [selectedAccount, setSelectedAccount] = useState<{ id: string; name: string } | null>(null);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+  /** Purpose for the message (e.g. "review follow-up", "renewal reminder"). Used when generating so the message matches this intent. */
+  const [emailPurpose, setEmailPurpose] = useState("");
+  /** When user clicks Auto-generate, we store the formatted HTML so Send uses it (gradient header, green block, button). Cleared when user edits the body. */
+  const [lastPreviewHtml, setLastPreviewHtml] = useState<string | null>(null);
   const [allEmailLoading, setAllEmailLoading] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [sendLoading, setSendLoading] = useState(false);
@@ -43,11 +66,46 @@ export default function ManualTriggersPage() {
   const [voiceMode, setVoiceMode] = useState<VoiceMode>("single");
   const [voiceAccountSearch, setVoiceAccountSearch] = useState("");
   const [voiceSelectedAccount, setVoiceSelectedAccount] = useState<{ id: string; name: string } | null>(null);
+  /** Purpose for the call (e.g. "review follow-up", "renewal discussion"). Used when triggering so the script matches this intent. */
+  const [voicePurpose, setVoicePurpose] = useState("");
   const [voiceAllLoading, setVoiceAllLoading] = useState(false);
   const [voiceSingleLoading, setVoiceSingleLoading] = useState(false);
   const [voiceMessage, setVoiceMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const { data: accounts = [], isLoading: accountsLoading } = useAccounts();
+
+  /** Unique location strings from accounts (city, state, "city, state") for autocomplete. */
+  const locationSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    accounts.forEach((a) => {
+      const city = (a.contactCity ?? "").trim();
+      const state = (a.contactState ?? "").trim();
+      if (city) set.add(city);
+      if (state) set.add(state);
+      if (city && state) set.add(`${city}, ${state}`);
+    });
+    const list = Array.from(set).filter(Boolean).sort();
+    const kw = (locationKeyword ?? "").trim().toLowerCase();
+    if (!kw) return list.slice(0, 12);
+    return list.filter((s) => s.toLowerCase().includes(kw)).slice(0, 12);
+  }, [accounts, locationKeyword]);
+
+  /** Unique partner names from accounts (partnerName, csm) for autocomplete. */
+  const partnerSuggestions = useMemo(() => {
+    const set = new Set<string>();
+    accounts.forEach((a) => {
+      const p = (a.partnerName ?? a.csm ?? "").trim();
+      if (p) set.add(p);
+    });
+    const list = Array.from(set).filter(Boolean).sort();
+    const kw = (partnerNameKeyword ?? "").trim().toLowerCase();
+    if (!kw) return list.slice(0, 12);
+    return list.filter((s) => s.toLowerCase().includes(kw)).slice(0, 12);
+  }, [accounts, partnerNameKeyword]);
+
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const [partnerDropdownOpen, setPartnerDropdownOpen] = useState(false);
+
   const accountSuggestions = useMemo(() => {
     if (!accountSearch.trim()) return accounts.slice(0, 8);
     const q = accountSearch.trim().toLowerCase();
@@ -67,7 +125,7 @@ export default function ManualTriggersPage() {
     setEmailMessage(null);
     setAllEmailLoading(true);
     try {
-      await emailApi.triggerCampaign();
+      await emailApi.triggerCampaign(emailPurpose?.trim() || undefined);
       setEmailMessage({ type: "success", text: "Email campaign triggered. Emails are being sent to eligible customers." });
     } catch (e) {
       setEmailMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to trigger campaign." });
@@ -81,9 +139,10 @@ export default function ManualTriggersPage() {
     setEmailMessage(null);
     setPreviewLoading(true);
     try {
-      const preview = await emailApi.getPreview(selectedAccount.id);
+      const preview = await emailApi.getPreview(selectedAccount.id, emailPurpose.trim() || undefined);
       setEmailSubject(preview.subject);
       setEmailBody(preview.text_body);
+      setLastPreviewHtml(preview.html_body ?? null);
       setEmailMessage({ type: "success", text: `Preview generated for ${preview.account_name}. Edit if needed and click Send.` });
     } catch (e) {
       setEmailMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to generate preview." });
@@ -101,10 +160,12 @@ export default function ManualTriggersPage() {
       const options = hasCustom
         ? {
           subject: emailSubject.trim() || "No subject",
-          html_body: emailBody.replace(/\n/g, "<br/>"),
+          html_body: lastPreviewHtml ?? emailBody.replace(/\n/g, "<br/>"),
           text_body: emailBody,
         }
-        : undefined;
+        : {
+          purpose: emailPurpose.trim() || undefined,
+        };
       await emailApi.sendToAccount(selectedAccount.id, options);
       setEmailMessage({ type: "success", text: `Email sent to ${selectedAccount.name}.` });
     } catch (e) {
@@ -132,7 +193,7 @@ export default function ManualTriggersPage() {
     setVoiceMessage(null);
     setVoiceSingleLoading(true);
     try {
-      await voiceApi.triggerToAccount(voiceSelectedAccount.id);
+      await voiceApi.triggerToAccount(voiceSelectedAccount.id, voicePurpose.trim() || undefined);
       setVoiceMessage({ type: "success", text: `Voice call initiated to ${voiceSelectedAccount.name}.` });
     } catch (e) {
       setVoiceMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to trigger call." });
@@ -174,25 +235,131 @@ export default function ManualTriggersPage() {
     finally { setCampaignsLoading(false); }
   }
 
+  const buildFilterConfig = (): CampaignFilterConfig | undefined => {
+    const hasRange = Object.values(rangeFilters).some((r) => r.min !== "" || r.max !== "");
+    const hasKeyword = (locationKeyword || "").trim() !== "" || (partnerNameKeyword || "").trim() !== "";
+    const hasPipeline = (pipelineStage || "").trim().toLowerCase() !== "";
+    if (!hasRange && !hasKeyword && !hasPipeline) return undefined;
+    const config: CampaignFilterConfig = {};
+    (Object.keys(rangeFilters) as RangeKey[]).forEach((key) => {
+      const r = rangeFilters[key];
+      if (r.min !== "" || r.max !== "") {
+        config[key] = {};
+        if (r.min !== "") config[key]!.min = Number(r.min);
+        if (r.max !== "") config[key]!.max = Number(r.max);
+      }
+    });
+    if ((locationKeyword || "").trim()) config.locationKeyword = locationKeyword.trim();
+    if ((partnerNameKeyword || "").trim()) config.partnerNameKeyword = partnerNameKeyword.trim();
+    if (hasPipeline) config.pipelineStage = pipelineStage.trim().toLowerCase();
+    return Object.keys(config).length ? config : undefined;
+  };
+
+  const matchingCount = useMemo(() => {
+    const config = buildFilterConfig();
+    if (!config || Object.keys(config).length === 0) return accounts.length;
+    return accounts.filter((client) => {
+      const risk = client.riskScore ?? 0;
+      const healthScore = client.healthScore ?? 0;
+      const arr = client.arr ?? 0;
+      const renewal = getRenewalInDays(client.renewalDate, client.contractEnd, client.status) ?? 0;
+      const u = Number(client.utilization ?? 0);
+      const utilization = u <= 1 && u >= 0 ? u * 100 : u;
+      const relationshipScore = client.relationshipScore ?? 0;
+      const churnPct = (client.churnProbability ?? 0) * 100;
+      if (config.risk) {
+        if (config.risk.min != null && risk < config.risk.min) return false;
+        if (config.risk.max != null && risk > config.risk.max) return false;
+      }
+      if (config.healthScore) {
+        if (config.healthScore.min != null && healthScore < config.healthScore.min) return false;
+        if (config.healthScore.max != null && healthScore > config.healthScore.max) return false;
+      }
+      if (config.arr) {
+        if (config.arr.min != null && arr < config.arr.min) return false;
+        if (config.arr.max != null && arr > config.arr.max) return false;
+      }
+      if (config.renewal) {
+        if (config.renewal.min != null && renewal < config.renewal.min) return false;
+        if (config.renewal.max != null && renewal > config.renewal.max) return false;
+      }
+      if (config.utilization) {
+        if (config.utilization.min != null && utilization < config.utilization.min) return false;
+        if (config.utilization.max != null && utilization > config.utilization.max) return false;
+      }
+      if (config.relationshipScore) {
+        if (config.relationshipScore.min != null && relationshipScore < config.relationshipScore.min) return false;
+        if (config.relationshipScore.max != null && relationshipScore > config.relationshipScore.max) return false;
+      }
+      if (config.churn) {
+        if (config.churn.min != null && churnPct < config.churn.min) return false;
+        if (config.churn.max != null && churnPct > config.churn.max) return false;
+      }
+      const locKw = (config.locationKeyword ?? "").toLowerCase();
+      if (locKw) {
+        const city = (client.contactCity ?? "").toLowerCase();
+        const state = (client.contactState ?? "").toLowerCase();
+        if (!`${city} ${state}`.trim().includes(locKw)) return false;
+      }
+      const partnerKw = (config.partnerNameKeyword ?? "").toLowerCase();
+      if (partnerKw) {
+        const partner = ((client.partnerName ?? client.csm) ?? "").toLowerCase();
+        if (!partner.includes(partnerKw)) return false;
+      }
+      const stage = (config.pipelineStage ?? "").toLowerCase();
+      if (stage) {
+        if (stage === "renewed") {
+          const s = (client.status ?? "").toString().trim().toLowerCase();
+          const r = (client.renewalStage ?? "").toString().trim().toLowerCase();
+          if (s !== "renewed" && s !== "renewal" && r !== "renewed") return false;
+        } else {
+          const accountStage = getRenewalStageFromPlan(client.contractStart, client.renewalDate, client.status, undefined, client.contractEnd, client.renewalStage);
+          if (accountStage !== stage) return false;
+        }
+      }
+      return true;
+    }).length;
+  }, [accounts, rangeFilters, locationKeyword, partnerNameKeyword, pipelineStage]);
+
   const handleSaveCampaign = async () => {
     if (!campaignName) return;
     setCampaignSaving(true);
     try {
+      const filterConfig = buildFilterConfig();
       await campaignsApi.createCampaign({
         name: campaignName,
         description: campaignDescription,
-        target_audience_filter: targetFilter,
-        filter_min_value: filterMin ? parseFloat(filterMin) : undefined,
-        filter_max_value: filterMax ? parseFloat(filterMax) : undefined,
+        target_audience_filter: "multi",
+        filter_config: filterConfig ?? undefined,
         recurring_frequency: recurrence,
         action_type: actionType,
-        is_active: true
+        is_active: true,
+        start_date: campaignStartDate.trim() || undefined,
+        end_date: campaignEndDate.trim() || undefined,
+        schedule_start_time: campaignStartTime.trim() || undefined,
+        schedule_end_time: campaignEndTime.trim() || undefined,
+        follow_up_offset_days: campaignFollowUpOffsetDays,
       });
       await loadCampaigns();
       setCampaignName("");
       setCampaignDescription("");
-      setFilterMin("");
-      setFilterMax("");
+      setCampaignStartDate("");
+      setCampaignEndDate("");
+      setCampaignStartTime("");
+      setCampaignEndTime("");
+      setCampaignFollowUpOffsetDays(3);
+      setRangeFilters({
+        risk: defaultRange(),
+        healthScore: defaultRange(),
+        arr: defaultRange(),
+        renewal: defaultRange(),
+        utilization: defaultRange(),
+        relationshipScore: defaultRange(),
+        churn: defaultRange(),
+      });
+      setLocationKeyword("");
+      setPartnerNameKeyword("");
+      setPipelineStage("");
     } catch (e) { console.error(e); }
     finally { setCampaignSaving(false); }
   }
@@ -202,7 +369,22 @@ export default function ManualTriggersPage() {
       await campaignsApi.deleteCampaign(id);
       await loadCampaigns();
     } catch (e) { console.error(e); }
-  }
+  };
+
+  const handleRunCampaignsNow = async () => {
+    setCampaignRunNowMessage(null);
+    setCampaignRunNowLoading(true);
+    try {
+      const result = await campaignsApi.runNow();
+      const processed = (result as { campaigns_processed?: number }).campaigns_processed ?? 0;
+      setCampaignRunNowMessage({ type: "success", text: `Ran campaigns. ${processed} campaign(s) executed.` });
+      await loadCampaigns();
+    } catch (e) {
+      setCampaignRunNowMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to run campaigns." });
+    } finally {
+      setCampaignRunNowLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-12">
@@ -256,94 +438,146 @@ export default function ManualTriggersPage() {
                   <textarea value={campaignDescription} onChange={e => setCampaignDescription(e.target.value)} placeholder="Describe the objective and details of this campaign..." rows={2} className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background resize-y" />
                 </div>
 
-                <div>
-                  <Label className="text-xs font-bold">Target Audience Filter</Label>
-                  <select
-                    className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
-                    value={targetFilter}
-                    onChange={(e) => setTargetFilter(e.target.value as TargetFilter)}
-                  >
-                    <option value="days_range">Days Until Renewal (Range)</option>
-                    <option value="health_range">Health Score (Range)</option>
-                    <option value="quarter">Specific Renewal Quarter (e.g. Q1, Q2)</option>
-                    <option value="month">Specific Month</option>
-                    <option value="usage_drop">Usage Drop (Less than X%)</option>
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs font-bold">Campaign Start Date</Label>
+                    <input type="date" value={campaignStartDate} onChange={e => setCampaignStartDate(e.target.value)} className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Optional. Campaign runs only on or after this date.</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold">Campaign End Date</Label>
+                    <input type="date" value={campaignEndDate} onChange={e => setCampaignEndDate(e.target.value)} className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Optional. Campaign runs only on or before this date.</p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-xs font-bold">Value / Setting</Label>
-
-                    {targetFilter === "days_range" || targetFilter === "health_range" ? (
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <input value={filterMin} onChange={e => setFilterMin(e.target.value)} type="number" placeholder="Min" className="w-full px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
-                        <span className="text-muted-foreground">-</span>
-                        <input value={filterMax} onChange={e => setFilterMax(e.target.value)} type="number" placeholder="Max" className="w-full px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
-                      </div>
-                    ) : targetFilter === "month" ? (
-                      <select className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background">
-                        <option>January</option>
-                        <option>February</option>
-                        <option>March</option>
-                        <option>April</option>
-                        <option>May</option>
-                        <option>June</option>
-                        <option>July</option>
-                        <option>August</option>
-                        <option>September</option>
-                        <option>October</option>
-                        <option>November</option>
-                        <option>December</option>
-                      </select>
-                    ) : targetFilter === "quarter" ? (
-                      <select className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background">
-                        <option>Q1</option>
-                        <option>Q2</option>
-                        <option>Q3</option>
-                        <option>Q4</option>
-                      </select>
-                    ) : (
-                      <div className="relative mt-1.5">
-                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                          <span className="text-muted-foreground text-sm font-medium">&lt;</span>
+                <div>
+                  <Label className="text-xs font-bold">Target Audience Filters</Label>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">Same as Accounts: apply any combination. All filters are ANDed. {matchingCount < accounts.length && <span className="text-primary font-medium">{matchingCount} of {accounts.length} accounts match.</span>}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {([
+                      { key: "risk" as const, label: "Risk", placeholder: "0-100" },
+                      { key: "healthScore" as const, label: "Health Score", placeholder: "0-100" },
+                      { key: "arr" as const, label: "ARR", placeholder: "e.g. 100000" },
+                      { key: "renewal" as const, label: "Renewal (days)", placeholder: "-30 to 365" },
+                      { key: "utilization" as const, label: "Utilization %", placeholder: "0-100" },
+                      { key: "relationshipScore" as const, label: "Relationship", placeholder: "0-100" },
+                      { key: "churn" as const, label: "Churn %", placeholder: "0-100" },
+                    ]).map(({ key, label, placeholder }) => (
+                      <div key={key} className="space-y-1">
+                        <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{label}</label>
+                        <div className="flex gap-2">
+                          <input type="number" placeholder="Min" value={rangeFilters[key].min} onChange={(e) => setRangeFilters((p) => ({ ...p, [key]: { ...p[key], min: e.target.value } }))} className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background" />
+                          <input type="number" placeholder="Max" value={rangeFilters[key].max} onChange={(e) => setRangeFilters((p) => ({ ...p, [key]: { ...p[key], max: e.target.value } }))} className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background" />
                         </div>
-                        <input value={filterMax} onChange={e => setFilterMax(e.target.value)} type="number" placeholder="e.g. 20" className="w-full pl-8 pr-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
                       </div>
-                    )}
+                    ))}
                   </div>
-
-                  <div>
-                    <Label className="text-xs font-bold">Recurring Frequency</Label>
-                    <div className="flex flex-col gap-2 mt-1.5">
-                      <select
-                        className="w-full px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
-                        value={recurrence}
-                        onChange={(e) => setRecurrence(e.target.value as Recurrence)}
-                      >
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="month">Specific Month</option>
-                      </select>
-
-                      {recurrence === "month" && (
-                        <select className="w-full px-3 py-2 text-sm border-2 border-black rounded-lg bg-background border-dashed">
-                          <option>January</option>
-                          <option>February</option>
-                          <option>March</option>
-                          <option>April</option>
-                          <option>May</option>
-                          <option>June</option>
-                          <option>July</option>
-                          <option>August</option>
-                          <option>September</option>
-                          <option>October</option>
-                          <option>November</option>
-                          <option>December</option>
-                        </select>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1 relative">
+                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Location (keyword)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Mumbai, Maharashtra"
+                        value={locationKeyword}
+                        onChange={(e) => setLocationKeyword(e.target.value)}
+                        onFocus={() => setLocationDropdownOpen(true)}
+                        onBlur={() => setTimeout(() => setLocationDropdownOpen(false), 180)}
+                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      />
+                      {locationDropdownOpen && locationSuggestions.length > 0 && (
+                        <ul className="absolute z-10 mt-0.5 w-full max-h-40 overflow-auto rounded-lg border-2 border-black bg-card shadow-lg py-1">
+                          {locationSuggestions.map((s) => (
+                            <li
+                              key={s}
+                              className="px-2 py-1.5 text-xs cursor-pointer hover:bg-primary/15 focus:bg-primary/15"
+                              onMouseDown={(e) => { e.preventDefault(); setLocationKeyword(s); setLocationDropdownOpen(false); }}
+                            >
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {locationSuggestions.length > 0 && (
+                        <p className="text-[9px] text-muted-foreground mt-0.5">Suggestions from your accounts. Click to apply.</p>
+                      )}
+                    </div>
+                    <div className="space-y-1 relative">
+                      <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Partner name (keyword)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Acme, Nexus"
+                        value={partnerNameKeyword}
+                        onChange={(e) => setPartnerNameKeyword(e.target.value)}
+                        onFocus={() => setPartnerDropdownOpen(true)}
+                        onBlur={() => setTimeout(() => setPartnerDropdownOpen(false), 180)}
+                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      />
+                      {partnerDropdownOpen && partnerSuggestions.length > 0 && (
+                        <ul className="absolute z-10 mt-0.5 w-full max-h-40 overflow-auto rounded-lg border-2 border-black bg-card shadow-lg py-1">
+                          {partnerSuggestions.map((s) => (
+                            <li
+                              key={s}
+                              className="px-2 py-1.5 text-xs cursor-pointer hover:bg-primary/15 focus:bg-primary/15"
+                              onMouseDown={(e) => { e.preventDefault(); setPartnerNameKeyword(s); setPartnerDropdownOpen(false); }}
+                            >
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {partnerSuggestions.length > 0 && (
+                        <p className="text-[9px] text-muted-foreground mt-0.5">Suggestions from your accounts. Click to apply.</p>
                       )}
                     </div>
                   </div>
+                  <div className="mt-4">
+                    <label className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">Pipeline stage (Renewal Pipeline)</label>
+                    <p className="text-[11px] text-muted-foreground mb-1.5">Target accounts in a specific pipeline stage; schedule runs day-wise or month-wise.</p>
+                    <select value={pipelineStage} onChange={(e) => setPipelineStage(e.target.value)} className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background">
+                      <option value="">Any (no pipeline filter)</option>
+                      <option value="q1">Q1 (271+ days to renewal)</option>
+                      <option value="q2">Q2 (181–270 days)</option>
+                      <option value="q3">Q3 (91–180 days)</option>
+                      <option value="q4">Q4 (0–90 days)</option>
+                      <option value="renewed">Renewed</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs font-bold">Recurring Frequency</Label>
+                  <select className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" value={recurrence} onChange={(e) => setRecurrence(e.target.value as Recurrence)}>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="month">Monthly</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs font-bold">Start time (send from)</Label>
+                    <input type="time" value={campaignStartTime} onChange={e => setCampaignStartTime(e.target.value)} className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Optional. Messages sent only at or after this time (IST).</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-bold">End time (send until)</Label>
+                    <input type="time" value={campaignEndTime} onChange={e => setCampaignEndTime(e.target.value)} className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Optional. Messages sent only at or before this time (IST).</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs font-bold">Follow-up offset (days)</Label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={campaignFollowUpOffsetDays}
+                    onChange={e => setCampaignFollowUpOffsetDays(Math.max(1, Math.min(60, parseInt(e.target.value, 10) || 3)))}
+                    className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Controls when calls or emails are automatically queued after this touchpoint.</p>
                 </div>
 
                 <div className="pt-2">
@@ -378,8 +612,23 @@ export default function ManualTriggersPage() {
                     <RefreshCw size={15} className="text-primary" />
                     <h3 className="text-sm font-semibold text-foreground">Ongoing Campaigns</h3>
                   </div>
-                  <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/20">{campaignsList.length} Active</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleRunCampaignsNow}
+                      disabled={campaignRunNowLoading}
+                      className="text-[10px] font-bold px-2 py-1 rounded-lg border-2 border-black bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {campaignRunNowLoading ? "Running…" : "Run now"}
+                    </button>
+                    <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/20">{campaignsList.length} Active</span>
+                  </div>
                 </div>
+                {campaignRunNowMessage && (
+                  <p className={`px-4 py-1 text-xs ${campaignRunNowMessage.type === "success" ? "text-green-600" : "text-destructive"}`}>
+                    {campaignRunNowMessage.text}
+                  </p>
+                )}
                 <div className="p-4 overflow-y-auto space-y-4">
                   {campaignsLoading ? (
                     <p className="text-xs text-muted-foreground text-center py-4">Loading campaigns...</p>
@@ -391,6 +640,29 @@ export default function ManualTriggersPage() {
                         <div>
                           <h4 className="text-sm font-bold">{campaign.name}</h4>
                           <p className="text-[11px] text-muted-foreground mt-0.5">{campaign.description}</p>
+                          {(campaign.start_date || campaign.end_date) && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              {campaign.start_date && campaign.end_date
+                                ? `${campaign.start_date} → ${campaign.end_date}`
+                                : campaign.start_date
+                                  ? `From ${campaign.start_date}`
+                                  : `Until ${campaign.end_date}`}
+                            </p>
+                          )}
+                          {(campaign.schedule_start_time || campaign.schedule_end_time) && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                              Send {campaign.schedule_start_time && campaign.schedule_end_time
+                                ? `${campaign.schedule_start_time}–${campaign.schedule_end_time} IST`
+                                : campaign.schedule_start_time
+                                  ? `from ${campaign.schedule_start_time} IST`
+                                  : `until ${campaign.schedule_end_time} IST`}
+                            </p>
+                          )}
+                          {campaign.follow_up_offset_days != null && (
+                            <p className={`text-[10px] mt-0.5 font-medium ${campaign.follow_up_offset_days > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                              Follow-up offset: {campaign.follow_up_offset_days}d
+                            </p>
+                          )}
                         </div>
                         <div className={`shrink-0 w-2 h-2 rounded-full mt-1 ${campaign.is_active ? 'bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]' : 'bg-muted-foreground'}`}></div>
                       </div>
@@ -438,8 +710,19 @@ export default function ManualTriggersPage() {
                   </div>
 
                   {emailMode === "all" && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-2">Send personalized emails to all eligible customers (same as scheduled campaign).</p>
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs font-medium text-foreground">Purpose (what do you want to say to everyone?)</Label>
+                        <input
+                          type="text"
+                          placeholder="e.g. renewal reminder, 10% discount, check-in"
+                          value={emailPurpose}
+                          onChange={(e) => setEmailPurpose(e.target.value)}
+                          className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Optional. All emails will be tailored to this purpose.</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Send personalized emails to all eligible customers (same as scheduled campaign).</p>
                       <button
                         onClick={handleSendToAll}
                         disabled={allEmailLoading}
@@ -452,6 +735,17 @@ export default function ManualTriggersPage() {
 
                   {emailMode === "single" && (
                     <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs font-medium text-foreground">Purpose (what do you want to say?)</Label>
+                        <input
+                          type="text"
+                          placeholder="e.g. review follow-up, renewal reminder, check-in"
+                          value={emailPurpose}
+                          onChange={(e) => setEmailPurpose(e.target.value)}
+                          className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Optional. When you click Auto-generate, the message will be tailored to this purpose.</p>
+                      </div>
                       <div>
                         <Label className="text-xs font-medium text-foreground">Select customer</Label>
                         <div className="mt-1">
@@ -511,7 +805,7 @@ export default function ManualTriggersPage() {
                             <Label className="text-xs font-medium text-foreground">Body</Label>
                             <textarea
                               value={emailBody}
-                              onChange={(e) => setEmailBody(e.target.value)}
+                              onChange={(e) => { setEmailBody(e.target.value); setLastPreviewHtml(null); }}
                               placeholder="Email body (auto-generate or type)"
                               rows={6}
                               className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background resize-y"
@@ -583,6 +877,17 @@ export default function ManualTriggersPage() {
 
                   {voiceMode === "single" && (
                     <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs font-medium text-foreground">Purpose of call</Label>
+                        <input
+                          type="text"
+                          placeholder="e.g. review follow-up, renewal discussion, check-in"
+                          value={voicePurpose}
+                          onChange={(e) => setVoicePurpose(e.target.value)}
+                          className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
+                        />
+                        <p className="text-[10px] text-muted-foreground mt-0.5">Optional. The call script will be tailored to this purpose.</p>
+                      </div>
                       <div>
                         <Label className="text-xs font-medium text-foreground">Select customer</Label>
                         <div className="mt-1">

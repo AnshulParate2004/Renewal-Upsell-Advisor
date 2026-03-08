@@ -15,7 +15,7 @@ from app.services.email.templates import (
     get_renewal_reminder_template,
     get_upsell_opportunity_template,
     get_churn_prevention_template,
-    get_wellness_check_template
+    get_wellness_check_template,
 )
 from app.services.email.llm_personalization import personalize_email_content
 import os
@@ -132,11 +132,10 @@ def get_email_interval_days(client: Any | None = None) -> int:
         return None
 
 
-async def send_scheduled_emails():
+async def send_scheduled_emails(purpose: Optional[str] = None):
     """
     Send scheduled emails to accounts.
-    Checks email_campaigns table in Supabase to see if email was sent before 7 days.
-    Only sends if 7 days have passed since last email or if no email was sent before.
+    Optional purpose: when set, all emails are tailored to this intent (e.g. "10% discount", "renewal reminder").
     """
     client = get_supabase_client()
     if not client:
@@ -373,7 +372,7 @@ async def send_scheduled_emails():
                     # Fallback to wellness check
                     base_subject, base_html_body, base_text_body = get_wellness_check_template(account)
                 
-                # Personalize email content using LLM
+                # Personalize email content using LLM (optional purpose from "Send to all" with purpose bar)
                 try:
                     subject, html_body, text_body = personalize_email_content(
                         account=account,
@@ -381,7 +380,8 @@ async def send_scheduled_emails():
                         base_subject=base_subject,
                         base_html_body=base_html_body,
                         base_text_body=base_text_body,
-                        opportunity=opportunity
+                        opportunity=opportunity,
+                        user_purpose=purpose,
                     )
                 except Exception as e:
                     logger.warning(f"LLM personalization failed, using base templates: {e}")
@@ -567,7 +567,7 @@ async def send_scheduled_emails():
         logger.error(traceback.format_exc())
 
 
-def _get_email_content_for_account(client: Any, account_id: str) -> Dict[str, Any]:
+def _get_email_content_for_account(client: Any, account_id: str, purpose: Optional[str] = None) -> Dict[str, Any]:
     """
     Build personalized email content for an account. Returns dict with subject, html_body, text_body,
     email_type, recipient_email, account_name, account_id_val, account, or error key on failure.
@@ -606,30 +606,42 @@ def _get_email_content_for_account(client: Any, account_id: str) -> Dict[str, An
     has_upsell_opportunity = opportunities_result.data and len(opportunities_result.data) > 0
     email_type = "wellness_check"
     plan_completion_percentage = None
-    if has_upsell_opportunity:
-        email_type = "upsell"
-    elif risk_score >= risk_threshold_pct or churn_probability >= churn_prob_threshold:
-        email_type = "churn_prevention"
-    elif contract_start_date and contract_end_date:
-        try:
-            start_dt = datetime.fromisoformat(contract_start_date.replace("Z", "+00:00")) if isinstance(contract_start_date, str) else contract_start_date
-            end_dt = datetime.fromisoformat(contract_end_date.replace("Z", "+00:00")) if isinstance(contract_end_date, str) else contract_end_date
-            start_dt = start_dt.replace(tzinfo=None) if start_dt.tzinfo else start_dt
-            end_dt = end_dt.replace(tzinfo=None) if end_dt.tzinfo else end_dt
-            total_days = (end_dt - start_dt).days
-            days_elapsed = (datetime.now() - start_dt).days
-            if total_days > 0:
-                plan_completion_percentage = max(0, min(100, (days_elapsed / total_days) * 100))
-                email_type = "renewal_reminder" if plan_completion_percentage >= renewal_pct else "wellness_check"
-        except Exception:
-            pass
-    elif renewal_date:
-        try:
-            renewal_dt = datetime.fromisoformat(renewal_date.replace("Z", "+00:00")) if isinstance(renewal_date, str) else renewal_date
-            days_until = (renewal_dt.replace(tzinfo=None) - datetime.now()).days if renewal_dt.tzinfo else (renewal_dt - datetime.now()).days
-            email_type = "renewal_reminder" if 0 <= days_until <= reminder_days_before_renewal else "wellness_check"
-        except Exception:
-            pass
+
+    # When user provides a purpose, pick template from it (renewal / upsell / churn); else keep auto-selection
+    purpose_lower = (purpose or "").strip().lower()
+    if purpose_lower:
+        if "renewal" in purpose_lower:
+            email_type = "renewal_reminder"
+        elif "upsell" in purpose_lower or "expansion" in purpose_lower:
+            email_type = "upsell" if has_upsell_opportunity else "wellness_check"
+        elif "churn" in purpose_lower or "at risk" in purpose_lower or "at-risk" in purpose_lower:
+            email_type = "churn_prevention"
+
+    if email_type == "wellness_check":
+        if has_upsell_opportunity:
+            email_type = "upsell"
+        elif risk_score >= risk_threshold_pct or churn_probability >= churn_prob_threshold:
+            email_type = "churn_prevention"
+        elif contract_start_date and contract_end_date:
+            try:
+                start_dt = datetime.fromisoformat(contract_start_date.replace("Z", "+00:00")) if isinstance(contract_start_date, str) else contract_start_date
+                end_dt = datetime.fromisoformat(contract_end_date.replace("Z", "+00:00")) if isinstance(contract_end_date, str) else contract_end_date
+                start_dt = start_dt.replace(tzinfo=None) if start_dt.tzinfo else start_dt
+                end_dt = end_dt.replace(tzinfo=None) if end_dt.tzinfo else end_dt
+                total_days = (end_dt - start_dt).days
+                days_elapsed = (datetime.now() - start_dt).days
+                if total_days > 0:
+                    plan_completion_percentage = max(0, min(100, (days_elapsed / total_days) * 100))
+                    email_type = "renewal_reminder" if plan_completion_percentage >= renewal_pct else "wellness_check"
+            except Exception:
+                pass
+        elif renewal_date:
+            try:
+                renewal_dt = datetime.fromisoformat(renewal_date.replace("Z", "+00:00")) if isinstance(renewal_date, str) else renewal_date
+                days_until = (renewal_dt.replace(tzinfo=None) - datetime.now()).days if renewal_dt.tzinfo else (renewal_dt - datetime.now()).days
+                email_type = "renewal_reminder" if 0 <= days_until <= reminder_days_before_renewal else "wellness_check"
+            except Exception:
+                pass
     opportunity = opportunities_result.data[0] if (email_type == "upsell" and has_upsell_opportunity) else None
     if email_type == "upsell" and opportunity:
         base_subject, base_html_body, base_text_body = get_upsell_opportunity_template(account, opportunity)
@@ -643,7 +655,7 @@ def _get_email_content_for_account(client: Any, account_id: str) -> Dict[str, An
         subject, html_body, text_body = personalize_email_content(
             account=account, email_type=email_type,
             base_subject=base_subject, base_html_body=base_html_body, base_text_body=base_text_body,
-            opportunity=opportunity
+            opportunity=opportunity, user_purpose=purpose
         )
     except Exception as e:
         logger.warning(f"LLM personalization failed for single account: {e}")
@@ -655,16 +667,17 @@ def _get_email_content_for_account(client: Any, account_id: str) -> Dict[str, An
     }
 
 
-async def generate_email_preview_for_account(account_id: str) -> Dict[str, Any]:
+async def generate_email_preview_for_account(account_id: str, purpose: Optional[str] = None) -> Dict[str, Any]:
     """
     Generate personalized email content for an account (for UI preview/edit before sending).
+    Optional purpose: tailor the message to this intent (e.g. "review follow-up", "renewal reminder").
     Returns subject, html_body, text_body, email_type, recipient_email, account_name.
     """
     client = get_supabase_client()
     if not client:
         return {"error": "Supabase not configured."}
     try:
-        content = _get_email_content_for_account(client, account_id)
+        content = _get_email_content_for_account(client, account_id, purpose=purpose)
         if "error" in content:
             return content
         return {
@@ -685,6 +698,7 @@ async def send_email_to_single_account(
     subject: Optional[str] = None,
     html_body: Optional[str] = None,
     text_body: Optional[str] = None,
+    purpose: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Send a single email to the selected account (manual trigger).
@@ -714,7 +728,7 @@ async def send_email_to_single_account(
             email_type = "manual_custom"
         else:
             # Generate personalized content
-            content = _get_email_content_for_account(client, account_id)
+            content = _get_email_content_for_account(client, account_id, purpose=purpose)
             if "error" in content:
                 return {"success": False, "error": content["error"]}
             subject = content["subject"]
@@ -821,6 +835,14 @@ async def run_email_scheduler():
                 continue
 
             logger.info("Running scheduled email check at %02d:%02d IST", hour, minute)
+            # Run auto-campaigns first (daily/weekly/monthly by recurring_frequency and filter_config)
+            try:
+                from app.services.campaign_runner import run_auto_campaigns
+                result = await run_auto_campaigns()
+                if result.get("campaigns_processed"):
+                    logger.info("Auto campaigns run: %s", result)
+            except Exception as camp_err:
+                logger.warning("Auto campaigns run failed: %s", camp_err)
             await send_scheduled_emails()
 
             # Re-read schedule time so user changes take effect next run

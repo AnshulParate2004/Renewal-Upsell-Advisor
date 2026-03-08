@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { X, TrendingUp, AlertTriangle, Users, Building2, Clock, BarChart3, Mail, Phone, Edit2 } from "lucide-react";
-import { Account, formatCurrency, getDaysUntil } from "@/data/mockData";
+import { Account, formatCurrency, getDaysUntil, getRenewalInDays } from "@/data/mockData";
 import { motion, AnimatePresence } from "framer-motion";
 import { generateHistoricalData } from "@/data/historicalDataGenerator";
 import MetricsHistoryChart from "./charts/MetricsHistoryChart";
@@ -129,9 +129,9 @@ export default function AccountDetail({ account, onClose }: AccountDetailProps) 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                         {[
                                             { label: 'ANNUAL_REVENUE', value: formatCurrency(account.arr), icon: <TrendingUp size={18} /> },
-                                            { label: 'RENEWAL_HORIZON', value: `T-${getDaysUntil(account.renewalDate)}D`, alert: getDaysUntil(account.renewalDate) <= 30, icon: <Clock size={18} /> },
-                                            { label: 'UTILIZATION_INDEX', value: `${account.licensesUsed}/${account.licensesTotal}`, icon: <Users size={18} /> },
-                                            { label: 'DEPLOYMENT_STAGE', value: account.renewalStage.toUpperCase(), icon: <BarChart3 size={18} /> }
+                                            { label: 'Renewal in days', value: `${getRenewalInDays(account.renewalDate, account.contractEnd, account.status) ?? getDaysUntil(account.renewalDate)} days`, alert: (getRenewalInDays(account.renewalDate, account.contractEnd, account.status) ?? 999) <= 30, icon: <Clock size={18} /> },
+                                            { label: 'Licence Used', value: (() => { const u = account.licensesUsed ?? 0; const t = account.licensesTotal ?? 0; const pct = t ? Math.round((u / t) * 100) : 0; return `${u}/${t} (${pct}%)`; })(), icon: <Users size={18} /> },
+                                            { label: 'Stage', value: (() => { const s = (account.renewalStage || '').toLowerCase(); if (['q1','q2','q3','q4'].includes(s)) return s.toUpperCase(); if (s === 'renewed' || s === 'lost') return s.toUpperCase(); if (s === 't30') return 'Q1'; if (s === 't60') return 'Q2'; if (s === 't90') return 'Q4'; return s ? s.toUpperCase() : '—'; })(), icon: <BarChart3 size={18} /> }
                                         ].map((m, i) => (
                                             <div key={i} className="paper-card p-6 bg-white border border-gray-100 shadow-xl shadow-purple-900/5 group hover:border-primary/20 transition-all">
                                                 <div className="flex items-center justify-between mb-6">
@@ -147,58 +147,68 @@ export default function AccountDetail({ account, onClose }: AccountDetailProps) 
                                         ))}
                                     </div>
 
-                                    {/* Intelligence Section */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Intelligence Section: Health Score, Sentiment Analysis, Relationship Score */}
+                                    <div className="space-y-8">
                                         {/* Health Score */}
                                         <div className="paper-card p-8 bg-white border border-gray-100 shadow-xl shadow-purple-900/5 rounded-3xl">
                                             <div className="flex items-center justify-between mb-8">
-                                                <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400">HEALTH_INDEX</h3>
+                                                <h3 className="text-sm font-bold text-foreground">Health Score</h3>
                                                 <span className={`text-3xl font-extrabold tracking-tight ${account.healthScore >= 70 ? 'text-emerald-500' : account.healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
-                                                    {account.healthScore}%
+                                                    {account.healthScore}
                                                 </span>
                                             </div>
                                             <div className="w-full h-2 bg-gray-50 rounded-full overflow-hidden">
                                                 <div
                                                     className={`h-full transition-all duration-500 ${account.healthScore >= 70 ? 'bg-emerald-500' : account.healthScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
-                                                    style={{ width: `${account.healthScore}%` }}
+                                                    style={{ width: `${account.healthScore}` }}
                                                 />
                                             </div>
                                         </div>
 
-                                        {/* Risk Analysis */}
+                                        {/* Churn (risk / churn probability) */}
                                         <div className="paper-card p-8 bg-foreground text-white border-none shadow-2xl shadow-purple-900/20 rounded-3xl relative overflow-hidden">
                                             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -mr-16 -mt-16 blur-3xl opacity-50" />
                                             <div className="relative z-10">
                                                 <div className="flex items-center justify-between mb-8">
-                                                    <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-white/40">RISK_ARCHITECTURE</h3>
+                                                    <h3 className="text-sm font-bold text-white/90">Churn probability</h3>
                                                     <span className={`text-3xl font-extrabold tracking-tight ${account.churnProbability >= 0.7 ? 'text-red-500' : 'text-white'}`}>
                                                         {Math.round(account.churnProbability * 100)}%
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="px-3 py-1 bg-white/10 rounded-lg text-[9px] font-bold uppercase tracking-widest">
-                                                        CHURN_PROBABILITY
-                                                    </div>
-                                                    <div className="px-3 py-1 bg-primary rounded-lg text-[9px] font-bold uppercase tracking-widest">
-                                                        {account.riskScore >= 70 ? 'CRITICAL' : 'STABLE'}
+                                                    <span className="text-xs font-medium text-white/70">Probability</span>
+                                                    <div className="px-3 py-1 bg-primary rounded-lg text-xs font-bold uppercase tracking-wider">
+                                                        {account.riskScore >= 70 ? 'Critical' : 'Stable'}
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Sentiment Audit */}
-                                        <div className="paper-card p-8 bg-white border border-gray-100 shadow-xl shadow-purple-900/5 rounded-3xl md:col-span-2">
+                                        {/* Sentiment Analysis */}
+                                        <div className="paper-card p-8 bg-white border border-gray-100 shadow-xl shadow-purple-900/5 rounded-3xl">
                                             <div className="flex items-center justify-between mb-8">
-                                                <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400">SENTIMENT_AUDIT_STREAM</h3>
-                                                <div className="flex items-center gap-6">
-                                                    <span className="text-4xl">{getSentimentEmoji(account.sentimentScore)}</span>
-                                                    <div className="text-right">
-                                                        <p className={`text-2xl font-extrabold tracking-tight leading-none mb-1 ${getSentimentColor(account.sentimentScore)}`}>
-                                                            {getSentimentLabel(account.sentimentScore)}
-                                                        </p>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">POLARITY_IDX: {account.sentimentScore.toFixed(2)}</p>
-                                                    </div>
+                                                <h3 className="text-sm font-bold text-foreground">Sentiment Analysis</h3>
+                                                <span className="text-xs font-medium text-gray-500">Score: {account.sentimentScore.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-6">
+                                                <span className="text-4xl">{getSentimentEmoji(account.sentimentScore)}</span>
+                                                <div>
+                                                    <p className={`text-2xl font-extrabold tracking-tight leading-none mb-1 ${getSentimentColor(account.sentimentScore)}`}>
+                                                        {getSentimentLabel(account.sentimentScore)}
+                                                    </p>
+                                                    <p className="text-sm text-gray-600">Overall customer sentiment is {getSentimentLabel(account.sentimentScore).toLowerCase()}.</p>
                                                 </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Relationship Score */}
+                                        <div className="paper-card p-8 bg-primary/5 border border-primary/20 shadow-xl shadow-purple-900/5 rounded-3xl">
+                                            <h3 className="text-sm font-bold text-primary mb-8">Relationship Score</h3>
+                                            <div className="flex items-baseline gap-2 mb-2">
+                                                <span className="text-4xl font-extrabold text-primary tracking-tight">{account.relationshipScore}</span>
+                                            </div>
+                                            <div className="w-full h-2 bg-primary/10 rounded-full overflow-hidden">
+                                                <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${account.relationshipScore}` }} />
                                             </div>
                                         </div>
                                     </div>
@@ -212,28 +222,6 @@ export default function AccountDetail({ account, onClose }: AccountDetailProps) 
                                         <ContactInfoSection account={account} />
                                     </div>
 
-                                    {/* Account Meta */}
-                                    <div className="space-y-6">
-                                        <div className="flex items-center gap-3">
-                                            <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400">METADATA_REGISTRY</h3>
-                                            <div className="h-px flex-1 bg-gray-50" />
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                            {[
-                                                { label: 'ASSIGNED_CSM', value: account.csm },
-                                                { label: 'LAST_UPLINK', value: account.lastContact },
-                                                { label: 'CONTRACT_ROOT', value: account.contractStart, mono: true },
-                                                { label: 'RENEWAL_NODE', value: account.renewalDate, mono: true }
-                                            ].map((field, i) => (
-                                                <div key={i} className="paper-card p-5 bg-gray-50/50 border border-gray-100 rounded-2xl">
-                                                    <p className="text-[9px] uppercase font-bold text-gray-400 tracking-widest mb-2">{field.label}</p>
-                                                    <p className={`text-sm font-bold text-foreground tracking-tight ${field.mono ? 'font-mono' : ''}`}>
-                                                        {field.value}
-                                                    </p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
                                 </div>
                             )}
 

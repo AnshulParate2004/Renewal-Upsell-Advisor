@@ -63,7 +63,7 @@ export default function Landing() {
     ];
 
     const stats = [
-        { value: "94%", label: "Renewal Rate", sublabel: "Avg across customers" },
+        { value: "94", label: "Renewal Rate", sublabel: "Avg across customers" },
         { value: "3.2x", label: "Upsell Lift", sublabel: "vs. baseline" },
         { value: "90d", label: "Early Warning", sublabel: "Before churn risk" },
         { value: "< 5min", label: "Time to Insight", sublabel: "From data to action" },
@@ -223,7 +223,7 @@ export default function Landing() {
                                     {[
                                         { label: "ARR at Risk", value: "$2.4M", color: "text-red-500", icon: "🚨" },
                                         { label: "Upsell Pipeline", value: "$890K", color: "text-emerald-600", icon: "💰" },
-                                        { label: "Renewal Rate", value: "94%", color: "text-primary", icon: "📈" },
+                                        { label: "Renewal Rate", value: "94", color: "text-primary", icon: "📈" },
                                     ].map((m, i) => (
                                         <div key={i} className="bg-white px-5 py-5">
                                             <div className="text-lg mb-1">{m.icon}</div>
@@ -259,7 +259,7 @@ export default function Landing() {
                                                 </div>
                                                 <div className="shrink-0 text-right">
                                                     <div className={`text-xs font-black px-2 py-0.5 rounded-full ${acc.risk >= 80 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>
-                                                        {acc.risk}% risk
+                                                        {acc.risk} risk
                                                     </div>
                                                 </div>
                                             </motion.div>

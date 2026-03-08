@@ -1,4 +1,4 @@
-import { Users, AlertTriangle, TrendingUp, DollarSign, Heart, Smile, Loader2, ShieldCheck, Briefcase } from "lucide-react";
+import { Users, AlertTriangle, DollarSign, Heart, Smile, Loader2, ShieldCheck, Briefcase, Activity, Gauge } from "lucide-react";
 import { formatCurrency } from "@/data/mockData";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useDashboardStats } from "@/hooks/useAnalytics";
@@ -15,29 +15,46 @@ export default function Dashboard() {
   const totalArr = stats?.total_arr ?? accounts.reduce((sum, a) => sum + a.arr, 0);
   const totalMrr = stats?.total_mrr ?? accounts.reduce((sum, a) => sum + (a.mrr || a.arr / 12), 0);
   const displayRevenue = revenueType === 'MRR' ? totalMrr : totalArr;
-  const churnRiskCount = stats?.churn_risk_count ?? 0;
-  const renewalRate = accounts.length > 0
-    ? Math.round((accounts.filter((a) => a.renewalStage === "renewed" || a.healthScore >= 70).length / accounts.length) * 100)
-    : 0;
+  const revenueLabel = revenueType === 'ARR' ? 'Annual Recurring Revenue' : 'Monthly Recurring Revenue';
+  // Renewed status: don't count in churn; do count as on track
+  const isStatusRenewed = (a: { status?: string | null }) => {
+    const s = (a?.status ?? '').toString().trim().toLowerCase();
+    return s === 'renewed' || s === 'renewal';
+  };
+  const churnRiskCount = accounts.length > 0
+    ? accounts.filter(a => (a.riskScore ?? 0) >= 70 && !isStatusRenewed(a)).length
+    : (stats?.churn_risk_count ?? 0);
   const upsellPipeline = stats?.upsell_pipeline ?? 0;
   const displayPipeline = revenueType === 'MRR' ? upsellPipeline / 12 : upsellPipeline;
   const avgRelationshipScore = stats?.avg_relationship_score ?? 0;
   const avgSentimentScore = (stats?.avg_sentiment_score ?? 0).toFixed(2);
   const isLoading = statsLoading || accountsLoading;
 
-  const safeAccountsCount = accounts.filter(a => a.riskScore < 70).length;
+  // On track: Healthy (risk < 40) or explicitly renewed (status renewed/renewal); Middle not counted unless renewed
+  const safeAccountsCount = accounts.filter(a => (a.riskScore ?? 0) < 40 || isStatusRenewed(a)).length;
+  const avgHealthScore = accounts.length > 0
+    ? Math.round(accounts.reduce((sum, a) => sum + (a.healthScore ?? 0), 0) / accounts.length)
+    : 0;
+  const avgUtilizationPct = accounts.length > 0
+    ? (() => {
+        const total = accounts.reduce((sum, a) => {
+          const u = Number(a.utilization ?? 0);
+          return sum + (u <= 1 && u >= 0 ? u * 100 : u);
+        }, 0);
+        return Math.round(total / accounts.length);
+      })()
+    : 0;
 
   const metricCards = [
     { label: 'Total Customers', value: accounts.length, icon: <Briefcase size={18} />, iconBg: 'bg-blue-500/10', iconColor: 'text-blue-500', borderColor: 'border-blue-500/20' },
-    { label: `Total ${revenueType}`, value: formatCurrency(displayRevenue), icon: <DollarSign size={18} />, iconBg: 'bg-primary/10', iconColor: 'text-primary', borderColor: 'border-primary/20' },
-    { label: 'Safe Accounts', value: safeAccountsCount, icon: <ShieldCheck size={18} />, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500', borderColor: 'border-emerald-500/20' },
-    { label: 'Churn Risk', value: churnRiskCount, icon: <AlertTriangle size={18} />, iconBg: 'bg-destructive/10', iconColor: 'text-destructive', isAlert: true, borderColor: 'border-destructive/20' },
-    { label: 'Renewal Rate', value: `${renewalRate}%`, icon: <TrendingUp size={18} />, iconBg: 'bg-primary/10', iconColor: 'text-primary', borderColor: 'border-primary/20' },
+    { label: `Total ${revenueLabel}`, value: formatCurrency(displayRevenue), icon: <DollarSign size={18} />, iconBg: 'bg-primary/10', iconColor: 'text-primary', borderColor: 'border-primary/20' },
+    { label: 'Accounts on track', value: safeAccountsCount, icon: <ShieldCheck size={18} />, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500', borderColor: 'border-emerald-500/20' },
+    { label: 'Churn Prediction', value: churnRiskCount, icon: <AlertTriangle size={18} />, iconBg: 'bg-destructive/10', iconColor: 'text-destructive', isAlert: true, borderColor: 'border-destructive/20' },
     { label: 'Upsell Pipeline', value: formatCurrency(displayPipeline), icon: <Users size={18} />, iconBg: 'bg-accent/10', iconColor: 'text-accent', borderColor: 'border-accent/20' },
-    { label: 'Avg Relationship', value: `${Math.round(avgRelationshipScore)}%`, icon: <Heart size={18} />, iconBg: 'bg-pink-500/10', iconColor: 'text-pink-500', borderColor: 'border-pink-500/20' },
-    { label: 'Avg Sentiment', value: avgSentimentScore, icon: <Smile size={18} />, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500', borderColor: 'border-amber-500/20' },
-    { label: 'Avg Deal Size', value: formatCurrency(Math.floor(displayRevenue / (accounts.filter(a => a.arr > 0).length || 1))), icon: <TrendingUp size={18} />, iconBg: 'bg-orange-500/10', iconColor: 'text-orange-500', borderColor: 'border-orange-500/20' },
-    { label: 'Conversion Rate', value: '15%', icon: <Smile size={18} />, iconBg: 'bg-indigo-500/10', iconColor: 'text-indigo-500', borderColor: 'border-indigo-500/20' },
+    { label: 'Avg Relationship', value: `${Math.round(avgRelationshipScore)}`, icon: <Heart size={18} />, iconBg: 'bg-pink-500/10', iconColor: 'text-pink-500', borderColor: 'border-pink-500/20' },
+    { label: 'Average Customer Sentiment', value: avgSentimentScore, icon: <Smile size={18} />, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500', borderColor: 'border-amber-500/20' },
+    { label: 'Average Health Score', value: avgHealthScore, icon: <Activity size={18} />, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-600', borderColor: 'border-emerald-500/20' },
+    { label: 'Average Licence Used %', value: `${avgUtilizationPct}%`, icon: <Gauge size={18} />, iconBg: 'bg-sky-500/10', iconColor: 'text-sky-600', borderColor: 'border-sky-500/20' },
   ];
 
   return (

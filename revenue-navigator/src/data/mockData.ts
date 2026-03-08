@@ -41,12 +41,15 @@ export interface Account {
   licensesUsed: number;
   licensesTotal: number;
   renewalDate: string;
-  renewalStage: "q1" | "q2" | "q3" | "q4" | "renewed" | "lost";
+  renewalStage: "q1" | "q2" | "q3" | "q4" | "no_renewed" | "renewed" | "lost";
   industry: string;
   company_size?: string; // Added to match Supabase schema
   csm: string;
+  /** Partner name (from partner_name or csm_name in DB) */
+  partnerName?: string;
   lastContact: string;
   contractStart: string;
+  contractEnd?: string;
   /** Account status: active, churned, at_risk, renewed */
   status?: string;
   // Contact information
@@ -114,14 +117,35 @@ export const getDaysUntil = (date: string) => {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 };
 
+/** Renewal in days = days from today. When status is renewed and renewal_date is set, use contract_end − today; else use renewal_date if set, else contract_end. */
+export function getRenewalInDays(
+  renewalDate: string | undefined | null,
+  contractEnd: string | undefined | null,
+  status?: string | null
+): number | null {
+  const s = (status ?? '').toString().trim().toLowerCase();
+  const isRenewed = s === 'renewed' || s === 'renewal';
+  const hasRenewalDate = renewalDate && String(renewalDate).trim();
+  const hasContractEnd = contractEnd && String(contractEnd).trim();
+  const useDate = isRenewed && hasRenewalDate && hasContractEnd
+    ? (contractEnd && String(contractEnd).trim()) || null
+    : hasRenewalDate
+      ? (renewalDate && String(renewalDate).trim()) || null
+      : hasContractEnd
+        ? (contractEnd && String(contractEnd).trim()) || null
+        : null;
+  if (!useDate) return null;
+  return getDaysUntil(useDate);
+}
+
 /** Days since a date (e.g. contract start). Positive = past, negative = future. */
 export function getDaysSinceStart(date: string): number {
   const diff = new Date().getTime() - new Date(date).getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-/** Pipeline stage: Q1 (0-25%), Q2 (25-50%), Q3 (50-75%), Q4 (75-100%); past renewal or status=renewed → Renewed. */
-export type RenewalStage = "q1" | "q2" | "q3" | "q4" | "renewed";
+/** Pipeline stage: Q1–Q4 by days to renewal; days < 0 and not renewed → no_renewed. Renewed accounts go to Q1–Q4 by days to apply renewal (no separate column). */
+export type RenewalStage = "q1" | "q2" | "q3" | "q4" | "no_renewed";
 
 export interface RenewalStageOptions {
   milestonePercents?: number[];
@@ -129,34 +153,34 @@ export interface RenewalStageOptions {
 }
 
 export function getRenewalStageFromPlan(
-  contractStartDate: string | undefined | null,
+  _contractStartDate: string | undefined | null,
   renewalDate: string | undefined | null,
   status?: string | null,
-  options?: RenewalStageOptions | null
+  _options?: RenewalStageOptions | null,
+  contractEnd?: string | undefined | null,
+  _renewalStage?: string | undefined | null
 ): RenewalStage {
-  if (status === "renewed") return "renewed";
   const today = new Date().toISOString().split("T")[0];
-  const end = renewalDate && renewalDate.trim() ? renewalDate.trim() : today;
-  const endMs = new Date(end).getTime();
-  if (Number.isNaN(endMs)) return "q4";
+  const s = (status ?? "").toString().trim().toLowerCase();
+  const isRenewed = s === "renewed" || s === "renewal";
+  // Renewed accounts: bucket by days to contract end (apply renewal); others by renewal/contract end
+  const end =
+    isRenewed && contractEnd && String(contractEnd).trim()
+      ? String(contractEnd).trim()
+      : (renewalDate && renewalDate.trim())
+        ? renewalDate.trim()
+        : (contractEnd && String(contractEnd).trim())
+          ? contractEnd.trim()
+          : today;
+  if (Number.isNaN(new Date(end).getTime())) return "q4";
 
-  // Past renewal (overdue) → Renewed
-  const daysUntilRenewal = getDaysUntil(end);
-  if (daysUntilRenewal <= 0) return "renewed";
+  const daysToRenewal = getDaysUntil(end);
 
-  const start = contractStartDate && contractStartDate.trim() ? contractStartDate.trim() : today;
-  const startMs = new Date(start).getTime();
-  if (Number.isNaN(startMs)) return "q4";
-
-  const planDurationDays = Math.max(1, Math.ceil((endMs - startMs) / (1000 * 60 * 60 * 24)));
-  const daysElapsed = getDaysSinceStart(start);
-  const percent = Number.isFinite(daysElapsed) && planDurationDays > 0
-    ? (daysElapsed / planDurationDays) * 100
-    : 0;
-  const p = Number.isFinite(percent) ? Math.max(0, percent) : 0;
-
-  if (p < 25) return "q1";
-  if (p < 50) return "q2";
-  if (p < 75) return "q3";
+  // Past renewal date and not renewed → No Renewed column
+  if (!isRenewed && daysToRenewal < 0) return "no_renewed";
+  // Renewed with past contract end → Q4; else bucket by days
+  if (daysToRenewal > 270) return "q1";
+  if (daysToRenewal > 180) return "q2";
+  if (daysToRenewal > 90) return "q3";
   return "q4";
 }

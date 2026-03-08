@@ -23,6 +23,31 @@ router = APIRouter()
 # Only these two types are supported (frontend and API)
 ALLOWED_OPPORTUNITY_TYPES = ("upsell", "expansion")
 
+# Pipeline stages for display; used when status is missing or generic "identified"
+OPPORTUNITY_STAGES = ("prospecting", "qualification", "proposal", "negotiation", "identified", "closed_won", "closed_lost")
+
+
+def _stage_from_probability(probability: float) -> str:
+    """Derive a display stage from probability when status is missing or 'identified'."""
+    p = float(probability) if probability is not None else 0
+    if p < 0.25:
+        return "prospecting"
+    if p < 0.45:
+        return "qualification"
+    if p < 0.65:
+        return "proposal"
+    if p < 0.85:
+        return "negotiation"
+    return "identified"
+
+
+def _normalize_stage(status: Optional[str], probability: float) -> str:
+    """Return status if set and not generic 'identified'; otherwise derive from probability."""
+    s = (status or "").strip().lower() if status else ""
+    if s and s not in ("identified",):
+        return s if s in OPPORTUNITY_STAGES else "identified"
+    return _stage_from_probability(probability)
+
 
 def _normalize_type(opportunity_type: Optional[str]) -> str:
     """Return only 'upsell' or 'expansion'. Legacy values map to expansion."""
@@ -87,7 +112,7 @@ async def get_opportunities(skip: int = 0, limit: int = 100):
                 "type": _normalize_type(opp.get("opportunity_type")),  # only upsell or expansion
                 "value": float(opp.get("predicted_value", 0)),  # predicted_value -> value
                 "probability": float(opp.get("probability", 0)),
-                "stage": opp.get("status", "identified"),  # status -> stage
+                "stage": _normalize_stage(opp.get("status"), float(opp.get("probability", 0))),
                 "created_date": opp.get("created_at", ""),
                 "created_at": opp.get("created_at", ""),
                 "updated_at": opp.get("updated_at"),
@@ -133,7 +158,7 @@ async def get_opportunity(opportunity_id: str):
             "type": _normalize_type(opp.get("opportunity_type")),
             "value": float(opp.get("predicted_value", 0)),
             "probability": float(opp.get("probability", 0)),
-            "stage": opp.get("status", "identified"),
+            "stage": _normalize_stage(opp.get("status"), float(opp.get("probability", 0))),
             "created_date": opp.get("created_at", ""),
             "created_at": opp.get("created_at", ""),
             "updated_at": opp.get("updated_at"),
@@ -180,7 +205,7 @@ async def create_opportunity(opportunity: dict):
             "type": _normalize_type(opp.get("opportunity_type")),
             "value": float(opp.get("predicted_value", 0)),
             "probability": float(opp.get("probability", 0)),
-            "stage": opp.get("status", "identified"),
+            "stage": _normalize_stage(opp.get("status"), float(opp.get("probability", 0))),
             "created_date": opp.get("created_at", ""),
             "created_at": opp.get("created_at", ""),
             "updated_at": opp.get("updated_at"),
@@ -232,7 +257,7 @@ async def update_opportunity(opportunity_id: str, opportunity_update: dict):
             "type": _normalize_type(opp.get("opportunity_type")),
             "value": float(opp.get("predicted_value", 0)),
             "probability": float(opp.get("probability", 0)),
-            "stage": opp.get("status", "identified"),
+            "stage": _normalize_stage(opp.get("status"), float(opp.get("probability", 0))),
             "created_date": opp.get("created_at", ""),
             "created_at": opp.get("created_at", ""),
             "updated_at": opp.get("updated_at"),

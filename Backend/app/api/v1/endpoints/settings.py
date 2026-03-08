@@ -12,7 +12,7 @@ with at least the following columns:
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from app.core.logging import get_logger
 from app.services.email.scheduler import get_supabase_client
@@ -56,6 +56,19 @@ class MetricsConfig(BaseModel):
   healthScoreAtRiskBelowPercent: int = Field(50, ge=0, le=100, description="Health score below this % treated as at-risk")
 
 
+class PipelineFlowConfig(BaseModel):
+  """
+  Per–pipeline-stage action: what to send for each stage (email, call, both, or none).
+  Keys: q1, q2, q3, q4, renewed. Values: "email" | "voice" | "both" | "none".
+  Used by the daily pipeline flow runner to send messages according to Settings.
+  """
+  q1: str = Field("email", description="Q1 (271+ days): email | voice | both | none")
+  q2: str = Field("email", description="Q2 (181–270 days)")
+  q3: str = Field("email", description="Q3 (91–180 days)")
+  q4: str = Field("both", description="Q4 (0–90 days)")
+  renewed: str = Field("none", description="Renewed stage")
+
+
 class AppSettings(BaseModel):
   """
   Root settings object persisted in Supabase.
@@ -63,6 +76,7 @@ class AppSettings(BaseModel):
 
   schedule: ScheduleConfig = ScheduleConfig()
   metrics: MetricsConfig = MetricsConfig()
+  pipeline_flow: Optional[PipelineFlowConfig] = Field(default_factory=PipelineFlowConfig, description="Per-stage action for pipeline flow (email/call/both/none)")
 
 
 DEFAULT_SETTINGS = AppSettings()

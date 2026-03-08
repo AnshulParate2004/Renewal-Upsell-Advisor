@@ -23,13 +23,13 @@ export function TopBar() {
             onClick={() => setRevenueType('ARR')}
             className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors ${revenueType === 'ARR' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-black/5'}`}
           >
-            ARR
+            Annual
           </button>
           <button
             onClick={() => setRevenueType('MRR')}
             className={`px-2.5 py-0.5 text-xs font-medium rounded-md transition-colors ${revenueType === 'MRR' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-black/5'}`}
           >
-            MRR
+            Monthly
           </button>
         </div>
 

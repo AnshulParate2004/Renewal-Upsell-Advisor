@@ -9,9 +9,6 @@ import {
   ExternalLink,
   RefreshCw,
   Plus,
-  Clock,
-  Mail,
-  Phone,
   SlidersHorizontal,
   Kanban,
 } from "lucide-react";
@@ -33,17 +30,6 @@ export default function SettingsPage() {
     highRisk: true, renewals: true, daily: false, failedCalls: true,
   });
 
-  const [scheduleSettings, setScheduleSettings] = useState({
-    callWindowStart: "09:00",
-    callWindowEnd: "17:00",
-    emailWindowStart: "08:00",
-    emailWindowEnd: "18:00",
-    followUpDays: 3,
-    autoEmailScheduleTime: "12:00",
-    autoCallScheduleTime: "14:00",
-    reminderDaysBeforeRenewal: 1,
-  });
-
   const [metricDefaults, setMetricDefaults] = useState({
     churnRiskThreshold: 30,
     renewalTarget: 90,
@@ -60,14 +46,6 @@ export default function SettingsPage() {
   const toggleNotif = (key: keyof typeof notifications) =>
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  function updateSchedule(
-    key: keyof typeof scheduleSettings,
-    value: string | number,
-  ) {
-    setScheduleSettings((prev) => ({ ...prev, [key]: value }));
-    setIsDirty(true);
-  }
-
   function updateMetric(key: keyof typeof metricDefaults, value: number) {
     setMetricDefaults((prev) => ({
       ...prev,
@@ -78,21 +56,10 @@ export default function SettingsPage() {
 
 
 
-  // Hydrate local editable state from backend settings when available
+  // Hydrate metrics from backend. Only pipeline schedules run; no global call/email schedule in use.
   useEffect(() => {
-    const schedule = appSettings?.schedule;
     const metrics = appSettings?.metrics;
-    if (!schedule || !metrics) return;
-    setScheduleSettings({
-      callWindowStart: schedule.callWindowStart ?? "09:00",
-      callWindowEnd: schedule.callWindowEnd ?? "17:00",
-      emailWindowStart: schedule.emailWindowStart ?? "08:00",
-      emailWindowEnd: schedule.emailWindowEnd ?? "18:00",
-      followUpDays: schedule.followUpDays ?? 3,
-      autoEmailScheduleTime: schedule.autoEmailScheduleTime ?? "12:00",
-      autoCallScheduleTime: schedule.autoCallScheduleTime ?? "14:00",
-      reminderDaysBeforeRenewal: schedule.reminderDaysBeforeRenewal ?? 1,
-    });
+    if (!metrics) return;
     setMetricDefaults({
       churnRiskThreshold: metrics.churnRiskThreshold ?? 30,
       renewalTarget: metrics.renewalTarget ?? 90,
@@ -108,16 +75,17 @@ export default function SettingsPage() {
 
   const handleSaveSettings = async () => {
     try {
+      // Only pipeline schedules run; send default schedule for API compatibility, save only metrics.
       await updateSettings.mutateAsync({
         schedule: {
-          callWindowStart: scheduleSettings.callWindowStart,
-          callWindowEnd: scheduleSettings.callWindowEnd,
-          emailWindowStart: scheduleSettings.emailWindowStart,
-          emailWindowEnd: scheduleSettings.emailWindowEnd,
-          followUpDays: scheduleSettings.followUpDays,
-          autoEmailScheduleTime: scheduleSettings.autoEmailScheduleTime,
-          autoCallScheduleTime: scheduleSettings.autoCallScheduleTime,
-          reminderDaysBeforeRenewal: scheduleSettings.reminderDaysBeforeRenewal,
+          callWindowStart: "09:00",
+          callWindowEnd: "17:00",
+          emailWindowStart: "08:00",
+          emailWindowEnd: "18:00",
+          followUpDays: 3,
+          autoEmailScheduleTime: "12:00",
+          autoCallScheduleTime: "14:00",
+          reminderDaysBeforeRenewal: 1,
         },
         metrics: {
           churnRiskThreshold: metricDefaults.churnRiskThreshold,
@@ -133,7 +101,7 @@ export default function SettingsPage() {
       setIsDirty(false);
       toast({
         title: "Settings saved",
-        description: "Scheduling and metric defaults have been updated.",
+        description: "Metric defaults have been updated.",
       });
     } catch (error: any) {
       toast({
@@ -151,7 +119,7 @@ export default function SettingsPage() {
           <div>
             <h1 className="text-xl font-semibold text-foreground">Settings</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Manage integrations, notifications, engagement scheduling and guardrail metrics
+              Manage integrations, notifications and guardrail metrics. Only pipeline schedules run (set in Renewal Pipeline flows).
             </p>
           </div>
           <button
@@ -224,147 +192,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Call & Email Scheduling - left side */}
-            <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
-                <Clock size={15} className="text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Call & Email Scheduling</h3>
-              </div>
-              <div className="p-4 space-y-4 text-xs">
-                <p className="text-[11px] text-muted-foreground">
-                  Start with our recommended outreach windows, then tailor when calls and emails
-                  should be scheduled for your team.
-                </p>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
-                      <Phone className="w-3 h-3" />
-                      Preferred Call Window (Start)
-                    </Label>
-                    <input
-                      type="time"
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={scheduleSettings.callWindowStart}
-                      onChange={(e) => updateSchedule("callWindowStart", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">
-                      Preferred Call Window (End)
-                    </Label>
-                    <input
-                      type="time"
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={scheduleSettings.callWindowEnd}
-                      onChange={(e) => updateSchedule("callWindowEnd", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground flex items-center gap-1.5">
-                      <Mail className="w-3 h-3" />
-                      Email Window (Start)
-                    </Label>
-                    <input
-                      type="time"
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={scheduleSettings.emailWindowStart}
-                      onChange={(e) => updateSchedule("emailWindowStart", e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">
-                      Email Window (End)
-                    </Label>
-                    <input
-                      type="time"
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={scheduleSettings.emailWindowEnd}
-                      onChange={(e) => updateSchedule("emailWindowEnd", e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] font-medium text-foreground">
-                    Default Follow-up Offset (days)
-                  </Label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={60}
-                    className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                    value={scheduleSettings.followUpDays}
-                    onChange={(e) =>
-                      updateSchedule("followUpDays", Number(e.target.value) || scheduleSettings.followUpDays)
-                    }
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Controls when calls or emails are automatically queued after a touchpoint.
-                  </p>
-                </div>
-
-                <div className="border-t-2 border-black/20 pt-3 space-y-3">
-                  <p className="text-[11px] font-medium text-foreground">Auto run schedule (daily)</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-foreground">
-                        Auto email run time
-                      </Label>
-                      <input
-                        type="time"
-                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                        value={scheduleSettings.autoEmailScheduleTime}
-                        onChange={(e) => updateSchedule("autoEmailScheduleTime", e.target.value)}
-                      />
-                      <p className="text-[10px] text-muted-foreground">
-                        When the daily email campaign runs automatically.
-                      </p>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-foreground">
-                        Auto call run time
-                      </Label>
-                      <input
-                        type="time"
-                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                        value={scheduleSettings.autoCallScheduleTime}
-                        onChange={(e) => updateSchedule("autoCallScheduleTime", e.target.value)}
-                      />
-                      <p className="text-[10px] text-muted-foreground">
-                        When the daily call processing runs automatically.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t-2 border-black/20 pt-3 space-y-1.5">
-                  <Label className="text-[11px] font-medium text-foreground">
-                    Reminder days before renewal
-                  </Label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={365}
-                    className="w-full max-w-[100px] px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                    value={scheduleSettings.reminderDaysBeforeRenewal}
-                    onChange={(e) =>
-                      updateSchedule("reminderDaysBeforeRenewal", Math.max(0, parseInt(e.target.value, 10) || 0))
-                    }
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Trigger call/email when this many days before renewal (e.g. 1 = 1 day before).
-                  </p>
-                </div>
-              </div>
-            </div>
-
-
-          </div>
-
-          {/* Right Col */}
-          <div className="lg:col-span-4 space-y-5">
-            {/* Notifications */}
+            {/* Notifications - in left column to fill empty space */}
             <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
                 <Bell size={15} className="text-primary" />
@@ -391,7 +219,10 @@ export default function SettingsPage() {
                 ))}
               </div>
             </div>
+          </div>
 
+          {/* Right Col */}
+          <div className="lg:col-span-4 space-y-5">
             {/* Default Metrics (Auto + Customizable) */}
             <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
@@ -404,130 +235,120 @@ export default function SettingsPage() {
                   You can override these thresholds at any time to fit your motion.
                 </p>
 
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">
-                      Churn Risk Threshold (%)
-                    </Label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={metricDefaults.churnRiskThreshold}
-                      onChange={(e) => updateMetric("churnRiskThreshold", Number(e.target.value))}
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Accounts above this risk level are treated as high-risk in dashboards and alerts.
-                    </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-foreground">
+                        Churn Prediction Threshold (%)
+                      </Label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                        value={metricDefaults.churnRiskThreshold}
+                        onChange={(e) => updateMetric("churnRiskThreshold", Number(e.target.value))}
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Accounts above this risk level are treated as high-risk in dashboards and alerts.
+                      </p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-foreground">
+                        Target Renewal Rate (%)
+                      </Label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                        value={metricDefaults.renewalTarget}
+                        onChange={(e) => updateMetric("renewalTarget", Number(e.target.value))}
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Used as the default success target for renewal performance.
+                      </p>
+                    </div>
+                    <div className="space-y-1.5 border-t-2 border-black/20 pt-3">
+                      <Label className="text-[11px] font-medium text-foreground">
+                        Upsell Pipeline Target (ARR)
+                      </Label>
+                      <input
+                        type="number"
+                        min={0}
+                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                        value={metricDefaults.upsellPipelineTarget}
+                        onChange={(e) => updateMetric("upsellPipelineTarget", Number(e.target.value))}
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Initial upsell ARR goal used in dashboards until you customize it.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">
-                      Target Renewal Rate (%)
-                    </Label>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={metricDefaults.renewalTarget}
-                      onChange={(e) => updateMetric("renewalTarget", Number(e.target.value))}
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Used as the default success target for renewal performance.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">
-                      Upsell Pipeline Target (ARR)
-                    </Label>
-                    <input
-                      type="number"
-                      min={0}
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      value={metricDefaults.upsellPipelineTarget}
-                      onChange={(e) => updateMetric("upsellPipelineTarget", Number(e.target.value))}
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      Initial upsell ARR goal used in dashboards until you customize it.
-                    </p>
-                  </div>
-
-                  <div className="border-t-2 border-black/20 pt-3 space-y-3">
+                  <div className="border-t-2 border-black/20 md:border-t-0 md:border-l-2 md:border-l-black/20 md:pl-6 pt-3 md:pt-0 space-y-3">
                     <p className="text-[11px] font-medium text-foreground">Percentage-wise thresholds</p>
                     <div className="space-y-3">
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <Label className="text-[11px] font-medium text-foreground shrink-0">Renewal reminder at completion (%)</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
-                            value={metricDefaults.renewalReminderAtCompletionPercent}
-                            onChange={(e) => updateMetric("renewalReminderAtCompletionPercent", Number(e.target.value))}
-                          />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">Send renewal reminder when plan is ≥ this % complete.</p>
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <Label className="text-[11px] font-medium text-foreground">Renewal reminder at completion (%)</Label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
+                          value={metricDefaults.renewalReminderAtCompletionPercent}
+                          onChange={(e) => updateMetric("renewalReminderAtCompletionPercent", Number(e.target.value))}
+                        />
                       </div>
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <Label className="text-[11px] font-medium text-foreground shrink-0">High-risk score threshold (%)</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
-                            value={metricDefaults.highRiskScoreThresholdPercent}
-                            onChange={(e) => updateMetric("highRiskScoreThresholdPercent", Number(e.target.value))}
-                          />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">Risk score ≥ this % is treated as high-risk.</p>
+                      <p className="text-[10px] text-muted-foreground -mt-2">Send renewal reminder when plan is ≥ this % complete.</p>
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <Label className="text-[11px] font-medium text-foreground">High-risk score threshold (%)</Label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
+                          value={metricDefaults.highRiskScoreThresholdPercent}
+                          onChange={(e) => updateMetric("highRiskScoreThresholdPercent", Number(e.target.value))}
+                        />
                       </div>
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <Label className="text-[11px] font-medium text-foreground shrink-0">Churn probability threshold (%)</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
-                            value={metricDefaults.churnProbabilityThresholdPercent}
-                            onChange={(e) => updateMetric("churnProbabilityThresholdPercent", Number(e.target.value))}
-                          />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">Churn probability ≥ this % triggers churn prevention (e.g. 70 = 0.70).</p>
+                      <p className="text-[10px] text-muted-foreground -mt-2">Risk score ≥ this % is treated as high-risk.</p>
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <Label className="text-[11px] font-medium text-foreground">Churn probability threshold (%)</Label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
+                          value={metricDefaults.churnProbabilityThresholdPercent}
+                          onChange={(e) => updateMetric("churnProbabilityThresholdPercent", Number(e.target.value))}
+                        />
                       </div>
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <Label className="text-[11px] font-medium text-foreground shrink-0">Min usage % for call</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
-                            value={metricDefaults.minUsagePercentForCall}
-                            onChange={(e) => updateMetric("minUsagePercentForCall", Number(e.target.value))}
-                          />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">First call only when plan completion ≥ this %.</p>
+                      <p className="text-[10px] text-muted-foreground -mt-2">Churn probability ≥ this % triggers churn prevention (e.g. 70 = 0.70).</p>
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <Label className="text-[11px] font-medium text-foreground">Min usage % for call</Label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
+                          value={metricDefaults.minUsagePercentForCall}
+                          onChange={(e) => updateMetric("minUsagePercentForCall", Number(e.target.value))}
+                        />
                       </div>
-                      <div>
-                        <div className="flex items-center justify-between gap-3">
-                          <Label className="text-[11px] font-medium text-foreground shrink-0">Health score at-risk below (%)</Label>
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
-                            value={metricDefaults.healthScoreAtRiskBelowPercent}
-                            onChange={(e) => updateMetric("healthScoreAtRiskBelowPercent", Number(e.target.value))}
-                          />
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">Health score below this % is treated as at-risk.</p>
+                      <p className="text-[10px] text-muted-foreground -mt-2">First call only when plan completion ≥ this %.</p>
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <Label className="text-[11px] font-medium text-foreground">Health score at-risk below (%)</Label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right"
+                          value={metricDefaults.healthScoreAtRiskBelowPercent}
+                          onChange={(e) => updateMetric("healthScoreAtRiskBelowPercent", Number(e.target.value))}
+                        />
                       </div>
+                      <p className="text-[10px] text-muted-foreground -mt-2">Health score below this % is treated as at-risk.</p>
                     </div>
                   </div>
                 </div>

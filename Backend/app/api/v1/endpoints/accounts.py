@@ -72,8 +72,9 @@ async def get_accounts(skip: int = 0, limit: int = 1000):
             "status, renewal_stage, health_score, risk_score, relationship_score, "
             "churn_probability, sentiment_score, sentiment_category, "
             "licenses_total, licenses_used, utilization_percentage, "
-            "csm_name, csm_email, "
+            "csm_name, csm_email, partner_name, "
             "primary_contact_name, primary_contact_email, primary_contact_phone, "
+            "primary_contact_city, primary_contact_state, "
             "created_at, updated_at"
         ).range(skip, skip + limit - 1).execute()
         
@@ -86,6 +87,43 @@ async def get_accounts(skip: int = 0, limit: int = 1000):
         import traceback
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to fetch accounts: {str(e)}")
+
+
+@router.get("/{account_id}/comments")
+async def get_account_comments(account_id: str):
+    """List comments for an account (from account_comments table)."""
+    client = supabase or get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    try:
+        result = client.table("account_comments").select("id, account_id, body, created_at, updated_at, created_by").eq("account_id", account_id).order("created_at", desc=True).execute()
+        items = result.data if result.data else []
+        return items
+    except Exception as e:
+        logger.error(f"Error fetching comments for account {account_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch comments: {str(e)}")
+
+
+@router.post("/{account_id}/comments")
+async def create_account_comment(account_id: str, payload: dict):
+    """Add a comment for an account. Persisted to account_comments table."""
+    client = supabase or get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    body = (payload.get("body") or "").strip()
+    if not body:
+        raise HTTPException(status_code=400, detail="Comment body is required")
+    try:
+        row = {"account_id": account_id, "body": body, "created_by": payload.get("created_by")}
+        result = client.table("account_comments").insert(row).execute()
+        if not result.data or len(result.data) == 0:
+            raise HTTPException(status_code=400, detail="Failed to create comment")
+        return result.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating comment for account {account_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create comment: {str(e)}")
 
 
 @router.get("/{account_id}")

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, UUID4, confloat
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 
 class AutoCampaignBase(BaseModel):
@@ -8,9 +8,22 @@ class AutoCampaignBase(BaseModel):
     target_audience_filter: str
     filter_min_value: Optional[float] = None
     filter_max_value: Optional[float] = None
+    """Optional multi-filter config (same as Accounts: risk, healthScore, arr, renewal, utilization, relationshipScore, churn, locationKeyword, partnerNameKeyword). Applied together when present."""
+    filter_config: Optional[Dict[str, Any]] = None
     recurring_frequency: str
     action_type: str
     is_active: bool = True
+    last_run_at: Optional[datetime] = None
+    """Campaign runs only when today is on or after this date (YYYY-MM-DD). Optional."""
+    start_date: Optional[str] = None
+    """Campaign runs only when today is on or before this date (YYYY-MM-DD). Optional."""
+    end_date: Optional[str] = None
+    """Send messages only at or after this time each day. Optional. Format HH:MM (24h, IST)."""
+    schedule_start_time: Optional[str] = None
+    """Send messages only at or before this time each day. Optional. Format HH:MM (24h, IST)."""
+    schedule_end_time: Optional[str] = None
+    """Days after this touchpoint to queue the next call or email. Optional. Default 3."""
+    follow_up_offset_days: Optional[int] = None
 
 class AutoCampaignCreate(AutoCampaignBase):
     pass

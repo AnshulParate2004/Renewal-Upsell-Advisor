@@ -1,13 +1,54 @@
 import { useState, useEffect } from "react";
-import { Clock, Calendar, ChevronRight, Settings, Plus, Play, Mail, Phone, CheckSquare, Loader2 } from "lucide-react";
+import { ChevronRight, Settings, Plus, Play, Mail, Phone, CheckSquare, Loader2 } from "lucide-react";
 import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from "@/components/ui/sheet";
-import { workflowsApi, WorkflowStep, WorkflowTemplate } from "@/lib/api/workflows";
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { workflowsApi, WorkflowStep, WorkflowTemplate, type StepFrequency } from "@/lib/api/workflows";
+
+const FREQUENCY_OPTIONS: { value: StepFrequency; label: string }[] = [
+    { value: "daily", label: "Daily" },
+    { value: "weekly", label: "Weekly" },
+    { value: "monthly", label: "Monthly" },
+];
+
+/** Q1 = months 1,2,3; Q2 = 4,5,6; Q3 = 7,8,9; Q4 = 10,11,12; renewed = 1,2,3 */
+function getMonthOptionsForStage(stage: string | null): { value: string; label: string }[] {
+    if (!stage) return [{ value: "Month 1", label: "Month 1" }];
+    const s = stage.toLowerCase();
+    let months: number[];
+    if (s === "q1") months = [1, 2, 3];
+    else if (s === "q2") months = [4, 5, 6];
+    else if (s === "q3") months = [7, 8, 9];
+    else if (s === "q4") months = [10, 11, 12];
+    else months = [1, 2, 3]; // renewed, no_renewed, or other
+    return months.map((m) => ({ value: `Month ${m}`, label: `Month ${m}` }));
+}
+
+/** Default time_label for new step in this stage (first month of quarter). */
+function getDefaultMonthLabelForStage(stage: string | null): string {
+    const opts = getMonthOptionsForStage(stage);
+    return opts[0]?.value ?? "Month 1";
+}
+
+type TimingType = "month" | "after_days" | "last_days";
+
+function getTimingTypeFromStep(step: WorkflowStep): TimingType {
+    const t = (step.time_label || "").trim();
+    if (t.startsWith("Last")) return "last_days";
+    if (t.startsWith("After")) return "after_days";
+    return "month";
+}
+
+function getDaysFromStep(step: WorkflowStep): number {
+    const t = (step.time_label || "").trim();
+    const match = t.match(/(\d+)/);
+    if (match) return Math.max(1, parseInt(match[1], 10));
+    return step.days_offset && step.days_offset > 0 ? step.days_offset : 1;
+}
 
 interface QuarterlyFlowSheetProps {
     stage: string | null;
@@ -94,6 +135,10 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
                     days_offset: step.days_offset,
                     action_type: step.action_type,
                     topic: step.topic,
+                    frequency: step.frequency ?? "weekly",
+                    send_window_start: step.send_window_start || undefined,
+                    send_window_end: step.send_window_end || undefined,
+                    follow_up_offset_days: step.follow_up_offset_days ?? 3,
                     is_active: step.is_active
                 });
             }
@@ -108,21 +153,28 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
 
     if (!stage) return null;
 
-    const stageTitle = stage === "renewed" ? "Renewed" : stage.toUpperCase();
+    const stageTitle = stage === "no_renewed" ? "No Renewed" : (stage === "renewed" ? "Renewed" : stage.toUpperCase());
 
     const handleAddStep = () => {
+        const monthLabel = getDefaultMonthLabelForStage(stage);
         const newStep: WorkflowStep = {
             title: "New Action",
-            time_label: viewMode === "month" ? "Month X" : "Day X",
+            time_label: monthLabel,
             days_offset: viewMode === "month" ? 30 : 1,
             action_type: "email",
-            topic: "Enter action details...",
+            topic: "",
+            frequency: "weekly",
+            send_window_start: "09:00",
+            send_window_end: "17:00",
+            follow_up_offset_days: 3,
             is_active: true,
             step_order: currentSteps.length + 1
         };
         setCurrentSteps([...currentSteps, newStep]);
         setEditingStep(currentSteps.length);
     };
+
+    const monthOptions = getMonthOptionsForStage(stage);
 
     const actionIcons = {
         email: <Mail className="w-4 h-4" />,
@@ -131,41 +183,20 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
     };
 
     return (
-        <Sheet open={isOpen} onOpenChange={onOpenChange}>
-            <SheetContent className="w-full sm:max-w-[450px] p-0 border-l-2 border-black flex flex-col bg-background">
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-[480px] w-[95vw] p-0 gap-0 border-2 border-black rounded-xl overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-background max-h-[90vh] flex flex-col">
+                <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
                 <div className="p-6 border-b-2 border-black bg-card shrink-0">
-                    <SheetHeader className="text-left space-y-1">
+                    <DialogHeader className="text-left space-y-1">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                             <span className="text-[10px] font-bold uppercase tracking-wider text-primary">Automated Workflow</span>
                         </div>
-                        <SheetTitle className="text-xl font-bold text-foreground">{stageTitle} Process Flow</SheetTitle>
-                        <SheetDescription className="text-sm text-muted-foreground">
-                            Define the scheduled touchpoints and expected figures for accounts in {stageTitle}.
-                        </SheetDescription>
-                    </SheetHeader>
-
-                    {/* View Mode Toggle */}
-                    <div className="flex bg-muted rounded-lg p-1 border-2 border-black mt-6">
-                        <button
-                            onClick={() => setViewMode("day")}
-                            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-md transition-all ${viewMode === "day"
-                                ? "bg-card text-foreground shadow-sm border-2 border-black"
-                                : "text-muted-foreground hover:text-foreground hover:bg-black/5"
-                                }`}
-                        >
-                            <Clock className="w-3.5 h-3.5" /> Day-wise
-                        </button>
-                        <button
-                            onClick={() => setViewMode("month")}
-                            className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-md transition-all ${viewMode === "month"
-                                ? "bg-card text-foreground shadow-sm border-2 border-black"
-                                : "text-muted-foreground hover:text-foreground hover:bg-black/5"
-                                }`}
-                        >
-                            <Calendar className="w-3.5 h-3.5" /> Month-wise
-                        </button>
-                    </div>
+                        <DialogTitle className="text-xl font-bold text-foreground">{stageTitle} Process Flow</DialogTitle>
+                        <DialogDescription className="text-sm text-muted-foreground">
+                            Set schedule to day-wise or month-wise. For each step choose email or voice; the purpose you write is injected into the email/call bot so it sends or says it accordingly. Set frequency: one-time, daily, weekly, or monthly.
+                        </DialogDescription>
+                    </DialogHeader>
                 </div>
 
                 {/* Scrollable Flow Area */}
@@ -199,10 +230,10 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
 
                                             {editingStep === idx ? (
                                                 <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
-                                                    <div className="flex items-center gap-2">
+                                                    <div className="flex items-center gap-2 flex-wrap">
                                                         <input
                                                             type="text"
-                                                            className="text-sm font-bold bg-background px-2 py-1 rounded-md border border-primary w-full outline-none text-foreground"
+                                                            className="text-sm font-bold bg-background px-2 py-1 rounded-md border border-primary flex-1 min-w-[120px] outline-none text-foreground"
                                                             value={step.title}
                                                             onChange={(e) => {
                                                                 const newSteps = [...currentSteps];
@@ -211,22 +242,74 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
                                                             }}
                                                             placeholder="Action Title"
                                                         />
-                                                        <input
-                                                            type="text"
-                                                            className="text-[10px] font-bold px-2 py-1 rounded-md border border-black bg-muted text-muted-foreground w-16 text-center"
-                                                            value={step.time_label || ''}
-                                                            onChange={(e) => {
-                                                                const newSteps = [...currentSteps];
-                                                                newSteps[idx].time_label = e.target.value;
-                                                                setCurrentSteps(newSteps);
-                                                            }}
-                                                            placeholder="Time"
-                                                        />
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <label className="text-[10px] font-medium text-muted-foreground shrink-0">When</label>
+                                                            <select
+                                                                className="text-[10px] font-bold px-2 py-1.5 rounded-md border-2 border-black bg-background text-foreground"
+                                                                value={getTimingTypeFromStep(step)}
+                                                                onChange={(e) => {
+                                                                    const newSteps = [...currentSteps];
+                                                                    const typ = e.target.value as TimingType;
+                                                                    if (typ === "month") {
+                                                                        newSteps[idx].time_label = monthOptions[0]?.value ?? "Month 1";
+                                                                        newSteps[idx].days_offset = 30;
+                                                                    } else if (typ === "after_days") {
+                                                                        const n = getDaysFromStep(step);
+                                                                        newSteps[idx].time_label = `After ${n} days`;
+                                                                        newSteps[idx].days_offset = n;
+                                                                    } else {
+                                                                        const n = getDaysFromStep(step);
+                                                                        newSteps[idx].time_label = `Last ${n} days`;
+                                                                        newSteps[idx].days_offset = n;
+                                                                    }
+                                                                    setCurrentSteps(newSteps);
+                                                                }}
+                                                            >
+                                                                <option value="month">Month in quarter</option>
+                                                                <option value="after_days">After X days</option>
+                                                                <option value="last_days">Last X days before renewal</option>
+                                                            </select>
+                                                            {getTimingTypeFromStep(step) === "month" && (
+                                                                <select
+                                                                    className="text-[10px] font-bold px-2 py-1 rounded-md border-2 border-black bg-background text-foreground min-w-[90px]"
+                                                                    value={monthOptions.some((o) => o.value === (step.time_label || "")) ? step.time_label : monthOptions[0]?.value}
+                                                                    onChange={(e) => {
+                                                                        const newSteps = [...currentSteps];
+                                                                        newSteps[idx].time_label = e.target.value;
+                                                                        setCurrentSteps(newSteps);
+                                                                    }}
+                                                                >
+                                                                    {monthOptions.map((opt) => (
+                                                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                                    ))}
+                                                                </select>
+                                                            )}
+                                                            {(getTimingTypeFromStep(step) === "after_days" || getTimingTypeFromStep(step) === "last_days") && (
+                                                                <div className="flex items-center gap-1">
+                                                                    <input
+                                                                        type="number"
+                                                                        min={1}
+                                                                        max={getTimingTypeFromStep(step) === "last_days" ? 365 : 999}
+                                                                        className="w-14 text-[10px] font-bold px-2 py-1 rounded-md border-2 border-black bg-background text-foreground text-center"
+                                                                        value={getDaysFromStep(step)}
+                                                                        onChange={(e) => {
+                                                                            const newSteps = [...currentSteps];
+                                                                            const n = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                                                            const typ = getTimingTypeFromStep(newSteps[idx]);
+                                                                            newSteps[idx].days_offset = n;
+                                                                            newSteps[idx].time_label = typ === "after_days" ? `After ${n} days` : `Last ${n} days`;
+                                                                            setCurrentSteps(newSteps);
+                                                                        }}
+                                                                    />
+                                                                    <span className="text-[10px] text-muted-foreground">days</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
 
-                                                    <div>
+                                                    <div className="space-y-2">
                                                         <select
-                                                            className="w-full text-xs font-medium bg-background px-2 py-1.5 rounded-md border border-primary outline-none text-foreground mb-2"
+                                                            className="w-full text-xs font-medium bg-background px-2 py-1.5 rounded-md border border-primary outline-none text-foreground"
                                                             value={step.action_type}
                                                             onChange={(e) => {
                                                                 const newSteps = [...currentSteps];
@@ -238,17 +321,93 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
                                                             <option value="call">Voice Call</option>
                                                             <option value="task">Manual Task</option>
                                                         </select>
-                                                        <textarea
-                                                            className="w-full text-xs bg-background px-2 py-1.5 rounded-md border border-primary outline-none resize-none text-foreground"
-                                                            rows={2}
-                                                            value={step.topic || ''}
+                                                        {(step.action_type === "email" || step.action_type === "call") && (
+                                                            <>
+                                                                <label className="text-[10px] font-medium text-muted-foreground block mt-1">
+                                                                    Purpose (injected into email/call bot)
+                                                                </label>
+                                                                <textarea
+                                                                    className="w-full text-xs bg-background px-2 py-1.5 rounded-md border border-primary outline-none resize-none text-foreground"
+                                                                    rows={2}
+                                                                    value={step.topic || ''}
+                                                                    onChange={(e) => {
+                                                                        const newSteps = [...currentSteps];
+                                                                        newSteps[idx].topic = e.target.value;
+                                                                        setCurrentSteps(newSteps);
+                                                                    }}
+                                                                    placeholder="e.g. Renewal reminder, check satisfaction, offer upgrade..."
+                                                                />
+                                                            </>
+                                                        )}
+                                                        {step.action_type === "task" && (
+                                                            <>
+                                                                <label className="text-[10px] font-medium text-muted-foreground block mt-1">Details</label>
+                                                                <textarea
+                                                                    className="w-full text-xs bg-background px-2 py-1.5 rounded-md border border-primary outline-none resize-none text-foreground"
+                                                                    rows={2}
+                                                                    value={step.topic || ''}
+                                                                    onChange={(e) => {
+                                                                        const newSteps = [...currentSteps];
+                                                                        newSteps[idx].topic = e.target.value;
+                                                                        setCurrentSteps(newSteps);
+                                                                    }}
+                                                                    placeholder="Task description..."
+                                                                />
+                                                            </>
+                                                        )}
+                                                        <label className="text-[10px] font-medium text-muted-foreground block mt-1">Frequency</label>
+                                                        <select
+                                                            className="w-full text-xs font-medium bg-background px-2 py-1.5 rounded-md border border-black outline-none text-foreground"
+                                                            value={step.frequency ?? "weekly"}
                                                             onChange={(e) => {
                                                                 const newSteps = [...currentSteps];
-                                                                newSteps[idx].topic = e.target.value;
+                                                                newSteps[idx].frequency = e.target.value as StepFrequency;
                                                                 setCurrentSteps(newSteps);
                                                             }}
-                                                            placeholder="Action Topic and Details..."
+                                                        >
+                                                            {FREQUENCY_OPTIONS.map((opt) => (
+                                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                            ))}
+                                                        </select>
+                                                        <label className="text-[10px] font-medium text-muted-foreground block mt-1">Send between (start – end time)</label>
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="time"
+                                                                className="text-xs bg-background px-2 py-1.5 rounded-md border-2 border-black outline-none text-foreground"
+                                                                value={step.send_window_start ?? "09:00"}
+                                                                onChange={(e) => {
+                                                                    const newSteps = [...currentSteps];
+                                                                    newSteps[idx].send_window_start = e.target.value || undefined;
+                                                                    setCurrentSteps(newSteps);
+                                                                }}
+                                                            />
+                                                            <span className="text-[10px] text-muted-foreground">to</span>
+                                                            <input
+                                                                type="time"
+                                                                className="text-xs bg-background px-2 py-1.5 rounded-md border-2 border-black outline-none text-foreground"
+                                                                value={step.send_window_end ?? "17:00"}
+                                                                onChange={(e) => {
+                                                                    const newSteps = [...currentSteps];
+                                                                    newSteps[idx].send_window_end = e.target.value || undefined;
+                                                                    setCurrentSteps(newSteps);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <p className="text-[10px] text-muted-foreground">Message or call is sent only within this time window.</p>
+                                                        <label className="text-[10px] font-medium text-muted-foreground block mt-1">Follow-up offset (days)</label>
+                                                        <input
+                                                            type="number"
+                                                            min={1}
+                                                            max={60}
+                                                            className="w-full text-xs bg-background px-2 py-1.5 rounded-md border-2 border-black outline-none text-foreground"
+                                                            value={step.follow_up_offset_days ?? 3}
+                                                            onChange={(e) => {
+                                                                const newSteps = [...currentSteps];
+                                                                newSteps[idx].follow_up_offset_days = Math.max(1, Math.min(60, parseInt(e.target.value, 10) || 3));
+                                                                setCurrentSteps(newSteps);
+                                                            }}
                                                         />
+                                                        <p className="text-[10px] text-muted-foreground">Controls when calls or emails are automatically queued after this touchpoint.</p>
                                                     </div>
 
                                                     <button
@@ -271,9 +430,22 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
                                                             {step.time_label}
                                                         </span>
                                                     </div>
+                                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                        <span className="text-[10px] font-medium text-muted-foreground capitalize">
+                                                            {FREQUENCY_OPTIONS.find((o) => o.value === (step.frequency ?? "weekly"))?.label ?? "Weekly"}
+                                                        </span>
+                                                        {(step.send_window_start || step.send_window_end) && (
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                {step.send_window_start ?? "—"} – {step.send_window_end ?? "—"}
+                                                            </span>
+                                                        )}
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            Follow-up in {(step.follow_up_offset_days ?? 3)}d
+                                                        </span>
+                                                    </div>
                                                     <div className="flex items-start justify-between mt-3 gap-4">
                                                         <p className="text-xs font-medium text-muted-foreground leading-relaxed line-clamp-2">
-                                                            {step.topic}
+                                                            {step.topic || "—"}
                                                         </p>
 
                                                         <button
@@ -303,7 +475,7 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t-2 border-black bg-card shrink-0">
+                <div className="p-6 border-t-2 border-black bg-card shrink-0 rounded-b-xl">
                     <button
                         onClick={handleSave}
                         disabled={isSaving || isLoading}
@@ -313,7 +485,8 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
                         {isSaving ? "Saving..." : `Save ${stageTitle} Flow`} {!isSaving && <ChevronRight className="w-4 h-4" />}
                     </button>
                 </div>
-            </SheetContent>
-        </Sheet>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }

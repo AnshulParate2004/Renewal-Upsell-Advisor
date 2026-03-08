@@ -28,7 +28,7 @@ export default function RelationshipBarChart() {
                 <div className="bg-white dark:bg-gray-800 p-3 border-[0.5px] border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                     <p className="text-xs font-black uppercase text-black dark:text-white">{payload[0].payload.fullName}</p>
                     <p className="text-sm font-bold" style={{ color: getColor(payload[0].value) }}>
-                        Relationship Score: {payload[0].value}%
+                        Relationship Score: {payload[0].value}
                     </p>
                 </div>
             );
@@ -91,7 +91,7 @@ export default function RelationshipBarChart() {
                             <LabelList
                                 dataKey="score"
                                 position="right"
-                                formatter={(value: number) => `${value}%`}
+                                formatter={(value: number) => `${value}`}
                                 style={{ fill: '#fff', fontWeight: 'bold', fontSize: '11px' }}
                             />
                         </Bar>

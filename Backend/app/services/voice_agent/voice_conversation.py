@@ -52,35 +52,42 @@ class VoiceConversationHandler:
         self,
         account: Dict[str, Any],
         usage_percentage: float,
-        call_type: str
+        call_type: str,
+        purpose: Optional[str] = None,
     ) -> str:
         """
-        Generate conversation script using LangChain based on usage percentage and call type.
-        
-        Args:
-            account: Account information
-            usage_percentage: Current usage percentage (0-100)
-            call_type: Type of call (check_in, renewal_reminder, etc.)
-            
-        Returns:
-            Initial script text
+        Generate conversation script. Optional purpose: tailor script to this intent (e.g. manual trigger).
         """
-        # Use reliable fallback script to ensure quality and avoid LLM generating unwanted content
         logger.info(f"Using reliable script for {account.get('name', 'Customer')} (usage: {usage_percentage:.1f}%)")
-        return self._get_fallback_script(account, usage_percentage)
+        return self._get_fallback_script(account, usage_percentage, purpose=purpose)
     
-    def _get_fallback_script(self, account: Dict[str, Any], usage_percentage: float) -> str:
-        """Reliable script generator - always used to ensure quality."""
+    def _get_fallback_script(
+        self, account: Dict[str, Any], usage_percentage: float, purpose: Optional[str] = None
+    ) -> str:
+        """Reliable script generator. When purpose is set (e.g. manual trigger), tailor script to it."""
         account_name = account.get('name', 'Valued Customer')
         csm_name = account.get('csm_name', 'Jennifer')
         
-        # Ensure CSM name is valid
         if not csm_name or csm_name.lower() in ['our team', 'team', '']:
             csm_name = 'Jennifer'
-        
-        # Clean account name
         if not account_name or account_name.lower() in ['valued customer', 'customer']:
             account_name = 'your account'
+        
+        if purpose and str(purpose).strip():
+            script = (
+                f"Hello, this is {csm_name} calling from Renewal & Upsell Advisor regarding {account_name}. "
+                f"The reason for our call today is: {purpose.strip()}. "
+                "I'd love to hear from you. Do you have a few minutes to talk?"
+            )
+            logger.info(f"Generated purpose-driven script for {account_name}: {script[:80]}...")
+            script_lower = script.lower()
+            unwanted = [
+                "trial", "trial account", "upgrade", "execute", "press any key",
+                "remove account", "click on", "remove this message"
+            ]
+            if any(phrase in script_lower for phrase in unwanted):
+                script = f"Hello, this is {csm_name} calling from Renewal & Upsell Advisor regarding {account_name}. We wanted to follow up: {purpose.strip()}. Do you have a few minutes?"
+            return script
         
         # Generate script based on usage percentage - keep it concise and natural
         if usage_percentage >= 95:

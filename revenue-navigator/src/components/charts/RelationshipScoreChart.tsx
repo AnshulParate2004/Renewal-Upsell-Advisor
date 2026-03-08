@@ -36,7 +36,7 @@ export default function RelationshipTrendChart() {
                 <div className="bg-card p-3 border-[0.5px] border-black rounded-lg shadow-lg">
                     <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
                     <p className="text-sm font-semibold text-primary">
-                        Avg Score: {payload[0].value}%
+                        Avg Score: {payload[0].value}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         Across {accounts.length} accounts
@@ -71,10 +71,10 @@ export default function RelationshipTrendChart() {
                 </div>
                 <div className="text-right flex items-center gap-3">
                     <div>
-                        <div className="text-2xl font-bold text-foreground">{currentAvg}%</div>
+                        <div className="text-2xl font-bold text-foreground">{currentAvg}</div>
                         <div className={`text-xs font-medium flex items-center gap-1 justify-end ${trendDirection === 'up' ? 'text-emerald-600' : 'text-destructive'}`}>
                             {trendDirection === 'up' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                            {trendChange}% vs 6mo ago
+                            {trendChange} vs 6mo ago
                         </div>
                     </div>
                 </div>
@@ -125,7 +125,7 @@ export default function RelationshipTrendChart() {
                 <div className="text-center pt-4">
                     <p className="text-xs text-muted-foreground mb-0.5">Trend</p>
                     <p className={`text-lg font-bold ${trendDirection === 'up' ? 'text-emerald-600' : 'text-destructive'}`}>
-                        {trendDirection === 'up' ? '+' : '-'}{trendChange}%
+                        {trendDirection === 'up' ? '+' : '-'}{trendChange}
                     </p>
                 </div>
                 <div className="text-center pt-4">

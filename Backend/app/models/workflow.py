@@ -27,7 +27,11 @@ class WorkflowStep(Base):
     time_label = Column(String(50))
     days_offset = Column(Integer, nullable=False)
     action_type = Column(String(50), nullable=False)
-    topic = Column(Text)
+    topic = Column(Text)  # Purpose injected into email/call bot
+    frequency = Column(String(20), default="weekly")  # one_time | daily | weekly | monthly
+    send_window_start = Column(String(5))  # "HH:MM" when to start sending
+    send_window_end = Column(String(5))  # "HH:MM" when to stop sending
+    follow_up_offset_days = Column(Integer, default=3)  # Days after touchpoint to queue next
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

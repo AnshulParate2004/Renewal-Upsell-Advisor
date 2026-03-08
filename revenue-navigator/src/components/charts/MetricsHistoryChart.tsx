@@ -12,7 +12,7 @@ export default function MetricsHistoryChart({ data }: MetricsHistoryChartProps) 
         'Health Score': d.healthScore,
         'Risk Score': d.riskScore,
         'Relationship': d.relationshipScore,
-        'Churn Risk': Math.round(d.churnProbability * 100),
+        'Churn Prediction': Math.round(d.churnProbability * 100),
         'Utilization': d.utilization
     }));
 
@@ -68,7 +68,7 @@ export default function MetricsHistoryChart({ data }: MetricsHistoryChartProps) 
                     />
                     <Line
                         type="monotone"
-                        dataKey="Churn Risk"
+                        dataKey="Churn Prediction"
                         stroke="#f97316"
                         strokeWidth={2}
                         dot={{ fill: '#f97316', r: 3 }}

@@ -3,6 +3,7 @@ Write activity log rows to the existing Supabase activity_logs table.
 Does not create any table; only inserts into activity_logs.
 Logs: ml_pipeline_trigger, ml_pipeline_run, email_scheduler_run,
 email_scheduler_completed, voice_scheduler_run, voice_scheduler_completed,
+renewal_pipeline_scheduler_run, renewal_pipeline_scheduler_completed,
 plus existing send_email and voice_call_initiated.
 """
 from typing import Any, Dict, Optional

@@ -285,9 +285,10 @@ async def make_voice_call(
             insert_data["metadata"] = {
                 "usage_percentage": usage_percentage,
                 "milestone": next((m for m in milestones if usage_percentage >= m), None),
-                "account_name": account_name
+                "account_name": account_name,
+                **({"call_purpose": purpose} if purpose else {}),
             }
-        except:
+        except Exception:
             pass  # Metadata column doesn't exist, skip it
         
         call_record = client.table("voice_calls").insert(insert_data).execute()
@@ -430,10 +431,10 @@ async def process_scheduled_calls():
         logger.error(traceback.format_exc())
 
 
-async def trigger_voice_call_for_account(account_id: str) -> Dict[str, Any]:
+async def trigger_voice_call_for_account(account_id: str, purpose: Optional[str] = None) -> Dict[str, Any]:
     """
-    Manually trigger a voice call to a single account (e.g. from Settings).
-    Skips eligibility/milestone checks. Returns {"success": True, "message": "...", "call_sid": "..."} or {"success": False, "error": "..."}.
+    Manually trigger a voice call to a single account.
+    Optional purpose: reason for the call (e.g. "review follow-up", "renewal discussion"); used to tailor the script.
     """
     client = get_supabase_client()
     if not client:
@@ -447,7 +448,7 @@ async def trigger_voice_call_for_account(account_id: str) -> Dict[str, Any]:
         account = result.data[0]
         if not account.get("primary_contact_phone"):
             return {"success": False, "error": f"No phone number for account {account.get('name', 'Unknown')}."}
-        call_sid = await make_voice_call(account, client, skip_eligibility_check=True)
+        call_sid = await make_voice_call(account, client, skip_eligibility_check=True, purpose=purpose)
         if call_sid:
             return {"success": True, "message": f"Voice call initiated to {account.get('name')}.", "call_sid": call_sid}
         return {"success": False, "error": "Failed to initiate call (Twilio or internal error)."}

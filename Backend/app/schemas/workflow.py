@@ -8,7 +8,11 @@ class WorkflowStepBase(BaseModel):
     time_label: Optional[str] = None
     days_offset: int
     action_type: str
-    topic: Optional[str] = None
+    topic: Optional[str] = None  # Purpose/description injected into email or call bot
+    frequency: Optional[str] = "weekly"  # one_time | daily | weekly | monthly
+    send_window_start: Optional[str] = None  # When to send: start time "HH:MM" (e.g. 09:00)
+    send_window_end: Optional[str] = None  # When to send: end time "HH:MM" (e.g. 17:00)
+    follow_up_offset_days: Optional[int] = 3  # Days after this touchpoint to queue next call/email
     is_active: bool = True
 
 class WorkflowStepCreate(WorkflowStepBase):

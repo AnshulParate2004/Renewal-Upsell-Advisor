@@ -36,34 +36,16 @@ async def lifespan(app: FastAPI):
     # Startup
     Base.metadata.create_all(bind=engine)
     
-    # Start email scheduler background task
+    # Exceptions: only campaign schedules + manual triggers run. No other schedulers (email, voice, ML).
+    # - Renewal pipeline scheduler: runs campaigns when due per their plan (daily/weekly/monthly).
+    # - Manual triggers: POST /email/trigger-campaign, /ml/trigger, /voice/trigger-calls, etc. still work.
+    import asyncio
     try:
-        from app.services.email.scheduler import run_email_scheduler
-        import asyncio
-        # Start email scheduler as background task
-        email_scheduler_task = asyncio.create_task(run_email_scheduler())
-        print("✅ Email scheduler started (runs daily at 12:00 PM IST)")
+        from app.services.campaign_runner import run_campaign_scheduler
+        asyncio.create_task(run_campaign_scheduler())
+        print("✅ Renewal pipeline scheduler started (runs at scheduled time); manual triggers via API.")
     except Exception as e:
-        print(f"Warning: Failed to start email scheduler: {e}")
-    
-    # Start voice call scheduler background task
-    try:
-        from app.services.voice_agent.scheduler import run_voice_call_scheduler
-        import asyncio
-        # Start voice call scheduler as background task
-        voice_scheduler_task = asyncio.create_task(run_voice_call_scheduler())
-        print("✅ Voice call scheduler started (runs daily at 2:00 PM IST)")
-    except Exception as e:
-        print(f"Warning: Failed to start voice call scheduler: {e}")
-
-    # Start ML pipeline scheduler (runs daily at 12:00 AM IST)
-    try:
-        from app.services.ml.ml_scheduler import run_ml_pipeline_scheduler
-        import asyncio
-        ml_scheduler_task = asyncio.create_task(run_ml_pipeline_scheduler())
-        print("✅ ML pipeline scheduler started (runs daily at 12:00 AM IST)")
-    except Exception as e:
-        print(f"Warning: Failed to start ML pipeline scheduler: {e}")
+        print(f"Warning: Failed to start renewal pipeline scheduler: {e}")
     
     yield
     

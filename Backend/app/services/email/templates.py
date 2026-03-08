@@ -166,33 +166,20 @@ This is an automated email. Please do not reply directly to this message.
 def get_upsell_opportunity_template(account: Dict[str, Any], opportunity: Dict[str, Any]) -> tuple[str, str, str]:
     """
     Generate upsell opportunity email template.
-    
-    Args:
-        account: Account data dictionary
-        opportunity: Opportunity data dictionary
-        
-    Returns:
-        Tuple of (subject, html_body, text_body)
+    Tone: conversational, review-focused — ask how the review went and invite feedback.
     """
     account_name = account.get("name", "Valued Customer")
-    opportunity_type = opportunity.get("type", "upsell").replace("_", " ").title()
-    predicted_value = opportunity.get("value", 0)
-    probability = opportunity.get("probability", 0)
-    recommended_products = opportunity.get("recommended_products", [])
-    csm_name = account.get("csm_name", "Your Customer Success Manager")
+    csm_name = account.get("csm_name") or account.get("csm") or "Your Customer Success Manager"
     csm_email = account.get("csm_email", "")
-    
-    # Format value
-    value_formatted = f"${predicted_value:,.2f}" if predicted_value else "$0"
-    probability_percent = f"{probability * 100:.0f}%"
-    
-    subject = f"Exclusive {opportunity_type} Opportunity for {account_name}"
-    
+
+    subject = f"Quick follow-up — how was your review? ({account_name})"
+
     html_body = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
             body {{
                 font-family: Arial, sans-serif;
@@ -200,37 +187,64 @@ def get_upsell_opportunity_template(account: Dict[str, Any], opportunity: Dict[s
                 color: #333;
                 max-width: 600px;
                 margin: 0 auto;
-                padding: 20px;
+                padding: 0;
+                background: #fff;
             }}
             .header {{
                 background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
                 color: white;
-                padding: 30px;
+                padding: 28px 24px;
                 text-align: center;
                 border-radius: 10px 10px 0 0;
             }}
+            .header h1 {{
+                margin: 0;
+                font-size: 22px;
+                font-weight: 600;
+            }}
             .content {{
-                background: #f9f9f9;
-                padding: 30px;
+                background: #ffffff;
+                padding: 30px 24px;
                 border-radius: 0 0 10px 10px;
+            }}
+            .content p {{
+                margin: 0 0 16px 0;
+                text-align: left;
             }}
             .highlight {{
                 background: #d4edda;
-                padding: 15px;
+                padding: 16px 20px;
                 border-left: 4px solid #28a745;
                 margin: 20px 0;
+                border-radius: 4px;
+            }}
+            .highlight p {{
+                margin: 0;
+                font-size: 15px;
+            }}
+            .button-wrap {{
+                text-align: center;
+                margin: 24px 0;
             }}
             .button {{
                 display: inline-block;
-                padding: 12px 30px;
+                padding: 14px 32px;
                 background: #f5576c;
-                color: white;
+                color: white !important;
                 text-decoration: none;
-                border-radius: 5px;
-                margin: 20px 0;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 15px;
+            }}
+            .csm-block {{
+                margin-top: 24px;
+            }}
+            .csm-block a {{
+                color: #0066cc;
+                text-decoration: underline;
             }}
             .footer {{
-                margin-top: 30px;
+                margin-top: 28px;
                 padding-top: 20px;
                 border-top: 1px solid #ddd;
                 font-size: 12px;
@@ -240,35 +254,26 @@ def get_upsell_opportunity_template(account: Dict[str, Any], opportunity: Dict[s
     </head>
     <body>
         <div class="header">
-            <h1>Exclusive {opportunity_type} Opportunity</h1>
+            <h1>Quick follow-up</h1>
         </div>
         <div class="content">
-            <p>Dear {account_name} Team,</p>
-            
-            <p>We're excited to share a personalized {opportunity_type.lower()} opportunity that we believe would be a great fit for your business!</p>
-            
+            <p>Hi {account_name} team,</p>
+
+            <p>Hope you're doing well. We wanted to follow up and ask: <strong>how did your recent review go?</strong> We'd love to hear your feedback — what went well, and if there's anything we could do better or any way we can support you going forward.</p>
+
             <div class="highlight">
-                <strong>Potential Value:</strong> {value_formatted}<br>
-                <strong>Confidence Level:</strong> {probability_percent}
+                <p>We'd love to hear from you — just reply to this email or reach out to your CSM below.</p>
             </div>
-            
-            {"<p><strong>Recommended Products:</strong></p><ul>" + "".join([f"<li>{product}</li>" for product in recommended_products]) + "</ul>" if recommended_products else ""}
-            
-            <p>This opportunity is based on your current usage patterns and business needs. We'd love to discuss how this can help accelerate your success.</p>
-            
-            <p style="text-align: center;">
-                <a href="#" class="button">Schedule a Discussion</a>
+
+            <div class="button-wrap">
+                <a href="{f'mailto:{csm_email}' if csm_email else '#'}" class="button">Reply or contact your CSM</a>
+            </div>
+
+            <p class="csm-block">Your Customer Success Manager:<br>
+            <strong>{csm_name}</strong><br>
+            {f'<a href="mailto:{csm_email}">{csm_email}</a>' if csm_email else ''}
             </p>
-            
-            <p>Your Customer Success Manager is ready to help:</p>
-            
-            <p>
-                <strong>{csm_name}</strong><br>
-                {f'Email: <a href="mailto:{csm_email}">{csm_email}</a>' if csm_email else ''}
-            </p>
-            
-            <p>Looking forward to helping you grow!</p>
-            
+
             <p>Best regards,<br>
             Renewal & Upsell Advisor Team</p>
         </div>
@@ -278,27 +283,19 @@ def get_upsell_opportunity_template(account: Dict[str, Any], opportunity: Dict[s
     </body>
     </html>
     """
-    
+
     text_body = f"""
-Exclusive {opportunity_type} Opportunity for {account_name}
+Quick follow-up — how was your review? ({account_name})
 
-Dear {account_name} Team,
+Hi {account_name} team,
 
-We're excited to share a personalized {opportunity_type.lower()} opportunity that we believe would be a great fit for your business!
+Hope you're doing well. We wanted to follow up and ask: how did your recent review go? We'd love to hear your feedback — what went well, and if there's anything we could do better or any way we can support you going forward.
 
-Potential Value: {value_formatted}
-Confidence Level: {probability_percent}
+If you have a few minutes, just reply to this email or reach out to your CSM below. We're here to help.
 
-{"Recommended Products:" if recommended_products else ""}
-{chr(10).join([f"- {product}" for product in recommended_products]) if recommended_products else ""}
-
-This opportunity is based on your current usage patterns and business needs. We'd love to discuss how this can help accelerate your success.
-
-Your Customer Success Manager is ready to help:
+Your Customer Success Manager:
 {csm_name}
 {f'Email: {csm_email}' if csm_email else ''}
-
-Looking forward to helping you grow!
 
 Best regards,
 Renewal & Upsell Advisor Team
@@ -306,7 +303,7 @@ Renewal & Upsell Advisor Team
 ---
 This is an automated email. Please do not reply directly to this message.
     """
-    
+
     return subject, html_body, text_body
 
 

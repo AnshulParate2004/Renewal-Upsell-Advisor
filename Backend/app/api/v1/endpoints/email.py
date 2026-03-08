@@ -1,7 +1,7 @@
 """
 Email API endpoints for manual email sending and management.
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from typing import Optional
 from pathlib import Path
 from dotenv import load_dotenv
@@ -48,10 +48,12 @@ async def send_test_email(to_email: str):
 
 
 @router.post("/trigger-campaign")
-async def trigger_email_campaign():
-    """Manually trigger email campaign (sends personalized emails to all eligible customers)."""
+async def trigger_email_campaign(body: Optional[dict] = Body(None)):
+    """Manually trigger email campaign (sends personalized emails to all eligible customers). Body may include optional 'purpose' to tailor all messages."""
+    purpose = (body or {}).get("purpose") if isinstance(body, dict) else None
+    purpose = str(purpose).strip() or None
     try:
-        await send_scheduled_emails()
+        await send_scheduled_emails(purpose=purpose)
         return {"status": "success", "message": "Email campaign triggered successfully"}
     except Exception as e:
         logger.error(f"Error triggering email campaign: {e}")
@@ -59,9 +61,9 @@ async def trigger_email_campaign():
 
 
 @router.get("/preview")
-async def get_email_preview(account_id: str):
-    """Generate personalized email preview for an account (subject, html_body, text_body). User can edit before sending."""
-    result = await generate_email_preview_for_account(account_id)
+async def get_email_preview(account_id: str, purpose: Optional[str] = None):
+    """Generate personalized email preview for an account (subject, html_body, text_body). Optional purpose: tailor message to this intent."""
+    result = await generate_email_preview_for_account(account_id, purpose=purpose or None)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
@@ -72,6 +74,7 @@ async def send_email_to_account(body: dict):
     """
     Send email to one account. Body: {"account_id": "<uuid>"} for auto-generated personalized email,
     or {"account_id": "<uuid>", "subject": "...", "html_body": "...", "text_body": "..."} for custom content.
+    Optional "purpose" field to tailor auto-generated content.
     """
     account_id = body.get("account_id") if isinstance(body, dict) else None
     if not account_id:
@@ -79,7 +82,8 @@ async def send_email_to_account(body: dict):
     subject = body.get("subject") if isinstance(body, dict) else None
     html_body = body.get("html_body") if isinstance(body, dict) else None
     text_body = body.get("text_body") if isinstance(body, dict) else None
-    result = await send_email_to_single_account(account_id, subject=subject, html_body=html_body, text_body=text_body)
+    purpose = body.get("purpose") if isinstance(body, dict) else None
+    result = await send_email_to_single_account(account_id, subject=subject, html_body=html_body, text_body=text_body, purpose=purpose)
     if result.get("success"):
         return {"status": "success", "message": result.get("message", "Email sent."), "email_type": result.get("email_type")}
     raise HTTPException(status_code=400, detail=result.get("error", "Failed to send email"))

@@ -257,12 +257,15 @@ async def handle_call(
                     # Calculate usage percentage
                     usage_percentage = calculate_plan_completion_percentage(account)
                     call_type = call_data.get("call_type", "check_in")
+                    call_metadata = call_data.get("metadata") or {}
+                    call_purpose = call_metadata.get("call_purpose") or None
                     
-                    # Get initial conversation script
+                    # Get initial conversation script (optionally tailored to purpose)
                     script = voice_conversation_handler.get_conversation_script(
                         account=account,
                         usage_percentage=usage_percentage,
-                        call_type=call_type
+                        call_type=call_type,
+                        purpose=call_purpose
                     )
                     
                     # Validate script is not empty or generic
@@ -759,15 +762,16 @@ async def trigger_calls():
 @router.post("/trigger-call-to-account")
 async def trigger_call_to_account(body: dict):
     """
-    Manually trigger a voice call to a single account (e.g. from Settings).
-    Skips eligibility/milestone checks. Body: {"account_id": "<uuid>"}.
+    Manually trigger a voice call to a single account.
+    Body: {"account_id": "<uuid>", "purpose": "optional reason for the call"}.
     """
     from app.services.voice_agent.voice_call_scheduler import trigger_voice_call_for_account
 
     account_id = body.get("account_id") if isinstance(body, dict) else None
+    purpose = (body.get("purpose") or "").strip() or None if isinstance(body, dict) else None
     if not account_id:
         raise HTTPException(status_code=400, detail="account_id is required")
-    result = await trigger_voice_call_for_account(account_id)
+    result = await trigger_voice_call_for_account(account_id, purpose=purpose)
     if result.get("success"):
         return {"status": "success", "message": result.get("message"), "call_sid": result.get("call_sid")}
     raise HTTPException(status_code=400, detail=result.get("error", "Failed to trigger call"))
