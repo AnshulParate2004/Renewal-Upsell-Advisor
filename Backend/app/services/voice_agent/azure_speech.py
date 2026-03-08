@@ -2,7 +2,12 @@
 Azure Speech Service for voice interactions.
 """
 from typing import Optional
-import azure.cognitiveservices.speech as speechsdk
+try:
+    import azure.cognitiveservices.speech as speechsdk
+    AZURE_SDK_AVAILABLE = True
+except ImportError:
+    speechsdk = None
+    AZURE_SDK_AVAILABLE = False
 from app.core.config import settings
 from app.core.logging import get_logger
 
@@ -14,7 +19,10 @@ class AzureSpeechService:
     
     def __init__(self):
         """Initialize Azure Speech service."""
-        if not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
+        if not AZURE_SDK_AVAILABLE:
+            logger.warning("Azure Speech SDK not installed. Voice features disabled.")
+            self.speech_config = None
+        elif not settings.AZURE_SPEECH_KEY or not settings.AZURE_SPEECH_REGION:
             logger.warning("Azure Speech credentials not configured")
             self.speech_config = None
         else:
