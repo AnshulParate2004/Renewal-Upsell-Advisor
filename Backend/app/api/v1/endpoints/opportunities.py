@@ -20,8 +20,9 @@ if env_path.exists():
 logger = get_logger(__name__)
 router = APIRouter()
 
-# Only these two types are supported (frontend and API)
-ALLOWED_OPPORTUNITY_TYPES = ("upsell", "expansion")
+# Only upsell is stored; expansion accepted in requests but normalized to upsell
+ALLOWED_OPPORTUNITY_TYPES = ("upsell",)
+ACCEPTED_TYPES_IN_REQUEST = ("upsell", "expansion")  # expansion → stored as upsell
 
 # Pipeline stages for display; used when status is missing or generic "identified"
 OPPORTUNITY_STAGES = ("prospecting", "qualification", "proposal", "negotiation", "identified", "closed_won", "closed_lost")
@@ -50,10 +51,10 @@ def _normalize_stage(status: Optional[str], probability: float) -> str:
 
 
 def _normalize_type(opportunity_type: Optional[str]) -> str:
-    """Return only 'upsell' or 'expansion'. Legacy values map to expansion."""
-    if opportunity_type in ALLOWED_OPPORTUNITY_TYPES:
-        return opportunity_type
-    return "expansion"  # renewal, cross_sell, or any other legacy value
+    """Return 'upsell' only. Expansion and other legacy values are normalized to upsell."""
+    if opportunity_type == "upsell":
+        return "upsell"
+    return "upsell"  # expansion, renewal, cross_sell, or any other → upsell
 
 
 def get_supabase_client() -> Optional[Client]:
@@ -178,16 +179,17 @@ async def create_opportunity(opportunity: dict):
         raise HTTPException(status_code=503, detail="Supabase not configured")
     
     try:
-        opp_type = opportunity.get("type", "upsell")
-        if opp_type not in ALLOWED_OPPORTUNITY_TYPES:
+        opp_type = (opportunity.get("type") or "upsell").strip().lower()
+        if opp_type not in ACCEPTED_TYPES_IN_REQUEST:
             raise HTTPException(
                 status_code=400,
-                detail=f"type must be one of: {', '.join(ALLOWED_OPPORTUNITY_TYPES)}",
+                detail=f"type must be one of: {', '.join(ACCEPTED_TYPES_IN_REQUEST)}",
             )
-        # Transform frontend format to Supabase format
+        # Store as upsell only (expansion normalized to upsell)
+        stored_type = _normalize_type(opp_type)
         supabase_data = {
             "account_id": opportunity.get("account_id"),
-            "opportunity_type": opp_type,
+            "opportunity_type": stored_type,
             "predicted_value": opportunity.get("value", 0),
             "probability": opportunity.get("probability", 0),
             "status": opportunity.get("stage", "identified"),
@@ -234,13 +236,13 @@ async def update_opportunity(opportunity_id: str, opportunity_update: dict):
         if "stage" in opportunity_update:
             update_data["status"] = opportunity_update["stage"]
         if "type" in opportunity_update:
-            t = opportunity_update["type"]
-            if t not in ALLOWED_OPPORTUNITY_TYPES:
+            t = (opportunity_update["type"] or "").strip().lower()
+            if t not in ACCEPTED_TYPES_IN_REQUEST:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"type must be one of: {', '.join(ALLOWED_OPPORTUNITY_TYPES)}",
+                    detail=f"type must be one of: {', '.join(ACCEPTED_TYPES_IN_REQUEST)}",
                 )
-            update_data["opportunity_type"] = t
+            update_data["opportunity_type"] = _normalize_type(t)
         
         # Remove None values
         update_data = {k: v for k, v in update_data.items() if v is not None}

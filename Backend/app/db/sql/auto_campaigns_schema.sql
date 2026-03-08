@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS public.auto_campaigns (
     schedule_start_time VARCHAR(5),
     schedule_end_time VARCHAR(5),
     follow_up_offset_days INTEGER,
+    last_run_incomplete BOOLEAN DEFAULT false,
+    status VARCHAR(50),
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -29,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.auto_campaigns (
 -- ALTER TABLE public.auto_campaigns ADD COLUMN IF NOT EXISTS schedule_start_time VARCHAR(5);
 -- ALTER TABLE public.auto_campaigns ADD COLUMN IF NOT EXISTS schedule_end_time VARCHAR(5);
 -- ALTER TABLE public.auto_campaigns ADD COLUMN IF NOT EXISTS follow_up_offset_days INTEGER;
+-- ALTER TABLE public.auto_campaigns ADD COLUMN IF NOT EXISTS last_run_incomplete BOOLEAN DEFAULT false;
 
 -- Optional: campaign_enrollments for tracking which accounts are in which campaign (if you use enrollments later)
 -- CREATE TABLE IF NOT EXISTS public.campaign_enrollments (

@@ -7,7 +7,6 @@ import { useAccounts } from "@/hooks/useAccounts";
 
 const typeBadge: Record<string, { label: string; color: string; bg: string }> = {
   upsell: { label: "Upsell", color: "text-emerald-600", bg: "bg-emerald-500/10" },
-  expansion: { label: "Expansion", color: "text-violet-600", bg: "bg-violet-500/10" },
 };
 
 const stageLabel: Record<string, string> = {
@@ -68,7 +67,10 @@ export default function Opportunities() {
   }, [opportunities, accounts]);
 
   const filtered = useMemo(() => {
-    return enrichedOpportunities.filter((o) => typeFilter === "all" || o.type === typeFilter);
+    return enrichedOpportunities.filter((o) => {
+      const t = o.type === 'expansion' ? 'upsell' : o.type;
+      return typeFilter === "all" || t === typeFilter;
+    });
   }, [enrichedOpportunities, typeFilter]);
 
   const totalPipeline = useMemo(() => enrichedOpportunities.reduce((s, o) => s + o.value, 0), [enrichedOpportunities]);
@@ -116,20 +118,7 @@ export default function Opportunities() {
           )}
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2">
-          <div className="flex gap-0.5 bg-muted rounded-lg p-0.5 border-2 border-black">
-            {(['all', 'upsell', 'expansion'] as const).map((filter) => (
-              <button
-                key={filter}
-                onClick={() => setTypeFilter(filter)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${typeFilter === filter ? 'bg-card text-foreground shadow-sm border-2 border-black' : 'text-muted-foreground hover:text-foreground bg-transparent'}`}
-              >
-                {filter === 'all' ? 'All Types' : filter.replace('_', '-').replace(/\b\w/g, l => l.toUpperCase())}
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Table */}
         <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">

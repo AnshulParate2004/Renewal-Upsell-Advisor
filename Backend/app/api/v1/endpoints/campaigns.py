@@ -54,10 +54,21 @@ def _is_bad_request_or_unknown_column(err: Exception) -> bool:
 
 @router.get("/", response_model=List[dict])
 async def list_campaigns(client=Depends(get_supabase_client)):
-    """Get all auto campaigns."""
+    """Get all auto campaigns. Computes status (upcoming|ongoing|incomplete|completed) and writes it to DB."""
     try:
+        from app.services.campaign_runner import get_campaign_display_section
+
         result = client.table("auto_campaigns").select("*").execute()
-        return result.data if result.data else []
+        campaigns = result.data if result.data else []
+        for c in campaigns:
+            cid = c.get("id")
+            status = get_campaign_display_section(c)
+            c["status"] = status
+            try:
+                client.table("auto_campaigns").update({"status": status}).eq("id", cid).execute()
+            except Exception:
+                pass
+        return campaigns
     except Exception as e:
         if _is_table_missing(e):
             return []
@@ -90,15 +101,52 @@ async def get_campaign(campaign_id: str, client=Depends(get_supabase_client)):
         raise
 
 
+REQUIRED_ACTION_TYPES = ("email_sequence", "voice_bot")
+
+
 @router.post("/", response_model=dict)
 async def create_campaign(campaign: AutoCampaignCreate, client=Depends(get_supabase_client)):
+    # Require name, description, start_date, end_date, and a valid action_type
+    name = (campaign.name or "").strip()
+    description = (campaign.description or "").strip()
+    start_date = (campaign.start_date or "").strip()
+    end_date = (campaign.end_date or "").strip()
+    action_type = (campaign.action_type or "").strip().lower()
+    if not name:
+        raise HTTPException(status_code=422, detail="Campaign name is required.")
+    if not description:
+        raise HTTPException(status_code=422, detail="Campaign description is required.")
+    if not start_date:
+        raise HTTPException(status_code=422, detail="Campaign start date is required.")
+    if not end_date:
+        raise HTTPException(status_code=422, detail="Campaign end date is required.")
+    if action_type not in REQUIRED_ACTION_TYPES:
+        raise HTTPException(status_code=422, detail="Action must be one of: email_sequence, voice_bot.")
+
     payload = campaign.model_dump(exclude_none=True)
     # Remove last_run_at from insert (backend sets it when campaign runs)
     payload.pop("last_run_at", None)
 
     try:
         result = client.table("auto_campaigns").insert(payload).execute()
-        return result.data[0] if result.data else None
+        created = result.data[0] if result.data else None
+        if created:
+            try:
+                from app.services.activity_log import log_activity
+                log_activity(
+                    "campaign_created",
+                    title=f"Campaign created: {created.get('name', '')}",
+                    details={
+                        "campaign_id": str(created.get("id", "")),
+                        "campaign_name": created.get("name"),
+                        "action_type": created.get("action_type"),
+                        "start_date": created.get("start_date"),
+                        "end_date": created.get("end_date"),
+                    },
+                )
+            except Exception:
+                pass
+        return created
     except Exception as e:
         if _is_table_missing(e):
             raise HTTPException(status_code=503, detail=TABLE_MISSING_MSG)
@@ -107,7 +155,14 @@ async def create_campaign(campaign: AutoCampaignCreate, client=Depends(get_supab
             try:
                 safe_payload = {k: v for k, v in payload.items() if k in BASE_CAMPAIGN_COLUMNS}
                 result = client.table("auto_campaigns").insert(safe_payload).execute()
-                return result.data[0] if result.data else None
+                created = result.data[0] if result.data else None
+                if created:
+                    try:
+                        from app.services.activity_log import log_activity
+                        log_activity("campaign_created", title=f"Campaign created: {created.get('name', '')}", details={"campaign_id": str(created.get("id", "")), "campaign_name": created.get("name")})
+                    except Exception:
+                        pass
+                return created
             except Exception as retry_err:
                 raise HTTPException(
                     status_code=400,

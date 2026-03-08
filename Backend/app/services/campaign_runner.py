@@ -245,6 +245,57 @@ def _is_campaign_due(campaign: Dict[str, Any]) -> bool:
         return True
 
 
+def _is_run_complete_for_today(campaign: Dict[str, Any]) -> bool:
+    """True if campaign has already run today (IST). Once run is done, show in Completed immediately."""
+    last_run = campaign.get("last_run_at")
+    if not last_run:
+        return False
+    now_utc = datetime.now(timezone.utc)
+    try:
+        if isinstance(last_run, str):
+            last_dt = datetime.fromisoformat(last_run.replace("Z", "+00:00"))
+        else:
+            last_dt = last_run
+        if last_dt.tzinfo is None:
+            last_dt = last_dt.replace(tzinfo=timezone.utc)
+        # Last run date in IST
+        last_utc_ts = last_dt.timestamp()
+        last_ist_ts = last_utc_ts + IST_OFFSET_MINUTES * 60
+        last_ist_dt = datetime.fromtimestamp(last_ist_ts, tz=timezone.utc)
+        last_ist_date = (last_ist_dt.day, last_ist_dt.month, last_ist_dt.year)
+        # Today in IST
+        now_utc_ts = now_utc.timestamp()
+        now_ist_ts = now_utc_ts + IST_OFFSET_MINUTES * 60
+        now_ist_dt = datetime.fromtimestamp(now_ist_ts, tz=timezone.utc)
+        now_ist_date = (now_ist_dt.day, now_ist_dt.month, now_ist_dt.year)
+        return last_ist_date == now_ist_date
+    except Exception:
+        return False
+
+
+def get_campaign_display_section(campaign: Dict[str, Any]) -> str:
+    """
+    Compute display section for UI: upcoming | ongoing | incomplete | completed.
+    Used by the campaigns API so the frontend does not duplicate date/time logic.
+    """
+    is_active = campaign.get("is_active") is True
+    today_utc = datetime.now(timezone.utc).date()
+    today_str = today_utc.isoformat()
+    start_date = (campaign.get("start_date") or "").strip() if campaign.get("start_date") else ""
+    end_date = (campaign.get("end_date") or "").strip() if campaign.get("end_date") else ""
+    last_run_incomplete = campaign.get("last_run_incomplete") is True
+
+    if is_active and start_date and start_date > today_str:
+        return "upcoming"
+    if is_active and last_run_incomplete:
+        return "incomplete"
+    if not is_active or (end_date and end_date < today_str):
+        return "completed"
+    if _is_run_complete_for_today(campaign):
+        return "completed"
+    return "ongoing"
+
+
 async def run_auto_campaigns() -> Dict[str, Any]:
     """
     Load active auto_campaigns; for each that is due and within its IST send window,
@@ -299,13 +350,19 @@ async def run_auto_campaigns() -> Dict[str, Any]:
         name = campaign.get("name", "Unnamed")
         config = campaign.get("filter_config") or {}
         action = (campaign.get("action_type") or "email_sequence").strip().lower()
+        description = (campaign.get("description") or "").strip() or None  # Used as purpose for email/call content
         matching = [a for a in all_accounts if _account_matches_filter(a, config)]
         if not matching:
             logger.info("Campaign '%s' due but no matching accounts (filter_config: %s).", name, bool(config))
             try:
-                client.table("auto_campaigns").update({"last_run_at": datetime.now(timezone.utc).isoformat()}).eq("id", cid).execute()
+                run_at = datetime.now(timezone.utc).isoformat()
+                payload = {"last_run_at": run_at, "status": get_campaign_display_section({**campaign, "last_run_at": run_at})}
+                client.table("auto_campaigns").update(payload).eq("id", cid).execute()
             except Exception:
-                pass
+                try:
+                    client.table("auto_campaigns").update({"last_run_at": datetime.now(timezone.utc).isoformat()}).eq("id", cid).execute()
+                except Exception:
+                    pass
             processed += 1
             continue
         logger.info(
@@ -313,21 +370,56 @@ async def run_auto_campaigns() -> Dict[str, Any]:
             name, action, len(matching),
             "all accounts (no filter)" if not config else "filtered accounts",
         )
+        failed_count = 0
         for acc in matching:
             aid = acc.get("id")
             if not aid:
                 continue
             try:
                 if action == "voice_bot":
-                    await trigger_voice_call_for_account(str(aid))
+                    await trigger_voice_call_for_account(str(aid), purpose=description)
                 else:
-                    await send_email_to_single_account(str(aid))
+                    await send_email_to_single_account(str(aid), purpose=description)
             except Exception as e:
+                failed_count += 1
                 logger.warning("Campaign '%s' action failed for account %s: %s", name, aid, e)
+        last_run_at = datetime.now(timezone.utc).isoformat()
+        last_run_incomplete = failed_count > 0
+        campaign_after_run = {**campaign, "last_run_at": last_run_at, "last_run_incomplete": last_run_incomplete}
+        status_str = get_campaign_display_section(campaign_after_run)
         try:
-            client.table("auto_campaigns").update({"last_run_at": datetime.now(timezone.utc).isoformat()}).eq("id", cid).execute()
+            update_payload = {
+                "last_run_at": last_run_at,
+                "last_run_incomplete": last_run_incomplete,
+                "status": status_str,
+            }
+            client.table("auto_campaigns").update(update_payload).eq("id", cid).execute()
         except Exception as e:
+            try:
+                client.table("auto_campaigns").update({"last_run_at": last_run_at, "status": status_str}).eq("id", cid).execute()
+            except Exception:
+                try:
+                    client.table("auto_campaigns").update({"last_run_at": last_run_at}).eq("id", cid).execute()
+                except Exception:
+                    pass
             logger.warning("Failed to update last_run_at for campaign %s: %s", cid, e)
+        try:
+            from app.services.activity_log import log_activity
+            log_activity(
+                "campaign_run",
+                title=f"Campaign run: {name}",
+                details={
+                    "campaign_id": str(cid),
+                    "campaign_name": name,
+                    "action_type": action,
+                    "accounts_targeted": len(matching),
+                    "accounts_sent": len(matching) - failed_count,
+                    "accounts_failed": failed_count,
+                    "last_run_incomplete": last_run_incomplete,
+                },
+            )
+        except Exception:
+            pass
         processed += 1
 
     logger.info("Renewal pipeline scheduler: process finished. campaigns_processed=%d", processed)

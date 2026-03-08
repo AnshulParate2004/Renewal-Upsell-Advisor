@@ -43,8 +43,6 @@ export default function ManualTriggersPage() {
   const [campaignsList, setCampaignsList] = useState<AutoCampaign[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignSaving, setCampaignSaving] = useState(false);
-  const [campaignRunNowLoading, setCampaignRunNowLoading] = useState(false);
-  const [campaignRunNowMessage, setCampaignRunNowMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [mlLoading, setMlLoading] = useState(false);
   const [mlMessage, setMlMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -321,21 +319,28 @@ export default function ManualTriggersPage() {
     }).length;
   }, [accounts, rangeFilters, locationKeyword, partnerNameKeyword, pipelineStage]);
 
+  const canSaveCampaign =
+    campaignName.trim() !== "" &&
+    campaignDescription.trim() !== "" &&
+    campaignStartDate.trim() !== "" &&
+    campaignEndDate.trim() !== "" &&
+    (actionType === "email_sequence" || actionType === "voice_bot");
+
   const handleSaveCampaign = async () => {
-    if (!campaignName) return;
+    if (!canSaveCampaign) return;
     setCampaignSaving(true);
     try {
       const filterConfig = buildFilterConfig();
       await campaignsApi.createCampaign({
-        name: campaignName,
-        description: campaignDescription,
+        name: campaignName.trim(),
+        description: campaignDescription.trim(),
         target_audience_filter: "multi",
         filter_config: filterConfig ?? undefined,
         recurring_frequency: recurrence,
         action_type: actionType,
         is_active: true,
-        start_date: campaignStartDate.trim() || undefined,
-        end_date: campaignEndDate.trim() || undefined,
+        start_date: campaignStartDate.trim(),
+        end_date: campaignEndDate.trim(),
         schedule_start_time: campaignStartTime.trim() || undefined,
         schedule_end_time: campaignEndTime.trim() || undefined,
         follow_up_offset_days: campaignFollowUpOffsetDays,
@@ -371,20 +376,23 @@ export default function ManualTriggersPage() {
     } catch (e) { console.error(e); }
   };
 
-  const handleRunCampaignsNow = async () => {
-    setCampaignRunNowMessage(null);
-    setCampaignRunNowLoading(true);
-    try {
-      const result = await campaignsApi.runNow();
-      const processed = (result as { campaigns_processed?: number }).campaigns_processed ?? 0;
-      setCampaignRunNowMessage({ type: "success", text: `Ran campaigns. ${processed} campaign(s) executed.` });
-      await loadCampaigns();
-    } catch (e) {
-      setCampaignRunNowMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to run campaigns." });
-    } finally {
-      setCampaignRunNowLoading(false);
-    }
-  };
+  /** Campaign sections from backend status (stored in DB). Missing status treated as ongoing. */
+  const upcomingCampaigns = useMemo(
+    () => campaignsList.filter((c) => (c.status ?? "").toLowerCase() === "upcoming"),
+    [campaignsList]
+  );
+  const ongoingCampaigns = useMemo(
+    () => campaignsList.filter((c) => (c.status ?? "").toLowerCase() === "ongoing" || !c.status),
+    [campaignsList]
+  );
+  const incompleteCampaigns = useMemo(
+    () => campaignsList.filter((c) => (c.status ?? "").toLowerCase() === "incomplete"),
+    [campaignsList]
+  );
+  const completedCampaigns = useMemo(
+    () => campaignsList.filter((c) => (c.status ?? "").toLowerCase() === "completed"),
+    [campaignsList]
+  );
 
   return (
     <div className="min-h-screen bg-background pb-12">
@@ -429,31 +437,35 @@ export default function ManualTriggersPage() {
 
               <div className="space-y-4">
                 <div>
-                  <Label className="text-xs font-bold">Campaign Name</Label>
+                  <Label className="text-xs font-bold">Campaign Name <span className="text-destructive">*</span></Label>
                   <input value={campaignName} onChange={e => setCampaignName(e.target.value)} type="text" placeholder="e.g. Q4 Renewal Push" className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
                 </div>
 
                 <div>
-                  <Label className="text-xs font-bold">Campaign Description</Label>
+                  <Label className="text-xs font-bold">Campaign Description <span className="text-destructive">*</span></Label>
                   <textarea value={campaignDescription} onChange={e => setCampaignDescription(e.target.value)} placeholder="Describe the objective and details of this campaign..." rows={2} className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background resize-y" />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs font-bold">Campaign Start Date</Label>
+                    <Label className="text-xs font-bold">Campaign Start Date <span className="text-destructive">*</span></Label>
                     <input type="date" value={campaignStartDate} onChange={e => setCampaignStartDate(e.target.value)} className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Optional. Campaign runs only on or after this date.</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Required. Campaign runs only on or after this date.</p>
                   </div>
                   <div>
-                    <Label className="text-xs font-bold">Campaign End Date</Label>
+                    <Label className="text-xs font-bold">Campaign End Date <span className="text-destructive">*</span></Label>
                     <input type="date" value={campaignEndDate} onChange={e => setCampaignEndDate(e.target.value)} className="w-full mt-1.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background" />
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Optional. Campaign runs only on or before this date.</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Required. Campaign runs only on or before this date.</p>
                   </div>
                 </div>
 
                 <div>
                   <Label className="text-xs font-bold">Target Audience Filters</Label>
-                  <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">Same as Accounts: apply any combination. All filters are ANDed. {matchingCount < accounts.length && <span className="text-primary font-medium">{matchingCount} of {accounts.length} accounts match.</span>}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 mb-2">Same as Accounts: apply any combination. All filters are ANDed.</p>
+                  <p className="text-[11px] mb-3">
+                    <span className="text-primary font-semibold">Filter will apply to {matchingCount} of {accounts.length} account{accounts.length === 1 ? "" : "s"}</span>
+                    {matchingCount < accounts.length && " (filtered)"}
+                  </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {([
                       { key: "risk" as const, label: "Risk", placeholder: "0-100" },
@@ -581,7 +593,8 @@ export default function ManualTriggersPage() {
                 </div>
 
                 <div className="pt-2">
-                  <Label className="text-xs font-bold">Action</Label>
+                  <Label className="text-xs font-bold">Action <span className="text-destructive">*</span></Label>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Required. Select one: Email or Voice.</p>
                   <div className="flex gap-4 mt-2">
                     <label className="flex items-center gap-2 text-sm cursor-pointer p-3 border-2 border-black rounded-lg flex-1 hover:bg-muted/50 transition-colors">
                       <input type="radio" name="auto-action" value="email_sequence" checked={actionType === "email_sequence"} onChange={e => setActionType(e.target.value)} className="accent-primary" />
@@ -599,47 +612,57 @@ export default function ManualTriggersPage() {
                 <button className="px-4 py-2 text-sm font-bold border-2 border-black rounded-lg hover:bg-muted transition-colors">
                   Cancel
                 </button>
-                <button onClick={handleSaveCampaign} disabled={campaignSaving || !campaignName} className="px-6 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 disabled:opacity-50">
+                <button onClick={handleSaveCampaign} disabled={campaignSaving || !canSaveCampaign} className="px-6 py-2 bg-primary text-primary-foreground text-sm font-bold rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex items-center gap-2 disabled:opacity-50">
                   {campaignSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Save Campaign
                 </button>
               </div>
             </div>
 
             <div className="lg:col-span-4 space-y-5">
+              {/* Upcoming: set but not yet triggered (start_date in future) */}
+              <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[280px]">
+                <div className="px-5 py-3.5 border-b-2 border-black flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Upcoming Campaigns</h3>
+                  <span className="bg-amber-500/20 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-amber-500/40">{upcomingCampaigns.length}</span>
+                </div>
+                <p className="px-4 pt-1 text-[10px] text-muted-foreground">Saved; will trigger from start date.</p>
+                <div className="p-4 overflow-y-auto space-y-3">
+                  {upcomingCampaigns.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-3">No upcoming campaigns.</p>
+                  ) : upcomingCampaigns.map((c) => (
+                    <div key={c.id} className="border-2 border-amber-500/30 rounded-lg p-2.5 space-y-1 bg-amber-500/5">
+                      <h4 className="text-xs font-bold">{c.name}</h4>
+                      <p className="text-[10px] text-muted-foreground line-clamp-2">{c.description}</p>
+                      {c.start_date && <p className="text-[10px] text-amber-700 font-medium">Starts {c.start_date}</p>}
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <span>{c.action_type === "email_sequence" ? "Email" : "Voice"}</span>
+                        <button onClick={() => handleDeleteCampaign(c.id!)} className="ml-auto text-destructive hover:underline">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col h-full max-h-[600px]">
                 <div className="px-5 py-3.5 border-b-2 border-black flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <RefreshCw size={15} className="text-primary" />
                     <h3 className="text-sm font-semibold text-foreground">Ongoing Campaigns</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleRunCampaignsNow}
-                      disabled={campaignRunNowLoading}
-                      className="text-[10px] font-bold px-2 py-1 rounded-lg border-2 border-black bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      {campaignRunNowLoading ? "Running…" : "Run now"}
-                    </button>
-                    <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/20">{campaignsList.length} Active</span>
-                  </div>
+                  <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/20">{ongoingCampaigns.length} Active</span>
                 </div>
-                {campaignRunNowMessage && (
-                  <p className={`px-4 py-1 text-xs ${campaignRunNowMessage.type === "success" ? "text-green-600" : "text-destructive"}`}>
-                    {campaignRunNowMessage.text}
-                  </p>
-                )}
+                <p className="px-4 pt-1 text-[10px] text-muted-foreground">Auto-triggered by schedule (no run button).</p>
                 <div className="p-4 overflow-y-auto space-y-4">
                   {campaignsLoading ? (
                     <p className="text-xs text-muted-foreground text-center py-4">Loading campaigns...</p>
-                  ) : campaignsList.length === 0 ? (
-                    <p className="text-xs text-muted-foreground text-center py-4">No active campaigns.</p>
-                  ) : campaignsList.map(campaign => (
-                    <div key={campaign.id} className="border-2 border-black rounded-lg p-3 space-y-2 relative overflow-hidden group">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="text-sm font-bold">{campaign.name}</h4>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{campaign.description}</p>
+                  ) : ongoingCampaigns.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">No ongoing campaigns.</p>
+                  ) : ongoingCampaigns.map(campaign => (
+                    <div key={campaign.id} className="border-2 border-black rounded-lg p-3 space-y-2 relative overflow-hidden group min-h-0">
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-bold truncate">{campaign.name}</h4>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 break-words">{campaign.description || "—"}</p>
                           {(campaign.start_date || campaign.end_date) && (
                             <p className="text-[10px] text-muted-foreground mt-1">
                               {campaign.start_date && campaign.end_date
@@ -664,19 +687,73 @@ export default function ManualTriggersPage() {
                             </p>
                           )}
                         </div>
-                        <div className={`shrink-0 w-2 h-2 rounded-full mt-1 ${campaign.is_active ? 'bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]' : 'bg-muted-foreground'}`}></div>
+                        <div className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${campaign.is_active ? 'bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]' : 'bg-muted-foreground'}`} aria-hidden />
                       </div>
-                      <div className="flex items-center justify-between gap-3 pt-2 text-[11px] font-medium text-muted-foreground border-t border-black/10 mt-2">
-                        <div className="flex items-center gap-3">
-                          <span className="flex items-center gap-1">
+                      <div className="flex items-center justify-between gap-2 pt-2 text-[11px] font-medium text-muted-foreground border-t border-black/10 mt-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="flex items-center gap-1 shrink-0">
                             {campaign.action_type === 'email_sequence' ? <Mail size={10} /> : <Phone size={10} />}
                             {campaign.action_type === 'email_sequence' ? 'Email' : 'Voice Call'}
                           </span>
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 shrink-0">
                             <RefreshCw size={10} /> {campaign.recurring_frequency}
                           </span>
                         </div>
-                        <button onClick={() => handleDeleteCampaign(campaign.id!)} className="text-destructive hover:underline text-[10px] invisible group-hover:visible">Delete</button>
+                        <button type="button" onClick={() => handleDeleteCampaign(campaign.id!)} className="text-destructive hover:underline text-[10px] shrink-0 invisible group-hover:visible">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Incomplete: last run had errors or didn't send to some (saved in DB) */}
+              <div className="bg-card rounded-xl border-2 border-destructive/50 overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[320px]">
+                <div className="px-5 py-3.5 border-b-2 border-black flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Incomplete Campaigns</h3>
+                  <span className="bg-destructive/20 text-destructive text-[10px] font-bold px-2 py-0.5 rounded-full border border-destructive/40">{incompleteCampaigns.length}</span>
+                </div>
+                <p className="px-4 pt-1 text-[10px] text-muted-foreground">Last run had errors or did not send to some accounts.</p>
+                <div className="p-4 overflow-y-auto space-y-3">
+                  {incompleteCampaigns.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-3">No incomplete campaigns.</p>
+                  ) : incompleteCampaigns.map((c) => (
+                    <div key={c.id} className="border-2 border-destructive/30 rounded-lg p-2.5 space-y-1 bg-destructive/5">
+                      <h4 className="text-xs font-bold">{c.name}</h4>
+                      <p className="text-[10px] text-muted-foreground line-clamp-2">{c.description}</p>
+                      {(c.start_date || c.end_date) && (
+                        <p className="text-[10px] text-muted-foreground">{c.start_date && c.end_date ? `${c.start_date} → ${c.end_date}` : c.end_date ? `Until ${c.end_date}` : `From ${c.start_date}`}</p>
+                      )}
+                      <div className="flex items-center gap-2 pt-1 text-[10px] text-muted-foreground">
+                        <span>{c.action_type === "email_sequence" ? "Email" : "Voice"}</span>
+                        <button onClick={() => handleDeleteCampaign(c.id!)} className="ml-auto text-destructive hover:underline">Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col max-h-[400px]">
+                <div className="px-5 py-3.5 border-b-2 border-black flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Completed Campaigns</h3>
+                  <span className="bg-muted text-muted-foreground text-[10px] font-bold px-2 py-0.5 rounded-full border border-black/20">{completedCampaigns.length}</span>
+                </div>
+                <div className="p-4 overflow-y-auto space-y-3">
+                  {completedCampaigns.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-4">No completed campaigns.</p>
+                  ) : completedCampaigns.map((campaign) => (
+                    <div key={campaign.id} className="border border-black/20 rounded-lg p-2.5 space-y-1 bg-muted/30">
+                      <h4 className="text-xs font-bold">{campaign.name}</h4>
+                      <p className="text-[10px] text-muted-foreground line-clamp-2">{campaign.description}</p>
+                      {(campaign.start_date || campaign.end_date) && (
+                        <p className="text-[10px] text-muted-foreground">
+                          {campaign.start_date && campaign.end_date ? `${campaign.start_date} → ${campaign.end_date}` : campaign.end_date ? `Ended ${campaign.end_date}` : `From ${campaign.start_date}`}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 pt-1 text-[10px] text-muted-foreground">
+                        <span>{campaign.action_type === "email_sequence" ? "Email" : "Voice"}</span>
+                        <span>·</span>
+                        <span>{campaign.recurring_frequency}</span>
+                        <button onClick={() => handleDeleteCampaign(campaign.id!)} className="ml-auto text-destructive hover:underline">Delete</button>
                       </div>
                     </div>
                   ))}

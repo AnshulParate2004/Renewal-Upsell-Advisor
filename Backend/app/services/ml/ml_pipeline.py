@@ -227,13 +227,9 @@ def run_pipeline_for_account(account: Dict[str, Any]) -> Dict[str, Any]:
         try:
             upsell_pred = _get_upsell_predictor().predict(upsell_features)
             prob = upsell_pred.get("probability", 0.0)
-            # Distribute roughly 60% upsell / 40% expansion for variety
-            import random
-            opp_type = "expansion" if random.random() < 0.4 else "upsell"
-            
             result["upsell_opportunity_row"] = {
                 "account_id": str(account_id),
-                "opportunity_type": str(opp_type),
+                "opportunity_type": "upsell",
                 "predicted_value": float(round(arr * 0.2, 2)) if prob >= 0.5 else 0.0,
                 "probability": float(round(prob, 4)),
                 "status": "identified",

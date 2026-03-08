@@ -82,7 +82,7 @@ export interface Opportunity {
   id: string;
   accountId: string;
   accountName: string;
-  type: "upsell" | "expansion";
+  type: "upsell";
   value: number;
   probability: number;
   stage: "identified" | "quote_sent" | "negotiation" | "closed_won" | "closed_lost";

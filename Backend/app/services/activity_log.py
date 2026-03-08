@@ -4,7 +4,7 @@ Does not create any table; only inserts into activity_logs.
 Logs: ml_pipeline_trigger, ml_pipeline_run, email_scheduler_run,
 email_scheduler_completed, voice_scheduler_run, voice_scheduler_completed,
 renewal_pipeline_scheduler_run, renewal_pipeline_scheduler_completed,
-plus existing send_email and voice_call_initiated.
+campaign_created, campaign_run, plus send_email and voice_call_initiated.
 """
 from typing import Any, Dict, Optional
 from uuid import UUID
@@ -46,14 +46,17 @@ def log_activity(
         logger.debug("Activity log skipped: Supabase not configured")
         return False
 
+    # Use only columns that exist in Supabase activity_logs: id, account_id, action, entity_type, entity_id, details, ip_address, user_agent, created_at (no title/sentiment).
+    details_payload = dict(details or {})
+    if title is not None:
+        details_payload["title"] = title
+    if sentiment is not None:
+        details_payload["sentiment"] = sentiment
+
     row = {
         "action": action,
-        "details": details or {},
+        "details": details_payload,
     }
-    if title is not None:
-        row["title"] = title
-    if sentiment is not None:
-        row["sentiment"] = sentiment
     if account_id is not None:
         row["account_id"] = str(account_id) if isinstance(account_id, UUID) else account_id
 
