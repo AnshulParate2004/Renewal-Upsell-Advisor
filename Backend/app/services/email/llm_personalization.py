@@ -80,7 +80,14 @@ def personalize_email_content(
         churn_probability = account.get("churn_probability") or 0
         sentiment_category = account.get("sentiment_category", "neutral")
         arr = account.get("arr") or 0
-        mrr = account.get("mrr") or 0
+        mrr_raw = account.get("monthly_wise_instalment") or account.get("mrr")
+        if mrr_raw is not None and mrr_raw != "":
+            try:
+                mrr = float(mrr_raw)
+            except (TypeError, ValueError):
+                mrr = (arr / 12) if arr else 0
+        else:
+            mrr = (arr / 12) if arr else 0
         renewal_date = account.get("renewal_date", "")
         utilization_percentage = account.get("utilization_percentage") or 0
         csm_name = account.get("csm_name", "Your Customer Success Manager")

@@ -214,13 +214,19 @@ def run_pipeline_for_account(account: Dict[str, Any]) -> Dict[str, Any]:
             logger.warning(f"Churn prediction failed for account {account_id}: {e}")
 
         # ========== PRIORITY 4: Upsell (C_Upsell) — uses only Health output + raw ==========
-        arr = _to_float(account.get("arr") or 0)
-        mrr = _to_float(account.get("mrr") or 0)
+        arr_from_db = _to_float(account.get("arr") or 0)
+        mrr_raw = account.get("monthly_wise_instalment") or account.get("mrr")
+        if mrr_raw is not None and mrr_raw != "":
+            mrr = _to_float(mrr_raw)
+        else:
+            mrr = (arr_from_db / 12) if arr_from_db else 0.0
+        # Annual equivalent for ML only: if account has no ARR (e.g. monthly-only), use mrr*12. Never save to DB.
+        arr_for_ml = arr_from_db if arr_from_db else (mrr * 12)
         company_size = (account.get("company_size") or "Medium").strip()
         upsell_features = {
             "health_score": health_score_pred,
             "calculated_utilization": calculated_util,
-            "arr": arr,
+            "arr": arr_for_ml,
             "mrr": mrr,
             "company_size": company_size,
         }
@@ -230,7 +236,7 @@ def run_pipeline_for_account(account: Dict[str, Any]) -> Dict[str, Any]:
             result["upsell_opportunity_row"] = {
                 "account_id": str(account_id),
                 "opportunity_type": "upsell",
-                "predicted_value": float(round(arr * 0.2, 2)) if prob >= 0.5 else 0.0,
+                "predicted_value": float(round(arr_for_ml * 0.2, 2)) if prob >= 0.5 else 0.0,
                 "probability": float(round(prob, 4)),
                 "status": "identified",
                 "reasoning": upsell_pred.get("reasoning", "Identified by ML model based on current usage and health."),

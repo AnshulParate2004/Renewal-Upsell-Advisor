@@ -271,7 +271,7 @@ export default function SettingsPage() {
                     </div>
                     <div className="space-y-1.5 border-t-2 border-black/20 pt-3">
                       <Label className="text-[11px] font-medium text-foreground">
-                        Upsell Pipeline Target (ARR)
+                        Upsell Pipeline Target
                       </Label>
                       <input
                         type="number"
@@ -281,7 +281,7 @@ export default function SettingsPage() {
                         onChange={(e) => updateMetric("upsellPipelineTarget", Number(e.target.value))}
                       />
                       <p className="text-[10px] text-muted-foreground">
-                        Initial upsell ARR goal used in dashboards until you customize it.
+                        Initial upsell revenue goal used in dashboards until you customize it.
                       </p>
                     </div>
                   </div>

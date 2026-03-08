@@ -13,11 +13,6 @@ export function TopBar() {
       <SearchDropdown />
 
       <div className="flex items-center gap-1">
-        <button className="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground transition-colors border-[0.5px] border-black">
-          <Bell className="h-4 w-4" />
-          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-destructive rounded-full" />
-        </button>
-
         <div className="flex bg-muted rounded-lg p-0.5 border-[0.5px] border-black h-8 shrink-0 mx-1">
           <button
             onClick={() => setRevenueType('ARR')}
@@ -32,6 +27,11 @@ export function TopBar() {
             Monthly
           </button>
         </div>
+
+        <button className="relative h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground transition-colors border-[0.5px] border-black">
+          <Bell className="h-4 w-4" />
+          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-destructive rounded-full" />
+        </button>
 
         <button
           onClick={toggle}

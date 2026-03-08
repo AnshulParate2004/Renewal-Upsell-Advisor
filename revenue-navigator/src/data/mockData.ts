@@ -29,8 +29,10 @@ export interface MetricsHistory {
 export interface Account {
   id: string;
   name: string;
-  arr: number;
-  mrr: number; // Added explicit MRR field
+  arr?: number | null; // Annual recurring revenue (can be null)
+  mrr?: number | null; // Monthly wise instalment (can be null)
+  /** 'monthly' | 'annual' - used to filter when Annual/Monthly toggle is selected */
+  billingInterval?: 'monthly' | 'annual' | null;
   healthScore: number;
   riskScore: number;
   sentiment: "positive" | "neutral" | "negative";
@@ -41,7 +43,7 @@ export interface Account {
   licensesUsed: number;
   licensesTotal: number;
   renewalDate: string;
-  renewalStage: "q1" | "q2" | "q3" | "q4" | "no_renewed" | "renewed" | "lost";
+  renewalStage: "q1" | "q2" | "q3" | "q4" | "m1" | "no_renewed" | "renewed" | "lost";
   industry: string;
   company_size?: string; // Added to match Supabase schema
   csm: string;
@@ -99,7 +101,7 @@ export const formatCurrency = (value: number) => {
     return `$${Math.round(value / 1000)}K`;
   } else {
     // Less than 1K: $500
-    return `$${value}`;
+    return `$${Math.round(value)}`;
   }
 };
 
@@ -183,4 +185,35 @@ export function getRenewalStageFromPlan(
   if (daysToRenewal > 180) return "q2";
   if (daysToRenewal > 90) return "q3";
   return "q4";
+}
+
+/** Stage for monthly billing: only M1 or no_renewed.
+ * Overdue (daysToRenewal < 0) always returns no_renewed, even if m1 was saved.
+ * Saved no_renewed is respected; saved m1 is only used when not overdue.
+ */
+export function getRenewalStageForMonthly(
+  _contractStartDate: string | undefined | null,
+  renewalDate: string | undefined | null,
+  status?: string | null,
+  contractEnd?: string | undefined | null,
+  renewalStage?: string | undefined | null
+): "m1" | "no_renewed" {
+  const s = (status ?? "").toString().trim().toLowerCase();
+  const isRenewed = s === "renewed" || s === "renewal";
+  // Use renewalDate first, then contractEnd as fallback — same as getRenewalInDays
+  const end =
+    (renewalDate && renewalDate.trim())
+      ? renewalDate.trim()
+      : (contractEnd && String(contractEnd).trim())
+        ? String(contractEnd).trim()
+        : null;
+  // If a valid end date exists and it's overdue, always go to no_renewed
+  if (!isRenewed && end && !Number.isNaN(new Date(end).getTime())) {
+    const daysToRenewal = getDaysUntil(end);
+    if (daysToRenewal < 0) return "no_renewed";
+  }
+  // Not overdue: respect saved stage if explicitly set to no_renewed
+  const stage = (renewalStage ?? "").toString().trim().toLowerCase();
+  if (stage === "no_renewed") return "no_renewed";
+  return "m1";
 }

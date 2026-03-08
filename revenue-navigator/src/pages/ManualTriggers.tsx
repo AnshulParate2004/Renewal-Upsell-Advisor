@@ -470,7 +470,7 @@ export default function ManualTriggersPage() {
                     {([
                       { key: "risk" as const, label: "Risk", placeholder: "0-100" },
                       { key: "healthScore" as const, label: "Health Score", placeholder: "0-100" },
-                      { key: "arr" as const, label: "ARR", placeholder: "e.g. 100000" },
+                      { key: "arr" as const, label: "Revenue", placeholder: "e.g. 100000" },
                       { key: "renewal" as const, label: "Renewal (days)", placeholder: "-30 to 365" },
                       { key: "utilization" as const, label: "Utilization %", placeholder: "0-100" },
                       { key: "relationshipScore" as const, label: "Relationship", placeholder: "0-100" },

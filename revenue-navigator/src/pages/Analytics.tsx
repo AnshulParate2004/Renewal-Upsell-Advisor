@@ -8,15 +8,24 @@ import { useAccounts } from "@/hooks/useAccounts";
 import { useDashboardStats } from "@/hooks/useAnalytics";
 import { useMemo } from "react";
 
+/** True if account is renewed (do not count in at-risk or high-risk). */
+function isRenewed(a: { status?: string | null; renewalStage?: string | null }): boolean {
+  const s = (a.status ?? "").toString().trim().toLowerCase();
+  const r = (a.renewalStage ?? "").toString().trim().toLowerCase();
+  return s === "renewed" || s === "renewal" || r === "renewed";
+}
+
 export default function Analytics() {
   const { data: accounts = [], isLoading: accountsLoading } = useAccounts();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const isLoading = accountsLoading || statsLoading;
 
+  // Portfolio risk: show Renewed as its own segment, then Low / Medium / High (non-renewed only)
   const riskDistribution = useMemo(() => [
-    { name: "Low Risk", value: accounts.filter((a) => a.riskScore < 40).length, color: "hsl(142, 71%, 45%)" },
-    { name: "Medium Risk", value: accounts.filter((a) => a.riskScore >= 40 && a.riskScore < 70).length, color: "hsl(38, 92%, 50%)" },
-    { name: "High Risk", value: accounts.filter((a) => a.riskScore >= 70).length, color: "hsl(var(--destructive))" },
+    { name: "Renewed", value: accounts.filter((a) => isRenewed(a)).length, color: "hsl(221, 83%, 53%)" },
+    { name: "Low Risk", value: accounts.filter((a) => !isRenewed(a) && (a.riskScore ?? 0) < 40).length, color: "hsl(142, 71%, 45%)" },
+    { name: "Medium Risk", value: accounts.filter((a) => !isRenewed(a) && (a.riskScore ?? 0) >= 40 && (a.riskScore ?? 0) < 70).length, color: "hsl(38, 92%, 50%)" },
+    { name: "High Risk", value: accounts.filter((a) => !isRenewed(a) && (a.riskScore ?? 0) >= 70).length, color: "hsl(var(--destructive))" },
   ], [accounts]);
 
   const revenueData = useMemo(() => {
@@ -28,12 +37,15 @@ export default function Analytics() {
     }));
   }, [stats]);
 
+  // Retention Flow: at risk = high risk score and NOT renewed (renewed should not be counted in at risk)
   const churnData = useMemo(() => {
+    const renewedCount = accounts.filter((a) => (a.renewalStage ?? "").toString().toLowerCase() === "renewed" || isRenewed(a)).length;
+    const atRiskCount = accounts.filter((a) => !isRenewed(a) && (a.riskScore ?? 0) >= 70).length;
     const months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"];
     return months.map((month) => ({
       month,
-      renewed: accounts.filter(a => a.renewalStage === "renewed").length,
-      atRisk: accounts.filter(a => a.riskScore >= 70).length,
+      renewed: renewedCount,
+      atRisk: atRiskCount,
     }));
   }, [accounts]);
 
@@ -78,7 +90,7 @@ export default function Analytics() {
                     <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: '2px solid #000', borderRadius: '8px', fontSize: '12px', boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)' }} />
                     <Legend iconType="circle" verticalAlign="top" height={32} />
-                    <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} name="Total ARR" />
+                    <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 0 }} name="Total Revenue" />
                     <Line type="monotone" dataKey="churned" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} name="Churned" />
                   </LineChart>
                 </ResponsiveContainer>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { DollarSign, TrendingUp, Target, Plus, Loader2 } from "lucide-react";
+import { DollarSign, TrendingUp, Plus, Loader2, Users } from "lucide-react";
 import { formatCurrency } from "@/data/mockData";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useOpportunities } from "@/hooks/useOpportunities";
@@ -7,10 +7,11 @@ import { useAccounts } from "@/hooks/useAccounts";
 
 const typeBadge: Record<string, { label: string; color: string; bg: string }> = {
   upsell: { label: "Upsell", color: "text-emerald-600", bg: "bg-emerald-500/10" },
+  no_upsell: { label: "No upsell", color: "text-muted-foreground", bg: "bg-muted" },
 };
 
 const stageLabel: Record<string, string> = {
-  prospecting: "Prospecting",
+  prospecting: "Early stage",
   qualification: "Qualification",
   proposal: "Proposal",
   negotiation: "Negotiation",
@@ -59,28 +60,38 @@ export default function Opportunities() {
   const { data: opportunities = [], isLoading, error } = useOpportunities();
   const { data: accounts = [] } = useAccounts();
 
+  const accountIds = useMemo(() => new Set(accounts.map((a) => a.id)), [accounts]);
   const enrichedOpportunities = useMemo(() => {
-    return opportunities.map(opp => {
-      const account = accounts.find(a => a.id === opp.accountId);
-      return { ...opp, accountName: account?.name || 'Unknown Account' };
-    });
-  }, [opportunities, accounts]);
+    return opportunities
+      .filter((opp) => accountIds.has(opp.accountId))
+      .map((opp) => {
+        const account = accounts.find((a) => a.id === opp.accountId);
+        return { ...opp, accountName: account?.name || "Unknown Account" };
+      });
+  }, [opportunities, accounts, accountIds]);
 
   const filtered = useMemo(() => {
     return enrichedOpportunities.filter((o) => {
       const t = o.type === 'expansion' ? 'upsell' : o.type;
-      return typeFilter === "all" || t === typeFilter;
+      const value = typeof o.value === 'number' ? o.value : 0;
+      const isUpsell = t === 'upsell' && value > 0;
+      if (typeFilter === "all") return true;
+      if (typeFilter === "upsell") return isUpsell; // only show as Upsell when value > 0
+      return false;
     });
   }, [enrichedOpportunities, typeFilter]);
 
   const totalPipeline = useMemo(() => enrichedOpportunities.reduce((s, o) => s + o.value, 0), [enrichedOpportunities]);
   const avgDeal = enrichedOpportunities.length > 0 ? totalPipeline / enrichedOpportunities.length : 0;
-  const conversionRate = Math.round((enrichedOpportunities.filter((o) => o.stage === "closed_won").length / enrichedOpportunities.length) * 100) || 15;
+  const predictedUpsellCount = useMemo(
+    () => enrichedOpportunities.filter((o) => (typeof o.value === 'number' ? o.value : 0) > 0).length,
+    [enrichedOpportunities]
+  );
 
   const summaryMetrics = [
-    { label: 'Pipeline Total', value: formatCurrency(totalPipeline), icon: <DollarSign size={16} />, bg: 'bg-primary/10', color: 'text-primary' },
-    { label: 'Avg Deal Size', value: formatCurrency(avgDeal), icon: <TrendingUp size={16} />, bg: 'bg-amber-500/10', color: 'text-amber-600' },
-    { label: 'Conversion Rate', value: `${conversionRate}`, icon: <Target size={16} />, bg: 'bg-primary/10', color: 'text-primary' },
+    { label: 'Total Upsell Predicted Value', value: formatCurrency(totalPipeline), icon: <DollarSign size={16} />, bg: 'bg-primary/10', color: 'text-primary' },
+    { label: 'Average Prediction Value', value: formatCurrency(avgDeal), icon: <TrendingUp size={16} />, bg: 'bg-amber-500/10', color: 'text-amber-600' },
+    { label: 'Total predicted upsell accounts', value: String(predictedUpsellCount), icon: <Users size={16} />, bg: 'bg-emerald-500/10', color: 'text-emerald-600' },
   ];
 
   return (
@@ -89,7 +100,17 @@ export default function Opportunities() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold text-foreground">Opportunities</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Strategic opportunity management</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Strategic opportunity management
+              {!isLoading && (
+                <span className="ml-2 font-medium text-foreground">
+                  — {filtered.length} {filtered.length === 1 ? "account" : "accounts"}
+                  {typeFilter === "upsell" && enrichedOpportunities.length !== filtered.length && (
+                    <span className="text-muted-foreground font-normal"> (of {enrichedOpportunities.length} total)</span>
+                  )}
+                </span>
+              )}
+            </p>
           </div>
           <button className="h-9 px-3 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-all flex items-center gap-1.5 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-none">
             <Plus className="w-3.5 h-3.5" /> New Opportunity
@@ -148,7 +169,9 @@ export default function Opportunities() {
                 </td></tr>
               ) : (
                 filtered.map((opp) => {
-                  const badge = typeBadge[opp.type] || { label: opp.type, color: 'text-muted-foreground', bg: 'bg-muted' };
+                  const value = typeof opp.value === 'number' ? opp.value : 0;
+                  const displayType = value === 0 ? 'no_upsell' : (opp.type === 'expansion' ? 'upsell' : opp.type);
+                  const badge = typeBadge[displayType] || { label: 'Upsell', color: 'text-emerald-600', bg: 'bg-emerald-500/10' };
                   const pct = probabilityPercent(opp.probability);
                   const probStyle = probabilityColor(opp.probability);
                   const stage = displayStage(opp.stage, opp.probability);

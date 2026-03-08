@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatCurrency, getDaysUntil, getRenewalInDays } from '@/data/mockData';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAccounts } from '@/hooks/useAccounts';
+import { useRevenue } from '@/contexts/RevenueContext';
 import { emailApi } from '@/lib/api/email';
 import { accountCommentsApi, type AccountComment } from '@/lib/api/accountComments';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -39,8 +40,10 @@ export default function Accounts() {
   const [newCommentBody, setNewCommentBody] = useState('');
   const [addCommentLoading, setAddCommentLoading] = useState(false);
   const navigate = useNavigate();
+  const { revenueType } = useRevenue();
   const { data: accountsRaw, isLoading, error, refetch } = useAccounts();
   const accounts = Array.isArray(accountsRaw) ? accountsRaw : [];
+  const revenueValue = (c: typeof accounts[0]) => (revenueType === 'MRR' ? (c?.mrr ?? 0) : (c?.arr ?? 0));
 
   /** Risk: High (≥70), Middle (40–69), Safe (<40). */
   const getRiskTier = (riskScore: number): 'high' | 'safe' | 'middle' =>
@@ -57,7 +60,7 @@ export default function Accounts() {
     return searchFilteredClients.filter((client) => {
       const risk = client.riskScore ?? 0;
       const healthScore = client.healthScore ?? 0;
-      const arr = client.arr ?? 0;
+      const arr = revenueValue(client);
       const renewal = getRenewalInDays(client.renewalDate, client.contractEnd, client.status) ?? 0;
       const utilization = client.utilization ?? 0;
       const relationshipScore = client.relationshipScore ?? 0;
@@ -183,8 +186,8 @@ export default function Accounts() {
           bVal = b.healthScore ?? 0;
           return mult * (aVal as number - (bVal as number));
         case 'arr':
-          aVal = a.arr ?? 0;
-          bVal = b.arr ?? 0;
+          aVal = revenueValue(a);
+          bVal = revenueValue(b);
           return mult * (aVal as number - (bVal as number));
         case 'renewal': {
           const aRenewal = getRenewalInDays(a.renewalDate, a.contractEnd) ?? 0;
@@ -211,14 +214,19 @@ export default function Accounts() {
 
   const handleExportCSV = () => {
     if (filteredClients.length === 0) return;
-    const headers = ['Account', 'ARR', 'Health', 'Risk', 'Renewal Days', 'Licences Used %', 'Relationship Score', 'Churn Probability', 'Sentiment Score', 'Location', 'Partner name'];
-    const rows = filteredClients.map(client => [
-      client?.name, client?.arr, client?.healthScore, client?.riskScore,
+    const revLabel = revenueType === 'MRR' ? 'MRR' : 'ARR';
+    const headers = ['Account', revLabel, 'Health', 'Risk', 'Renewal Days', 'Licences Used %', 'Relationship Score', 'Churn Probability', 'Sentiment Score', 'Location', 'Partner name'];
+    const rows = filteredClients.map(client => {
+      const rev = revenueValue(client);
+      const revStr = rev != null && !Number.isNaN(rev) ? String(rev) : '';
+      return [
+      client?.name, revStr, client?.healthScore, client?.riskScore,
       (getRenewalInDays(client?.renewalDate, client?.contractEnd, client?.status) ?? ''), client?.utilization, client?.relationshipScore,
       client.churnProbability, client.sentimentScore,
       [client?.contactCity, client?.contactState].filter(Boolean).join(', ') || '',
       client?.partnerName ?? client?.csm ?? ''
-    ]);
+    ];
+    });
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -286,7 +294,7 @@ export default function Accounts() {
               {([
                 { key: 'risk' as const, label: 'Risk', placeholder: '0-100' },
                 { key: 'healthScore' as const, label: 'Health Score', placeholder: '0-100' },
-                { key: 'arr' as const, label: 'ARR', placeholder: 'e.g. 100000' },
+                { key: 'arr' as const, label: revenueType === 'MRR' ? 'MRR' : 'ARR', placeholder: 'e.g. 100000' },
                 { key: 'renewal' as const, label: 'Renewal (days)', placeholder: 'e.g. -30 to 365' },
                 { key: 'utilization' as const, label: 'Utilization %', placeholder: '0-100' },
                 { key: 'relationshipScore' as const, label: 'Relationship', placeholder: '0-100' },
@@ -361,7 +369,7 @@ export default function Accounts() {
                 </th>
                 <th className="text-right py-3 pr-4">
                   <button type="button" onClick={() => handleSort('arr')} className="inline-flex items-center gap-1 hover:text-foreground transition-colors ml-auto">
-                    ARR {sortBy === 'arr' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-50" />}
+                    {revenueType === 'MRR' ? 'MRR' : 'ARR'} {sortBy === 'arr' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-50" />}
                   </button>
                 </th>
                 <th className="text-center py-3">
@@ -442,7 +450,13 @@ export default function Accounts() {
                         {client.healthScore ?? 0}
                       </span>
                     </td>
-                    <td className="text-right font-medium text-foreground pr-4 py-3.5 text-sm">{formatCurrency(client.arr)}</td>
+                    <td className="text-right font-medium text-foreground pr-4 py-3.5 text-sm">
+                      {(() => {
+                        const val = revenueValue(client);
+                        if (val == null || Number.isNaN(val)) return '—';
+                        return formatCurrency(val);
+                      })()}
+                    </td>
                     <td className="text-center py-3.5">
                       <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${(getRenewalInDays(client.renewalDate, client.contractEnd, client.status) ?? 999) <= 30 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
                         {getRenewalInDays(client.renewalDate, client.contractEnd, client.status) ?? '—'}d

@@ -1,36 +1,46 @@
 import { useMemo, useState } from "react";
 import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2, Settings } from "lucide-react";
-import { formatCurrency, getDaysUntil, getRenewalInDays, getRenewalStageFromPlan } from "@/data/mockData";
+import { formatCurrency, getDaysUntil, getRenewalInDays, getRenewalStageFromPlan, getRenewalStageForMonthly } from "@/data/mockData";
 import { useAccounts } from "@/hooks/useAccounts";
 import { useUpdateAccount } from "@/hooks/useAccounts";
-import { useAppSettings } from "@/hooks/useSettings";
 import { useRevenue } from "@/contexts/RevenueContext";
 import { QuarterlyFlowSheet } from "@/components/QuarterlyFlowSheet";
 
-type Stage = "q1" | "q2" | "q3" | "q4" | "no_renewed";
+type AnnualStage = "q1" | "q2" | "q3" | "q4" | "no_renewed";
+type MonthlyStage = "m1" | "no_renewed";
+type Stage = AnnualStage | MonthlyStage;
 
-const stages: Stage[] = ["q1", "q2", "q3", "q4", "no_renewed"];
+const annualStages: AnnualStage[] = ["q1", "q2", "q3", "q4", "no_renewed"];
+const monthlyStages: MonthlyStage[] = ["m1", "no_renewed"];
 
 const stageConfig: Record<Stage, { title: string; color: string; icon: React.ReactNode }> = {
   q1: { title: "Q1", color: "text-emerald-500", icon: <CheckCircle2 size={14} /> },
   q2: { title: "Q2", color: "text-blue-500", icon: <Clock size={14} /> },
   q3: { title: "Q3", color: "text-amber-500", icon: <Clock size={14} /> },
   q4: { title: "Q4", color: "text-destructive", icon: <ShieldAlert size={14} /> },
+  m1: { title: "M1", color: "text-emerald-500", icon: <CheckCircle2 size={14} /> },
   no_renewed: { title: "Not Renewed", color: "text-destructive", icon: <ShieldAlert size={14} /> },
 };
 
 export default function Pipeline() {
+  const { revenueType } = useRevenue();
   const { data: accounts = [], isLoading } = useAccounts();
   const updateAccount = useUpdateAccount();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [flowModalOpen, setFlowModalOpen] = useState(false);
   const [selectedQuarter, setSelectedQuarter] = useState<Stage | null>(null);
-  const { revenueType } = useRevenue();
 
-  const byStage = (stage: Stage) =>
-    accounts.filter((a) => getRenewalStageFromPlan(a.contractStart, a.renewalDate, a.status, undefined, a.contractEnd, a.renewalStage) === stage);
-  const stageArr = (stage: Stage) => byStage(stage).reduce((s, a) => s + a.arr, 0);
-  const stageMrr = (stage: Stage) => byStage(stage).reduce((s, a) => s + (a.mrr || 0), 0);
+  const isMonthly = revenueType === "MRR";
+  const stages = isMonthly ? monthlyStages : annualStages;
+
+  const getStage = (a: { contractStart?: string; renewalDate?: string; status?: string | null; contractEnd?: string; renewalStage?: string }) =>
+    isMonthly
+      ? getRenewalStageForMonthly(a.contractStart, a.renewalDate, a.status, a.contractEnd, a.renewalStage)
+      : getRenewalStageFromPlan(a.contractStart, a.renewalDate, a.status, undefined, a.contractEnd, undefined);
+
+  const byStage = (stage: Stage) => accounts.filter((a) => getStage(a) === stage);
+  const stageRevenue = (stage: Stage) =>
+    byStage(stage).reduce((s, a) => s + (revenueType === "MRR" ? (a.mrr ?? 0) : (a.arr ?? 0)), 0);
 
   const handleDragStart = (id: string) => setDraggedId(id);
 
@@ -98,7 +108,7 @@ export default function Pipeline() {
                     </div>
                   </div>
                   <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md border-2 border-black">
-                    {formatCurrency(revenueType === 'MRR' ? stageMrr(stage) : stageArr(stage))}
+                    {formatCurrency(stageRevenue(stage))}
                   </span>
                 </div>
 
@@ -110,14 +120,16 @@ export default function Pipeline() {
                     const statusLower = (account.status ?? "").toString().trim().toLowerCase();
                     const renewalStageLower = (account.renewalStage ?? "").toString().trim().toLowerCase();
                     const isRenewed = statusLower === "renewed" || statusLower === "renewal" || renewalStageLower === "renewed";
-                    const isCritical = account.riskScore >= 70;
+                    const isOverdue = !isRenewed && (renewalDays ?? days) < 0;
+                    const isCritical = account.riskScore >= 70 || (isMonthly && isOverdue);
+                    const isMiddle = !isCritical && !isRenewed && account.riskScore >= 40;
                     // Renewed: show "Renewed" + "Xd to apply renewal" (green); else "Xd to renewal"
                     const renewalLabel = isRenewed
                       ? (renewalDays != null ? `${renewalDays}d to apply renewal` : "Renewed")
                       : (renewalDays != null ? `${renewalDays}d to renewal` : `${days}d to renewal`);
                     const renewalBadgeStyle = isRenewed
                       ? "text-emerald-600 bg-emerald-500/10"
-                      : (renewalDays ?? days) <= 30
+                      : (renewalDays ?? days) <= (isMonthly ? 10 : 60)
                         ? "text-destructive bg-destructive/10"
                         : "text-muted-foreground bg-muted/50";
                     return (
@@ -128,12 +140,15 @@ export default function Pipeline() {
                         className={`cursor-grab bg-card border-2 border-black rounded-xl p-4 group transition-all active:cursor-grabbing relative overflow-hidden ${isRenewed ? "border-l-4 border-l-emerald-500" : ""}`}
                       >
                         {isCritical && !isRenewed && <div className="absolute top-0 left-0 w-1 h-full bg-destructive rounded-l-xl" />}
+                        {isMiddle && <div className="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-xl" />}
 
                         <div className="flex items-start justify-between mb-3">
                           <div>
                             <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{account.name}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {formatCurrency(revenueType === 'MRR' ? (account.mrr || account.arr / 12) : account.arr)} {revenueType}
+                              {revenueType === "MRR"
+                                ? `$${(account.mrr ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
+                                : formatCurrency(account.arr ?? 0)}
                             </p>
                           </div>
                           <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground transition-opacity" />
@@ -145,8 +160,12 @@ export default function Pipeline() {
                               Renewed
                             </span>
                           )}
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black ${isCritical && !isRenewed ? 'bg-destructive/10 text-destructive' : 'bg-emerald-500/10 text-emerald-600'}`}>
-                            {isCritical && !isRenewed ? 'Critical' : 'Healthy'}
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black ${isRenewed ? 'bg-emerald-500/10 text-emerald-600' :
+                            isCritical ? 'bg-destructive/10 text-destructive' :
+                              isMiddle ? 'bg-amber-400/90 text-amber-950' :
+                                'bg-emerald-500/10 text-emerald-600'
+                            }`}>
+                            {isRenewed ? 'Healthy' : isCritical ? 'Critical' : isMiddle ? 'Middle' : 'Healthy'}
                           </span>
                           <span className={`text-xs font-medium border-2 border-black px-2 py-0.5 rounded ${renewalBadgeStyle}`}>
                             {renewalLabel}

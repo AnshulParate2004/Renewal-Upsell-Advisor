@@ -67,12 +67,20 @@ async def get_dashboard_stats():
         
         # Calculate metrics
         total_accounts = len(accounts)
-        
-        # Churn risk count (accounts with churn_probability >= 0.7 or risk_score >= 70)
+
+        def _is_renewed(acc: dict) -> bool:
+            s = (acc.get("status") or "").strip().lower()
+            r = (acc.get("renewal_stage") or "").strip().lower()
+            return s in ("renewed", "renewal") or r == "renewed"
+
+        # Churn risk count: high risk/churn but exclude renewed (renewed accounts are not at risk)
         churn_risk_count = sum(
-            1 for acc in accounts 
-            if (acc.get("churn_probability") and float(acc.get("churn_probability", 0)) >= 0.7) or
-               (acc.get("risk_score") and float(acc.get("risk_score", 0)) >= 70)
+            1 for acc in accounts
+            if not _is_renewed(acc)
+            and (
+                (acc.get("churn_probability") and float(acc.get("churn_probability", 0)) >= 0.7)
+                or (acc.get("risk_score") and float(acc.get("risk_score", 0)) >= 70)
+            )
         )
         
         # Total ARR

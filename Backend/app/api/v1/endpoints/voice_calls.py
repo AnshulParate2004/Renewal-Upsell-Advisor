@@ -1,6 +1,7 @@
 """
 Voice call API endpoints for handling Twilio webhooks and call management.
 """
+import os
 from fastapi import APIRouter, Request, Form, Query, HTTPException
 from fastapi.responses import Response
 from typing import Optional, Dict, Any, List
@@ -15,6 +16,14 @@ from app.core.config import settings
 
 logger = get_logger(__name__)
 router = APIRouter()
+
+
+def _webhook_base_url(request: Request) -> str:
+    """Base URL for TwiML callbacks so Twilio can reach us (use public URL when behind tunnel)."""
+    base = os.getenv("WEBHOOK_BASE_URL") or settings.WEBHOOK_BASE_URL
+    if base:
+        return base.rstrip("/")
+    return str(request.base_url).rstrip("/")
 
 
 def generate_call_summary(
@@ -131,13 +140,24 @@ async def list_voice_calls(
         raise HTTPException(status_code=503, detail="Database unavailable")
 
     try:
-        result = (
-            client.table("voice_calls")
-            .select("id, account_id, duration, status, outcome, scheduled_at, completed_at, created_at, retry_count, sentiment")
-            .order("created_at", desc=True)
-            .range(skip, skip + limit - 1)
-            .execute()
-        )
+        # Select columns that exist in voice_calls (duration_seconds, not duration; sentiment may be missing)
+        select_cols = "id, account_id, duration_seconds, status, outcome, scheduled_at, completed_at, attempted_at, created_at, retry_count"
+        try:
+            result = (
+                client.table("voice_calls")
+                .select(f"{select_cols}, sentiment")
+                .order("created_at", desc=True)
+                .range(skip, skip + limit - 1)
+                .execute()
+            )
+        except Exception:
+            result = (
+                client.table("voice_calls")
+                .select(select_cols)
+                .order("created_at", desc=True)
+                .range(skip, skip + limit - 1)
+                .execute()
+            )
         rows = result.data or []
         if not rows:
             return {"calls": [], "total": 0}
@@ -156,7 +176,7 @@ async def list_voice_calls(
 
         calls: List[Dict[str, Any]] = []
         for r in rows:
-            completed = r.get("completed_at") or r.get("scheduled_at") or r.get("created_at")
+            completed = r.get("completed_at") or r.get("attempted_at") or r.get("scheduled_at") or r.get("created_at")
             if isinstance(completed, str) and "T" in completed:
                 date_str = completed.split("T")[0]
                 try:
@@ -167,8 +187,8 @@ async def list_voice_calls(
             else:
                 date_display = str(completed) if completed else "—"
 
-            # Use duration directly if string, otherwise calculate from seconds
-            dur = r.get("duration")
+            # duration_seconds (DB) or duration (legacy string)
+            dur = r.get("duration_seconds") or r.get("duration")
             dur_sec = None
             if dur is not None:
                 if isinstance(dur, str) and "m" in dur:
@@ -177,7 +197,7 @@ async def list_voice_calls(
                     try:
                         dur_sec = int(dur)
                         duration_display = f"{dur_sec // 60}m {dur_sec % 60}s" if dur_sec >= 0 else "—"
-                    except:
+                    except Exception:
                         duration_display = str(dur)
             else:
                 duration_display = "—"
@@ -207,9 +227,95 @@ async def list_voice_calls(
             })
 
         return {"calls": calls, "total": len(calls)}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error listing voice calls: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to load voice calls")
+
+
+@router.get("/calls/{call_id}")
+async def get_voice_call_detail(call_id: str):
+    """
+    Get full details for one voice call: transcript, summary, sentiment (category + score), and keywords (why).
+    Used when user clicks a call row to see the whole conversation and sentiment explanation.
+    """
+    client = get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Database unavailable")
+    try:
+        # Select without sentiment column (may not exist); sentiment from metadata. Fallback if transcript/summary missing.
+        select_cols = "id, account_id, transcript, summary, outcome, status, duration_seconds, completed_at, attempted_at, scheduled_at, created_at, retry_count, metadata"
+        try:
+            result = (
+                client.table("voice_calls")
+                .select(select_cols)
+                .eq("id", call_id)
+                .limit(1)
+                .execute()
+            )
+        except Exception as sel_err:
+            logger.warning(f"Voice call detail select failed: {sel_err}, using minimal columns")
+            result = (
+                client.table("voice_calls")
+                .select("id, account_id, outcome, status, duration_seconds, completed_at, attempted_at, created_at, retry_count, metadata")
+                .eq("id", call_id)
+                .limit(1)
+                .execute()
+            )
+        rows = result.data or []
+        if not rows:
+            raise HTTPException(status_code=404, detail="Call not found")
+        r = rows[0]
+        metadata = r.get("metadata") or {}
+        # Sentiment from metadata only (voice_calls.sentiment column may not exist)
+        sentiment_cat = (metadata.get("sentiment_category") or "").lower()
+        if "positive" in sentiment_cat or "very_positive" in sentiment_cat:
+            sentiment_category = "positive"
+        elif "negative" in sentiment_cat or "very_negative" in sentiment_cat:
+            sentiment_category = "negative"
+        else:
+            sentiment_category = "neutral"
+        sentiment_score = metadata.get("sentiment_score")
+        if sentiment_score is None:
+            sentiment_score = 0.0
+        keywords = metadata.get("keywords") or []
+        # Transcript: may be string (we store as text) or list
+        transcript = r.get("transcript")
+        if isinstance(transcript, list):
+            transcript = "\n".join(str(x) for x in transcript) if transcript else ""
+        transcript = (transcript or "").strip()
+        summary = (r.get("summary") or "").strip()
+        completed = r.get("completed_at") or r.get("attempted_at") or r.get("created_at")
+        date_display = str(completed)[:19].replace("T", " ") if completed else "—"
+        dur = r.get("duration_seconds")
+        duration_display = f"{dur // 60}m {dur % 60}s" if isinstance(dur, int) and dur >= 0 else "—"
+        # Account name
+        account_id = r.get("account_id")
+        account_name = "Unknown"
+        if account_id:
+            acc = client.table("accounts").select("name").eq("id", account_id).limit(1).execute()
+            if acc.data and len(acc.data) > 0:
+                account_name = acc.data[0].get("name") or "Unknown"
+        return {
+            "id": r["id"],
+            "account_id": account_id,
+            "account_name": account_name,
+            "date": date_display,
+            "duration": duration_display,
+            "duration_seconds": r.get("duration_seconds"),
+            "outcome": _outcome_for_ui(r.get("status"), r.get("outcome"), r.get("retry_count") or 0),
+            "transcript": transcript,
+            "summary": summary,
+            "sentiment_category": sentiment_category,
+            "sentiment_score": sentiment_score,
+            "keywords": keywords,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching voice call {call_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to load call details")
 
 
 @router.post("/handle-call")
@@ -225,6 +331,7 @@ async def handle_call(
     Handle incoming Twilio call webhook.
     This is called when Twilio connects the call.
     """
+    logger.info("VOICE WEBHOOK: handle-call received (call answered)")
     client = get_supabase_client()
     if not client:
         twiml = twilio_call_service.generate_twiml_response(
@@ -232,11 +339,10 @@ async def handle_call(
         )
         return Response(content=twiml, media_type="application/xml")
     
-    # Get call_id from query parameter or form data
+    # Get call_id from query parameter; CallSid from Form() param
     if not call_id:
         call_id = request.query_params.get("call_id")
-    
-    twilio_call_sid = CallSid or request.form.get("CallSid")
+    twilio_call_sid = CallSid
     
     try:
         # Get account information from call record
@@ -335,7 +441,7 @@ async def handle_call(
                     twiml = twilio_call_service.generate_twiml_response(
                         message=script,
                         gather_input=True,
-                        action_url=f"{request.base_url}api/v1/voice/handle-input?call_id={call_id}",
+                        action_url=f"{_webhook_base_url(request)}/api/v1/voice/handle-input?call_id={call_id}",
                         timeout=10
                     )
                     logger.info(f"Generated TwiML for call {call_id}")
@@ -355,6 +461,19 @@ async def handle_call(
         return Response(content=error_twiml, media_type="application/xml")
 
 
+def _safe_twiml_message(text: str, max_len: int = 500) -> str:
+    """Return a safe message for TwiML: strip and truncate; avoid breaking XML."""
+    if not text or not isinstance(text, str):
+        return "I understand. Is there anything else I can help you with?"
+    t = text.strip()
+    if len(t) > max_len:
+        t = t[: max_len - 3] + "..."
+    # Avoid unescaped XML chars that could break TwiML
+    for bad, good in [("&", " and "), ("<", ""), (">", "")]:
+        t = t.replace(bad, good)
+    return t or "I understand. Is there anything else I can help you with?"
+
+
 @router.post("/handle-input")
 async def handle_input(
     request: Request,
@@ -364,40 +483,41 @@ async def handle_input(
 ):
     """
     Handle user input during call (speech or DTMF).
+    Always returns 200 with valid TwiML so Twilio does not play "application error".
     """
-    logger.info(f"Received input - SpeechResult: {SpeechResult}, Digits: {Digits}, call_id: {call_id}")
-    
-    client = get_supabase_client()
-    if not client:
-        logger.error("Database client not available")
-        goodbye_twiml = twilio_call_service.generate_twiml_response("Sorry, we're experiencing technical difficulties. Please try again later.")
-        return Response(content=goodbye_twiml, media_type="application/xml")
-    
-    if not call_id:
-        call_id = request.query_params.get("call_id")
-        logger.info(f"Got call_id from query params: {call_id}")
-    
-    if not call_id:
-        logger.error("No call_id provided")
-        goodbye_twiml = twilio_call_service.generate_twiml_response("Sorry, we couldn't identify your call. Please call again.")
-        return Response(content=goodbye_twiml, media_type="application/xml")
-    
-    # Get user input - prefer speech, fallback to digits
-    user_input = SpeechResult or Digits or ""
-    
-    # If user pressed a digit but no speech, handle it appropriately
-    if Digits and not SpeechResult:
-        # User pressed a key - treat as response
-        if Digits == "1" or Digits == "9":
-            user_input = "yes"
-        elif Digits == "2" or Digits == "0":
-            user_input = "no"
-        else:
-            user_input = f"pressed {Digits}"
-    
-    logger.info(f"Processing user input for call {call_id}: {user_input[:50]}...")
-    
+    logger.info("VOICE WEBHOOK: handle-input received (user pressed key or spoke)")
     try:
+        logger.info(f"Received input - SpeechResult: {SpeechResult}, Digits: {Digits}, call_id: {call_id}")
+        
+        client = get_supabase_client()
+        if not client:
+            logger.error("Database client not available")
+            goodbye_twiml = twilio_call_service.generate_twiml_response("Sorry, we're experiencing technical difficulties. Please try again later.")
+            return Response(content=goodbye_twiml, media_type="application/xml")
+        
+        if not call_id:
+            call_id = request.query_params.get("call_id")
+            logger.info(f"Got call_id from query params: {call_id}")
+        
+        if not call_id:
+            logger.error("No call_id provided")
+            goodbye_twiml = twilio_call_service.generate_twiml_response("Sorry, we couldn't identify your call. Please call again.")
+            return Response(content=goodbye_twiml, media_type="application/xml")
+        
+        # Get user input - prefer speech, fallback to digits
+        user_input = (SpeechResult or Digits or "").strip()
+        
+        # If user pressed a digit but no speech, handle it appropriately
+        if Digits and not SpeechResult:
+            if Digits == "1" or Digits == "9":
+                user_input = "yes"
+            elif Digits == "2" or Digits == "0":
+                user_input = "no"
+            else:
+                user_input = f"pressed {Digits}"
+        
+        logger.info(f"Processing user input for call {call_id}: {user_input[:50]}...")
+        
         # Get call and account information
         logger.info(f"Fetching call data for call_id: {call_id}")
         call_result = client.table("voice_calls").select(
@@ -451,24 +571,26 @@ async def handle_input(
         usage_percentage = calculate_plan_completion_percentage(account)
         call_type = call_data.get("call_type", "check_in")
         
-        # Generate response
-        logger.info(f"Generating response for user input: {user_input[:50]}...")
-        try:
-            response = voice_conversation_handler.generate_dynamic_response(
-                account=account,
-                user_input=user_input,
-                conversation_context=conversation_history,
-                usage_percentage=usage_percentage,
-                call_type=call_type
-            )
-            
-            # Validate response
-            if not response or len(response.strip()) < 10:
-                logger.warning("Generated response is too short, using fallback")
+        # When user didn't say or press anything (timeout), prompt again so the call doesn't drop
+        if not (user_input and user_input.strip()):
+            logger.info("No input received (timeout); prompting user to press 1 or 2")
+            response = "We didn't catch that. To continue, press 1. To end the call, press 2."
+        else:
+            # Generate response
+            logger.info(f"Generating response for user input: {user_input[:50]}...")
+            try:
+                response = voice_conversation_handler.generate_dynamic_response(
+                    account=account,
+                    user_input=user_input,
+                    conversation_context=conversation_history,
+                    usage_percentage=usage_percentage,
+                    call_type=call_type
+                )
+                if not response or len(response.strip()) < 10:
+                    response = "I understand. Is there anything else I can help you with regarding your contract renewal?"
+            except Exception as resp_error:
+                logger.error(f"Error generating response: {resp_error}", exc_info=True)
                 response = "I understand. Is there anything else I can help you with regarding your contract renewal?"
-        except Exception as resp_error:
-            logger.error(f"Error generating response: {resp_error}", exc_info=True)
-            response = "I understand. Is there anything else I can help you with regarding your contract renewal?"
         
         # Update transcript
         updated_transcript = f"{transcript}\nUser: {user_input}\nAgent: {response}"
@@ -535,8 +657,8 @@ async def handle_input(
                     client.table("activity_logs").insert({
                         "account_id": account_id,
                         "action": "voice_call_completed",
-                        "title": "Voice Call Completed",
                         "details": {
+                            "title": "Voice Call Completed",
                             "call_type": call_type,
                             "phone_number": account.get("primary_contact_phone"),
                             "outcome": outcome,
@@ -577,9 +699,9 @@ async def handle_input(
                 logger.error(f"Failed to update transcript: {db_error}")
             
             continue_twiml = twilio_call_service.generate_twiml_response(
-                message=response,
+                message=_safe_twiml_message(response),
                 gather_input=True,
-                action_url=f"{request.base_url}api/v1/voice/handle-input?call_id={call_id}",
+                action_url=f"{_webhook_base_url(request)}/api/v1/voice/handle-input?call_id={call_id}",
                 timeout=10
             )
             return Response(content=continue_twiml, media_type="application/xml")
@@ -588,8 +710,7 @@ async def handle_input(
         logger.error(f"Error handling input: {e}", exc_info=True)
         import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        
-        # Provide helpful error message instead of generic error
+        # Always return 200 with TwiML so Twilio does not play "application error"
         error_message = "I apologize, but I'm having trouble processing your response. Would you like to speak with a representative? Please call us back or visit our website."
         error_twiml = twilio_call_service.generate_twiml_response(error_message)
         return Response(content=error_twiml, media_type="application/xml")
@@ -610,9 +731,10 @@ async def call_status(
     if not client:
         return {"status": "ok"}
     
-    twilio_call_sid = CallSid or request.form.get("CallSid")
-    status = CallStatus or request.form.get("CallStatus")
-    duration = CallDuration or request.form.get("CallDuration")
+    # Use Form() params (FastAPI injects these from the request body)
+    twilio_call_sid = CallSid
+    status = CallStatus
+    duration = CallDuration
     
     # Normalize status
     status_lower = status.lower() if status else ""
@@ -725,8 +847,7 @@ async def call_status(
                 client.table("activity_logs").insert({
                     "account_id": account_id,
                     "action": action_name,
-                    "title": f"Voice Call {status_lower.capitalize()}",
-                    "details": activity_details
+                    "details": {**activity_details, "title": f"Voice Call {status_lower.capitalize()}"}
                 }).execute()
                 
                 logger.info(f"Logged activity: {action_name} for call {call_id}")

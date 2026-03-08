@@ -95,7 +95,7 @@ export function SearchDropdown() {
                                                 <div className="flex items-center gap-2">
                                                     <RiskIcon className={`h-3.5 w-3.5 ${getRiskColor(account.riskScore)}`} />
                                                     <span className="text-xs font-semibold text-muted-foreground">
-                                                        ${(account.arr / 1000).toFixed(0)}K
+                                                        ${((account.arr ?? 0) / 1000).toFixed(0)}K
                                                     </span>
                                                 </div>
                                             </div>
@@ -131,7 +131,7 @@ export function SearchDropdown() {
                                                 <div className="flex items-center gap-2">
                                                     <RiskIcon className={`h-3.5 w-3.5 ${getRiskColor(account.riskScore)}`} />
                                                     <span className="text-xs font-semibold text-muted-foreground">
-                                                        ${(account.arr / 1000).toFixed(0)}K
+                                                        ${((account.arr ?? 0) / 1000).toFixed(0)}K
                                                     </span>
                                                 </div>
                                             </div>

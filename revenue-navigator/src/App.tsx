@@ -21,7 +21,6 @@ import ManualTriggersPage from "./pages/ManualTriggers";
 import AccountDetailPage from "./pages/AccountDetailPage";
 import NotFound from "./pages/NotFound";
 import "./styles/animations.css";
-
 import { RevenueProvider } from "@/contexts/RevenueContext";
 
 const queryClient = new QueryClient();

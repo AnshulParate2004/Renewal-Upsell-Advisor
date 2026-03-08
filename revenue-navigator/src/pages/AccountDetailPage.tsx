@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, Users, Building2, Clock, BarChart3, ArrowLeft, Mail, Phone, Edit2, Loader2, MessageSquare } from "lucide-react";
-import { emailApi } from "@/lib/api/email";
 import { motion } from "framer-motion";
 import { formatCurrency, getDaysUntil, getRenewalInDays } from "@/data/mockData";
 import { generateHistoricalData } from "@/data/historicalDataGenerator";
@@ -12,6 +11,8 @@ import ActivityTimeline from "@/components/ActivityTimeline";
 import { useAccount } from "@/hooks/useAccounts";
 import { usePredictions } from "@/hooks/usePredictions";
 import { accountCommentsApi, type AccountComment } from "@/lib/api/accountComments";
+import { accountsApi } from "@/lib/api/accounts";
+import type { AccountActivity } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -19,12 +20,12 @@ export default function AccountDetailPage() {
     const { accountId } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'analytics'>('overview');
-    const [sendingEmail, setSendingEmail] = useState(false);
-    const [emailMessage, setEmailMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [comments, setComments] = useState<AccountComment[]>([]);
     const [commentsLoading, setCommentsLoading] = useState(false);
     const [newCommentBody, setNewCommentBody] = useState('');
     const [addCommentLoading, setAddCommentLoading] = useState(false);
+    const [timelineActivities, setTimelineActivities] = useState<AccountActivity[]>([]);
+    const [timelineLoading, setTimelineLoading] = useState(false);
 
     const { data: account, isLoading, error } = useAccount(accountId || '');
 
@@ -63,6 +64,13 @@ export default function AccountDetailPage() {
         accountCommentsApi.getByAccountId(accountId).then(setComments).catch(() => setComments([])).finally(() => setCommentsLoading(false));
     }, [accountId]);
 
+    // Fetch timeline from database (seed data + real events)
+    useEffect(() => {
+        if (!accountId) return;
+        setTimelineLoading(true);
+        accountsApi.getTimeline(accountId).then(setTimelineActivities).catch(() => setTimelineActivities([])).finally(() => setTimelineLoading(false));
+    }, [accountId]);
+
     // Show loading state
     if (isLoading) {
         return (
@@ -98,7 +106,7 @@ export default function AccountDetailPage() {
         );
     }
 
-    // Generate historical data for timeline and analytics (synthetic until API provides GET /accounts/:id/history)
+    // Generate historical data for analytics tab only (metrics + sentiment). Timeline comes from API.
     const history = generateHistoricalData(accountWithPredictions as Account);
 
     const getSentimentColor = (score: number) => {
@@ -175,32 +183,6 @@ export default function AccountDetailPage() {
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            {emailMessage && (
-                                <span className={`text-xs font-medium px-2 py-1 rounded border-2 border-black ${emailMessage.type === 'success' ? 'bg-emerald-500/10 text-emerald-700' : 'bg-destructive/10 text-destructive'}`}>
-                                    {emailMessage.text}
-                                </span>
-                            )}
-                            <button
-                                onClick={async (e) => {
-                                    e.preventDefault();
-                                    if (!accountId || sendingEmail) return;
-                                    setSendingEmail(true);
-                                    setEmailMessage(null);
-                                    try {
-                                        const res = await emailApi.sendToAccount(accountId);
-                                        setEmailMessage({ type: 'success', text: res.message || 'Email sent.' });
-                                    } catch (err: any) {
-                                        setEmailMessage({ type: 'error', text: err?.message || 'Failed to send email.' });
-                                    } finally {
-                                        setSendingEmail(false);
-                                    }
-                                }}
-                                disabled={sendingEmail || !accountId}
-                                className="px-6 py-3 bg-primary text-white border-2 border-black rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:pointer-events-none"
-                            >
-                                {sendingEmail ? <Loader2 size={14} className="animate-spin" /> : <Mail size={14} />}
-                                {sendingEmail ? 'SENDING...' : 'SEND EMAIL'}
-                            </button>
                             <button className="px-6 py-3 bg-primary text-white border-2 border-black rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2 group shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
                                 <Edit2 size={14} />
                                 MODIFY_DATA
@@ -242,10 +224,10 @@ export default function AccountDetailPage() {
                         {/* Key Metrics Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {[
-                                { label: 'ANNUAL_REVENUE', value: formatCurrency(accountWithPredictions.arr), icon: <TrendingUp size={16} />, iconColor: 'text-foreground' },
+                                { label: 'Revenue', value: (() => { const v = accountWithPredictions.mrr != null ? accountWithPredictions.mrr : (accountWithPredictions.arr != null ? accountWithPredictions.arr / 12 : null); return v != null ? formatCurrency(v) : '—'; })(), icon: <TrendingUp size={16} />, iconColor: 'text-foreground' },
                                 { label: 'Renewal in days', value: `${getRenewalInDays(accountWithPredictions.renewalDate, accountWithPredictions.contractEnd, accountWithPredictions.status) ?? getDaysUntil(accountWithPredictions.renewalDate)} days`, alert: (getRenewalInDays(accountWithPredictions.renewalDate, accountWithPredictions.contractEnd, accountWithPredictions.status) ?? 999) <= 30, icon: <Clock size={16} />, iconColor: 'text-foreground' },
                                 { label: 'Licence Used', value: (() => { const u = accountWithPredictions.licensesUsed ?? 0; const t = accountWithPredictions.licensesTotal ?? 0; const pct = t ? Math.round((u / t) * 100) : 0; return `${u}/${t} (${pct}%)`; })(), icon: <Users size={16} />, iconColor: 'text-foreground' },
-                                { label: 'Stage', value: (() => { const s = (accountWithPredictions.renewalStage || '').toLowerCase(); if (['q1','q2','q3','q4'].includes(s)) return s.toUpperCase(); if (s === 'renewed' || s === 'lost') return s.toUpperCase(); if (s === 't30') return 'Q1'; if (s === 't60') return 'Q2'; if (s === 't90') return 'Q4'; return s ? s.toUpperCase() : '—'; })(), icon: <BarChart3 size={16} />, iconColor: 'text-foreground' }
+                                { label: 'Stage', value: (() => { const s = (accountWithPredictions.renewalStage || '').toLowerCase(); if (['q1', 'q2', 'q3', 'q4'].includes(s)) return s.toUpperCase(); if (s === 'renewed' || s === 'lost') return s.toUpperCase(); if (s === 't30') return 'Q1'; if (s === 't60') return 'Q2'; if (s === 't90') return 'Q4'; return s ? s.toUpperCase() : '—'; })(), icon: <BarChart3 size={16} />, iconColor: 'text-foreground' }
                             ].map((m, i) => (
                                 <div key={i} className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group cursor-default">
                                     <div className="flex items-center justify-between mb-4">
@@ -266,41 +248,82 @@ export default function AccountDetailPage() {
                         {/* Left: Account card (shifted from right). Right: Comments container. */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             {/* Account card - consolidated metrics on the left */}
-                            <div className="bg-card border-2 border-black rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] space-y-4 h-fit">
-                                <h3 className="text-sm font-bold text-foreground border-b-2 border-black pb-2">Account card</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Health Score</p>
-                                        <p className={`text-xl font-black ${accountWithPredictions.healthScore >= 70 ? 'text-success' : accountWithPredictions.healthScore >= 40 ? 'text-warning' : 'text-destructive'}`}>
-                                            {accountWithPredictions.healthScore}
-                                        </p>
-                                        <div className="mt-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className="bg-card border-2 border-black rounded-xl p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col h-full gap-5">
+                                <div className="flex items-center gap-2 border-b-2 border-black pb-3">
+                                    <BarChart3 className="w-5 h-5 text-primary" />
+                                    <h3 className="text-sm font-bold text-foreground uppercase tracking-widest">STATISTICS CARD</h3>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Health Score */}
+                                    <div className="bg-white border-2 border-black rounded-lg p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+                                        <p className="text-[10px] font-black text-foreground/50 uppercase tracking-widest mb-1 shadow-sm">HEALTH SCORE</p>
+                                        <div className="flex items-end justify-between mb-2">
+                                            <p className={`text-2xl font-black ${accountWithPredictions.healthScore >= 70 ? 'text-success' : accountWithPredictions.healthScore >= 40 ? 'text-warning' : 'text-destructive'}`}>
+                                                {accountWithPredictions.healthScore}
+                                            </p>
+                                        </div>
+                                        <div className="h-2 bg-muted rounded-full overflow-hidden border border-black/10">
                                             <div className={`h-full ${accountWithPredictions.healthScore >= 70 ? 'bg-success' : accountWithPredictions.healthScore >= 40 ? 'bg-warning' : 'bg-destructive'}`} style={{ width: `${accountWithPredictions.healthScore}%` }} />
                                         </div>
                                     </div>
-                                    <div className="bg-foreground text-white rounded-lg p-3">
-                                        <p className="text-[10px] font-medium text-white/70 uppercase tracking-wider mb-1">Churn probability</p>
-                                        <p className="text-xl font-black">{Math.round(accountWithPredictions.churnProbability * 100)}%</p>
-                                        <p className="text-[10px] text-white/70">Probability</p>
-                                        <span className="inline-block mt-2 px-2 py-0.5 bg-white text-foreground text-[10px] font-bold rounded border border-black">
-                                            {accountWithPredictions.riskScore >= 70 ? 'Critical' : 'Stable'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">Sentiment Analysis</p>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-2xl">{getSentimentEmoji(accountWithPredictions.sentimentScore)}</span>
-                                            <p className={`text-lg font-black ${getSentimentColor(accountWithPredictions.sentimentScore)}`}>
-                                                {getSentimentLabel(accountWithPredictions.sentimentScore)}
+
+                                    {/* Risk Score */}
+                                    <div className="bg-white border-2 border-black rounded-lg p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+                                        <p className="text-[10px] font-black text-foreground/50 uppercase tracking-widest mb-1 shadow-sm">RISK SCORE</p>
+                                        <div className="flex items-end justify-between mb-2">
+                                            <p className={`text-2xl font-black ${accountWithPredictions.riskScore >= 70 ? 'text-destructive' : accountWithPredictions.riskScore >= 40 ? 'text-warning' : 'text-success'}`}>
+                                                {accountWithPredictions.riskScore}
                                             </p>
+                                            <span className={`text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 border border-black rounded ${accountWithPredictions.riskScore >= 70 ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
+                                                {accountWithPredictions.riskScore >= 70 ? 'CRITICAL' : accountWithPredictions.riskScore >= 40 ? 'MIDDLE' : 'SAFE'}
+                                            </span>
                                         </div>
-                                        <p className="text-xs text-muted-foreground mt-0.5">Score: {accountWithPredictions.sentimentScore.toFixed(2)}</p>
-                                        <p className="text-xs text-foreground/70 mt-1">Overall customer sentiment is {getSentimentLabel(accountWithPredictions.sentimentScore).toLowerCase()}.</p>
+                                        <div className="h-2 bg-muted rounded-full overflow-hidden border border-black/10">
+                                            <div className={`h-full ${accountWithPredictions.riskScore >= 70 ? 'bg-destructive' : accountWithPredictions.riskScore >= 40 ? 'bg-warning' : 'bg-success'}`} style={{ width: `${Math.min(100, accountWithPredictions.riskScore)}%` }} />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="text-[10px] font-medium text-primary uppercase tracking-wider mb-1">Relationship Score</p>
-                                        <p className="text-2xl font-black text-primary">{accountWithPredictions.relationshipScore}</p>
-                                        <div className="mt-1 h-1.5 bg-primary/10 rounded-full overflow-hidden">
+                                </div>
+
+                                {/* Churn Probability Main Card */}
+                                <div className="bg-foreground text-white border-2 border-black rounded-xl p-4 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none" />
+                                    <div className="relative z-10 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black text-white/50 uppercase tracking-widest mb-1 shadow-md">CHURN PROBABILITY</p>
+                                            <div className="flex items-baseline gap-2">
+                                                <p className="text-3xl font-black">{Math.round(accountWithPredictions.churnProbability * 100)}%</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className={`inline-block px-2.5 py-1 bg-white text-foreground text-[10px] font-black uppercase tracking-widest rounded border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
+                                                PROBABILITY
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    {/* Sentiment */}
+                                    <div className="bg-white border-2 border-black rounded-lg p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+                                        <p className="text-[10px] font-black text-foreground/50 uppercase tracking-widest mb-1 shadow-sm">SENTIMENT</p>
+                                        <div className="flex flex-col h-full justify-between">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="text-2xl">{getSentimentEmoji(accountWithPredictions.sentimentScore)}</span>
+                                                <p className={`text-base font-black uppercase tracking-tight ${getSentimentColor(accountWithPredictions.sentimentScore)}`}>
+                                                    {getSentimentLabel(accountWithPredictions.sentimentScore)}
+                                                </p>
+                                            </div>
+                                            <p className="text-[10px] font-bold text-foreground/40 font-mono">Score: {accountWithPredictions.sentimentScore.toFixed(2)}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Relationship Score */}
+                                    <div className="bg-white border-2 border-black rounded-lg p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+                                        <p className="text-[10px] font-black text-foreground/50 uppercase tracking-widest mb-1 shadow-sm">RELATIONSHIP</p>
+                                        <div className="flex items-end justify-between mb-2">
+                                            <p className="text-2xl font-black text-primary">{accountWithPredictions.relationshipScore}</p>
+                                        </div>
+                                        <div className="h-2 bg-primary/10 rounded-full overflow-hidden border border-black/10 mt-auto">
                                             <div className="h-full bg-primary rounded-full" style={{ width: `${accountWithPredictions.relationshipScore}%` }} />
                                         </div>
                                     </div>
@@ -351,36 +374,19 @@ export default function AccountDetailPage() {
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-extrabold tracking-widest uppercase text-gray-400 flex items-center gap-2">
                                 <Users size={14} />
-                                PRIMARY_STAKEHOLDER_RECORD
+                                CUSTOMER RECORD
                             </h3>
                             <ContactInfoSection account={accountWithPredictions} />
                         </div>
 
-                        {/* Account Information */}
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2">
-                                <Building2 className="w-5 h-5 text-primary" />
-                                <h3 className="text-[10px] font-extrabold tracking-widest uppercase text-gray-400">METADATA_REGISTRY</h3>
-                                <div className="h-px flex-1 bg-gray-100" />
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {[
-                                    { label: 'Partner name', value: accountWithPredictions.partnerName ?? accountWithPredictions.csm }
-                                ].map((field, i) => (
-                                    <div key={i} className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group">
-                                        <p className="text-[9px] uppercase font-black text-foreground/60 tracking-widest mb-2">{field.label}</p>
-                                        <p className={`text-base font-black text-foreground tracking-tight uppercase ${field.mono ? 'font-mono' : ''}`}>
-                                            {field.value}
-                                        </p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+
                     </div>
                 )}
 
                 {activeTab === 'timeline' && (
-                    <ActivityTimeline activities={history.activities} />
+                    timelineLoading
+                        ? <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /><span className="ml-2 font-bold">Loading timeline...</span></div>
+                        : <ActivityTimeline activities={timelineActivities.length > 0 ? timelineActivities : history.activities} />
                 )}
 
                 {activeTab === 'analytics' && (
@@ -443,7 +449,6 @@ function ContactInfoSection({ account }: { account: any }) {
                         <Users className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h4 className="text-[9px] font-black uppercase tracking-widest text-foreground/60 mb-1">PRIMARY_STAKEHOLDER</h4>
                         <p className="text-xl font-black tracking-tight text-foreground uppercase">{contactName || "UNASSIGNED"}</p>
                     </div>
                 </div>
@@ -490,7 +495,7 @@ function ContactInfoSection({ account }: { account: any }) {
 
                     {/* Email */}
                     <div className="space-y-3">
-                        <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">SECURE_COMMUNICATION_PATH</label>
+                        <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">EMAIL</label>
                         {isEditing ? (
                             <input
                                 type="email"
@@ -532,6 +537,14 @@ function ContactInfoSection({ account }: { account: any }) {
                             <div className="bg-white border-2 border-black rounded-lg p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                                 <span className="text-sm font-black text-foreground font-mono uppercase tracking-wide">{account.renewalDate || "N/A"}</span>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Partner Name */}
+                    <div className="space-y-3">
+                        <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">PARTNER NAME</label>
+                        <div className="bg-white border-2 border-black rounded-lg p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <span className="text-sm font-black text-foreground uppercase tracking-wide">{account.partnerName ?? account.csm ?? "N/A"}</span>
                         </div>
                     </div>
                 </div>
@@ -619,6 +632,6 @@ function ContactInfoSection({ account }: { account: any }) {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

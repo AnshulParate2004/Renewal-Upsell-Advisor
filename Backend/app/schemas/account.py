@@ -15,7 +15,8 @@ class AccountBase(BaseModel):
     company_size: Optional[str] = None
     
     arr: float = 0.0
-    mrr: float = 0.0
+    mrr: float = 0.0  # deprecated: use monthly_wise_instalment
+    monthly_wise_instalment: Optional[float] = None  # nullable
     
     contract_start_date: Optional[datetime] = None
     contract_end_date: Optional[datetime] = None
@@ -54,7 +55,8 @@ class AccountUpdate(BaseModel):
     """Schema for updating an account."""
     name: Optional[str] = None
     arr: Optional[float] = None
-    mrr: Optional[float] = None
+    mrr: Optional[float] = None  # deprecated: use monthly_wise_instalment
+    monthly_wise_instalment: Optional[float] = None  # nullable
     health_score: Optional[int] = None
     risk_score: Optional[int] = None
     relationship_score: Optional[int] = None

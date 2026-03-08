@@ -2,11 +2,14 @@
 Global error handling middleware.
 """
 from fastapi import Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from app.core.exceptions import AppException, NotFoundError, ValidationError, ModelLoadError, PredictionError
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
+
+# Safe TwiML for voice webhooks so Twilio never gets 500 (avoids "application error" message)
+VOICE_ERROR_TWIML = '<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="alice" language="en-US">We had a temporary issue. Please try again later. Goodbye.</Say></Response>'
 
 
 async def app_exception_handler(request: Request, exc: AppException):
@@ -55,8 +58,12 @@ async def prediction_error_handler(request: Request, exc: PredictionError):
 
 
 async def general_exception_handler(request: Request, exc: Exception):
-    """Handle general exceptions."""
+    """Handle general exceptions. For voice webhooks return 200 + TwiML so Twilio does not play 'application error'."""
     logger.exception(f"Unhandled exception: {str(exc)}")
+    path = getattr(request, "url", None) and getattr(request.url, "path", "") or ""
+    if path and "/voice/" in path:
+        logger.warning(f"Voice webhook error (returning 200 + TwiML): {path}")
+        return Response(content=VOICE_ERROR_TWIML, media_type="application/xml", status_code=status.HTTP_200_OK)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"error": "Internal server error", "type": "Exception"}

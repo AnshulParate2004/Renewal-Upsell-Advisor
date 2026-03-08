@@ -456,8 +456,15 @@ def get_wellness_check_template(account: Dict[str, Any]) -> tuple[str, str, str]
         Tuple of (subject, html_body, text_body)
     """
     account_name = account.get("name", "Valued Customer")
-    arr = account.get("arr", 0)
-    mrr = account.get("mrr", 0)
+    arr = account.get("arr", 0) or 0
+    mrr_raw = account.get("monthly_wise_instalment") or account.get("mrr")
+    if mrr_raw is not None and mrr_raw != "":
+        try:
+            mrr = float(mrr_raw)
+        except (TypeError, ValueError):
+            mrr = (arr / 12) if arr else 0
+    else:
+        mrr = (arr / 12) if arr else 0
     health_score = account.get("health_score")
     utilization_percentage = account.get("utilization_percentage", 0)
     csm_name = account.get("csm_name", "Your Customer Success Manager")

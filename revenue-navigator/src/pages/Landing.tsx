@@ -221,7 +221,7 @@ export default function Landing() {
                                 {/* Metrics row */}
                                 <div className="grid grid-cols-3 gap-px bg-gray-100">
                                     {[
-                                        { label: "ARR at Risk", value: "$2.4M", color: "text-red-500", icon: "🚨" },
+                                        { label: "Revenue at Risk", value: "$2.4M", color: "text-red-500", icon: "🚨" },
                                         { label: "Upsell Pipeline", value: "$890K", color: "text-emerald-600", icon: "💰" },
                                         { label: "Renewal Rate", value: "94", color: "text-primary", icon: "📈" },
                                     ].map((m, i) => (
@@ -255,7 +255,7 @@ export default function Landing() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="text-sm font-bold text-gray-800 truncate">{acc.name}</div>
-                                                    <div className="text-[11px] text-gray-400">{acc.arr} ARR • {acc.days}d to renewal</div>
+                                                    <div className="text-[11px] text-gray-400">{acc.arr != null ? acc.arr : '—'} • {acc.days}d to renewal</div>
                                                 </div>
                                                 <div className="shrink-0 text-right">
                                                     <div className={`text-xs font-black px-2 py-0.5 rounded-full ${acc.risk >= 80 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}`}>

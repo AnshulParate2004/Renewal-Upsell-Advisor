@@ -33,7 +33,18 @@ def _get_app_config(client) -> Dict[str, Any]:
         rows = result.data or []
         if not rows:
             return {}
-        return rows[0].get("config") or {}
+        config = rows[0].get("config")
+        if config is None:
+            return {}
+        if isinstance(config, str):
+            import json
+            try:
+                return json.loads(config) or {}
+            except Exception:
+                return {}
+        if isinstance(config, dict):
+            return config
+        return {}
     except Exception:
         return {}
 
@@ -41,6 +52,8 @@ def _get_app_config(client) -> Dict[str, Any]:
 def _get_metrics_config(client) -> Dict[str, Any]:
     """Read metrics from app_settings. Returns {} if unavailable."""
     config = _get_app_config(client)
+    if not isinstance(config, dict):
+        return {}
     return config.get("metrics") or {}
 
 
@@ -230,6 +243,8 @@ async def make_voice_call(
     client,
     *,
     skip_eligibility_check: bool = False,
+    purpose: Optional[str] = None,
+    **kwargs: Any,
 ) -> Optional[str]:
     """
     Make a voice call to an account.
@@ -238,10 +253,13 @@ async def make_voice_call(
         account: Account dictionary
         client: Supabase client
         skip_eligibility_check: If True, do not check milestones/history (e.g. for manual trigger).
+        purpose: Optional reason for the call (e.g. "review follow-up"); stored in metadata and used to tailor the script.
+        **kwargs: Ignored (allows callers to pass purpose= for compatibility).
 
     Returns:
         Call SID if successful, None otherwise
     """
+    purpose = purpose or kwargs.pop("purpose", None)
     account_id = account.get('id')
     account_name = account.get('name', 'Customer')
     phone_number = account.get('primary_contact_phone')
@@ -325,13 +343,13 @@ async def make_voice_call(
             
             client.table("voice_calls").update(update_data).eq("id", call_id).execute()
             
-            # Log activity to activity_logs table
+            # Log activity to activity_logs table (only columns: action, account_id, details)
             try:
                 client.table("activity_logs").insert({
                     "account_id": account_id,
                     "action": "voice_call_initiated",
-                    "title": "Voice Call Initiated",
                     "details": {
+                        "title": "Voice Call Initiated",
                         "call_type": call_type,
                         "phone_number": phone_number,
                         "usage_percentage": usage_percentage,
