@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 from app.core.logging import get_logger
 from app.services.email.scheduler import get_supabase_client, send_email_to_single_account
 from app.services.voice_agent.voice_call_scheduler import trigger_voice_call_for_account
+from app.services.voice_agent.azure_openai import azure_openai
+from app.services.whatsapp.whatsapp_service import whatsapp_service
 
 logger = get_logger(__name__)
 
@@ -378,6 +380,49 @@ async def run_auto_campaigns() -> Dict[str, Any]:
             try:
                 if action == "voice_bot":
                     await trigger_voice_call_for_account(str(aid), purpose=description)
+                elif action == "whatsapp":
+                    # WhatsApp campaign: generate short message and send via Twilio WhatsApp
+                    to_phone = acc.get("primary_contact_phone") or ""
+                    if not to_phone:
+                        raise ValueError("primary_contact_phone missing")
+                    account_name = acc.get("name") or acc.get("primary_contact_name") or "Customer"
+                    system_msg = (
+                        "You are a professional customer success manager writing WhatsApp messages "
+                        "to B2B customers. Keep messages concise (3-6 short lines), friendly, and clear."
+                    )
+                    user_msg = (
+                        f"Account name: {account_name}\n"
+                        f"Campaign name: {name}\n"
+                        f"Purpose/description: {description or 'No extra description provided.'}\n\n"
+                        "Write a WhatsApp message I can send as part of an automated campaign."
+                    )
+                    text = azure_openai.chat_completion(
+                        [
+                            {"role": "system", "content": system_msg},
+                            {"role": "user", "content": user_msg},
+                        ],
+                        temperature=0.7,
+                        max_tokens=220,
+                    )
+                    sid = whatsapp_service.send_message(str(to_phone), text)
+                    if not sid:
+                        raise RuntimeError("WhatsApp send failed")
+                    # Store in whatsapp_conversations for history
+                    try:
+                        client.table("whatsapp_conversations").insert(
+                            {
+                                "phone_number": to_phone,
+                                "direction": "bot",
+                                "message": text,
+                                "metadata": {
+                                    "source": "auto_campaign",
+                                    "campaign_id": str(cid),
+                                    "account_id": str(aid),
+                                },
+                            }
+                        ).execute()
+                    except Exception as e2:
+                        logger.warning("Campaign '%s' failed to write whatsapp_conversations: %s", name, e2)
                 else:
                     await send_email_to_single_account(str(aid), purpose=description)
             except Exception as e:

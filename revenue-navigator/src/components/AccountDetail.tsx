@@ -217,7 +217,7 @@ export default function AccountDetail({ account, onClose }: AccountDetailProps) 
                                     <div className="space-y-6">
                                         <h3 className="text-[11px] font-extrabold tracking-widest uppercase text-gray-400 flex items-center gap-3">
                                             <Users size={16} />
-                                            PRIMARY_STAKEHOLDER_RECORD
+                                            CUSTOMER_INFORMATION
                                         </h3>
                                         <ContactInfoSection account={account} />
                                     </div>

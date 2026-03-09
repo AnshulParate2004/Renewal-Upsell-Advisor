@@ -39,6 +39,27 @@ export default function Calls() {
       .filter((c) => outcomeFilter === "all" || c.outcome === outcomeFilter);
   }, [voiceCalls, search, outcomeFilter]);
 
+  // Simple call statistics for the current filter
+  const stats = useMemo(() => {
+    if (filtered.length === 0) {
+      return {
+        total: 0,
+        pickedUp: 0,
+        pickRate: 0,
+        avgDuration: 0,
+      };
+    }
+    const total = filtered.length;
+    const pickedUp = filtered.filter((c) => c.outcome === "picked_up").length;
+    const pickRate = Math.round((pickedUp / total) * 100);
+    const totalSeconds = filtered.reduce(
+      (sum, c) => sum + (typeof c.duration_seconds === "number" ? c.duration_seconds : 0),
+      0
+    );
+    const avgDuration = totalSeconds > 0 ? Math.round(totalSeconds / total) : 0;
+    return { total, pickedUp, pickRate, avgDuration };
+  }, [filtered]);
+
   const openCallDetail = async (callId: string) => {
     setSelectedCallId(callId);
     setCallDetail(null);
@@ -93,7 +114,29 @@ export default function Calls() {
         </div>
       </div>
 
-      <div className="p-6">
+      <div className="p-6 space-y-4">
+        {/* Call statistics for current filter */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-card border-2 border-black rounded-lg p-3 text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <p className="uppercase tracking-widest font-black text-muted-foreground mb-1">Total Calls</p>
+            <p className="text-lg font-bold text-foreground">{stats.total}</p>
+          </div>
+          <div className="bg-card border-2 border-black rounded-lg p-3 text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <p className="uppercase tracking-widest font-black text-muted-foreground mb-1">Picked Up</p>
+            <p className="text-lg font-bold text-foreground">{stats.pickedUp}</p>
+          </div>
+          <div className="bg-card border-2 border-black rounded-lg p-3 text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <p className="uppercase tracking-widest font-black text-muted-foreground mb-1">Pick-up Rate</p>
+            <p className="text-lg font-bold text-foreground">{stats.pickRate}%</p>
+          </div>
+          <div className="bg-card border-2 border-black rounded-lg p-3 text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+            <p className="uppercase tracking-widest font-black text-muted-foreground mb-1">Avg Duration</p>
+            <p className="text-lg font-bold text-foreground">
+              {stats.avgDuration > 0 ? `${stats.avgDuration}s` : "—"}
+            </p>
+          </div>
+        </div>
+
         <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b-2 border-black">

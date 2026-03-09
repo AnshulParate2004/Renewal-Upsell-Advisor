@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { Cpu, Mail, Send, Sparkles, Phone, RefreshCw } from "lucide-react";
+import { Cpu, Mail, Send, Sparkles, Phone, RefreshCw, MessageCircle } from "lucide-react";
 import { triggerMlPipeline } from "@/lib/api/ml";
 import { emailApi } from "@/lib/api/email";
 import { voiceApi } from "@/lib/api/voice";
+import { whatsappApi } from "@/lib/api/whatsapp";
 import { campaignsApi, AutoCampaign, type CampaignFilterConfig } from "@/lib/api/campaigns";
 import { useAccounts } from "@/hooks/useAccounts";
 import { getRenewalInDays, getRenewalStageFromPlan } from "@/data/mockData";
@@ -70,6 +71,15 @@ export default function ManualTriggersPage() {
   const [voiceSingleLoading, setVoiceSingleLoading] = useState(false);
   const [voiceMessage, setVoiceMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Manual WhatsApp
+  const [whatsappAccountSearch, setWhatsappAccountSearch] = useState("");
+  const [whatsappSelectedAccount, setWhatsappSelectedAccount] = useState<{ id: string; name: string } | null>(null);
+  const [whatsappPurpose, setWhatsappPurpose] = useState("");
+  const [whatsappDetails, setWhatsappDetails] = useState("");
+  const [whatsappLoading, setWhatsappLoading] = useState(false);
+  const [whatsappMessage, setWhatsappMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [whatsappPreview, setWhatsappPreview] = useState<string | null>(null);
+
   const { data: accounts = [], isLoading: accountsLoading } = useAccounts();
 
   /** Unique location strings from accounts (city, state, "city, state") for autocomplete. */
@@ -118,6 +128,14 @@ export default function ManualTriggersPage() {
       (a) => a.name.toLowerCase().includes(q) || (a.industry && a.industry.toLowerCase().includes(q))
     ).slice(0, 8);
   }, [accounts, voiceAccountSearch]);
+
+  const whatsappAccountSuggestions = useMemo(() => {
+    if (!whatsappAccountSearch.trim()) return accounts.slice(0, 8);
+    const q = whatsappAccountSearch.trim().toLowerCase();
+    return accounts.filter(
+      (a) => a.name.toLowerCase().includes(q) || (a.industry && a.industry.toLowerCase().includes(q))
+    ).slice(0, 8);
+  }, [accounts, whatsappAccountSearch]);
 
   async function handleSendToAll() {
     setEmailMessage(null);
@@ -197,6 +215,31 @@ export default function ManualTriggersPage() {
       setVoiceMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to trigger call." });
     } finally {
       setVoiceSingleLoading(false);
+    }
+  }
+
+  async function handleWhatsappSendSingle() {
+    if (!whatsappSelectedAccount) return;
+    setWhatsappMessage(null);
+    setWhatsappPreview(null);
+    setWhatsappLoading(true);
+    try {
+      const res = await whatsappApi.sendToAccount(whatsappSelectedAccount.id, {
+        purpose: whatsappPurpose.trim() || undefined,
+        details: whatsappDetails.trim() || undefined,
+      });
+      setWhatsappPreview(res?.preview || null);
+      setWhatsappMessage({
+        type: "success",
+        text: `WhatsApp message sent to ${whatsappSelectedAccount.name}.`,
+      });
+    } catch (e) {
+      setWhatsappMessage({
+        type: "error",
+        text: e instanceof Error ? e.message : "Failed to send WhatsApp message.",
+      });
+    } finally {
+      setWhatsappLoading(false);
     }
   }
 
@@ -324,7 +367,7 @@ export default function ManualTriggersPage() {
     campaignDescription.trim() !== "" &&
     campaignStartDate.trim() !== "" &&
     campaignEndDate.trim() !== "" &&
-    (actionType === "email_sequence" || actionType === "voice_bot");
+    (actionType === "email_sequence" || actionType === "voice_bot" || actionType === "whatsapp");
 
   const handleSaveCampaign = async () => {
     if (!canSaveCampaign) return;
@@ -594,8 +637,8 @@ export default function ManualTriggersPage() {
 
                 <div className="pt-2">
                   <Label className="text-xs font-bold">Action <span className="text-destructive">*</span></Label>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">Required. Select one: Email or Voice.</p>
-                  <div className="flex gap-4 mt-2">
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Required. Select one: Email, Voice, or WhatsApp.</p>
+                  <div className="flex flex-col sm:flex-row gap-4 mt-2">
                     <label className="flex items-center gap-2 text-sm cursor-pointer p-3 border-2 border-black rounded-lg flex-1 hover:bg-muted/50 transition-colors">
                       <input type="radio" name="auto-action" value="email_sequence" checked={actionType === "email_sequence"} onChange={e => setActionType(e.target.value)} className="accent-primary" />
                       <Mail className="w-4 h-4 text-primary" /> Send Email Sequence
@@ -603,6 +646,13 @@ export default function ManualTriggersPage() {
                     <label className="flex items-center gap-2 text-sm cursor-pointer p-3 border-2 border-black rounded-lg flex-1 hover:bg-muted/50 transition-colors">
                       <input type="radio" name="auto-action" value="voice_bot" checked={actionType === "voice_bot"} onChange={e => setActionType(e.target.value)} className="accent-primary" />
                       <Phone className="w-4 h-4 text-primary" /> Trigger Voice Bot
+                    </label>
+                    <label className="flex items-center gap-2 text-sm cursor-pointer p-3 border-2 border-black rounded-lg flex-1 hover:bg-muted/50 transition-colors">
+                      <input type="radio" name="auto-action" value="whatsapp" checked={actionType === "whatsapp"} onChange={e => setActionType(e.target.value)} className="accent-primary" />
+                      <span className="inline-flex items-center gap-1">
+                        <span className="w-4 h-4 rounded-full border-2 border-black bg-green-500/20 flex items-center justify-center text-[10px] font-bold text-green-600">WA</span>
+                        WhatsApp Message
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -692,8 +742,8 @@ export default function ManualTriggersPage() {
                       <div className="flex items-center justify-between gap-2 pt-2 text-[11px] font-medium text-muted-foreground border-t border-black/10 mt-2">
                         <div className="flex items-center gap-3 min-w-0">
                           <span className="flex items-center gap-1 shrink-0">
-                            {campaign.action_type === 'email_sequence' ? <Mail size={10} /> : <Phone size={10} />}
-                            {campaign.action_type === 'email_sequence' ? 'Email' : 'Voice Call'}
+                            {campaign.action_type === 'email_sequence' ? <Mail size={10} /> : campaign.action_type === 'voice_bot' ? <Phone size={10} /> : <span className="w-4 h-4 rounded-full border border-black bg-green-500/20 text-[8px] flex items-center justify-center font-bold text-green-700">WA</span>}
+                            {campaign.action_type === 'email_sequence' ? 'Email' : campaign.action_type === 'voice_bot' ? 'Voice Call' : 'WhatsApp'}
                           </span>
                           <span className="flex items-center gap-1 shrink-0">
                             <RefreshCw size={10} /> {campaign.recurring_frequency}
@@ -724,7 +774,7 @@ export default function ManualTriggersPage() {
                         <p className="text-[10px] text-muted-foreground">{c.start_date && c.end_date ? `${c.start_date} → ${c.end_date}` : c.end_date ? `Until ${c.end_date}` : `From ${c.start_date}`}</p>
                       )}
                       <div className="flex items-center gap-2 pt-1 text-[10px] text-muted-foreground">
-                        <span>{c.action_type === "email_sequence" ? "Email" : "Voice"}</span>
+                        <span>{c.action_type === "email_sequence" ? "Email" : c.action_type === "voice_bot" ? "Voice" : "WhatsApp"}</span>
                         <button onClick={() => handleDeleteCampaign(c.id!)} className="ml-auto text-destructive hover:underline">Delete</button>
                       </div>
                     </div>
@@ -750,7 +800,7 @@ export default function ManualTriggersPage() {
                         </p>
                       )}
                       <div className="flex items-center gap-2 pt-1 text-[10px] text-muted-foreground">
-                        <span>{campaign.action_type === "email_sequence" ? "Email" : "Voice"}</span>
+                        <span>{campaign.action_type === "email_sequence" ? "Email" : campaign.action_type === "voice_bot" ? "Voice" : "WhatsApp"}</span>
                         <span>·</span>
                         <span>{campaign.recurring_frequency}</span>
                         <button onClick={() => handleDeleteCampaign(campaign.id!)} className="ml-auto text-destructive hover:underline">Delete</button>
@@ -1027,6 +1077,128 @@ export default function ManualTriggersPage() {
                       {voiceMessage.text}
                     </p>
                   )}
+                </div>
+              </div>
+
+              {/* Manual WhatsApp */}
+              <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+                <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
+                  <MessageCircle size={15} className="text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Manual WhatsApp</h3>
+                </div>
+                <div className="p-4 space-y-4">
+                  <p className="text-xs text-muted-foreground">
+                    Send a one-off WhatsApp update to a single customer. You write the{" "}
+                    <span className="font-medium text-foreground">purpose</span> and{" "}
+                    <span className="font-medium text-foreground">details</span>, and the AI will generate the message and send it.
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs font-medium text-foreground">Purpose</Label>
+                      <input
+                        type="text"
+                        placeholder="e.g. renewal reminder, feature launch update"
+                        value={whatsappPurpose}
+                        onChange={(e) => setWhatsappPurpose(e.target.value)}
+                        className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-foreground">Details for the bot</Label>
+                      <textarea
+                        placeholder="Explain what changed or what you want to say. The bot will turn this into a WhatsApp message."
+                        rows={4}
+                        value={whatsappDetails}
+                        onChange={(e) => setWhatsappDetails(e.target.value)}
+                        className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background resize-y"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-foreground">Select customer</Label>
+                      <div className="mt-1">
+                        <input
+                          type="text"
+                          placeholder="Type name to search..."
+                          value={whatsappSelectedAccount ? whatsappSelectedAccount.name : whatsappAccountSearch}
+                          onChange={(e) => {
+                            setWhatsappAccountSearch(e.target.value);
+                            if (whatsappSelectedAccount) setWhatsappSelectedAccount(null);
+                          }}
+                          onFocus={() => setWhatsappSelectedAccount(null)}
+                          className="w-full px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
+                          autoComplete="off"
+                        />
+                        {!whatsappSelectedAccount && whatsappAccountSearch.trim() && (
+                          <div className="mt-1 w-full bg-card border-2 border-black rounded-lg shadow-lg max-h-48 overflow-auto">
+                            {accountsLoading ? (
+                              <p className="px-3 py-2 text-xs text-muted-foreground">Loading customers…</p>
+                            ) : whatsappAccountSuggestions.length > 0 ? (
+                              <ul className="py-0.5">
+                                {whatsappAccountSuggestions.map((acc) => (
+                                  <li
+                                    key={acc.id}
+                                    onClick={() => {
+                                      setWhatsappSelectedAccount({ id: acc.id, name: acc.name });
+                                      setWhatsappAccountSearch("");
+                                    }}
+                                    className="px-3 py-2 text-xs cursor-pointer hover:bg-muted border-b border-black/10 last:border-0 first:rounded-t-md"
+                                  >
+                                    {acc.name}
+                                    {acc.industry && (
+                                      <span className="text-muted-foreground ml-1">({acc.industry})</span>
+                                    )}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="px-3 py-2 text-xs text-muted-foreground">
+                                No customers match &quot;{whatsappAccountSearch.trim()}&quot;
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {whatsappSelectedAccount && (
+                      <div className="pt-2 border-t-2 border-black/10 space-y-2">
+                        <p className="text-[11px] text-muted-foreground">
+                          Sending WhatsApp to:{" "}
+                          <strong className="text-foreground">{whatsappSelectedAccount.name}</strong>
+                        </p>
+                        <button
+                          onClick={handleWhatsappSendSingle}
+                          disabled={whatsappLoading}
+                          className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-primary/90 flex items-center justify-center gap-1.5 disabled:opacity-60"
+                        >
+                          {whatsappLoading ? (
+                            "Sending…"
+                          ) : (
+                            <>
+                              <MessageCircle size={12} /> Send WhatsApp
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {whatsappPreview && (
+                      <div className="mt-2 border-2 border-dashed border-black/40 rounded-lg p-2 bg-muted/40">
+                        <p className="text-[11px] font-semibold mb-1 text-foreground">Message preview</p>
+                        <p className="text-[11px] whitespace-pre-wrap text-muted-foreground">{whatsappPreview}</p>
+                      </div>
+                    )}
+
+                    {whatsappMessage && (
+                      <p
+                        className={`text-xs ${
+                          whatsappMessage.type === "success" ? "text-emerald-600" : "text-destructive"
+                        }`}
+                      >
+                        {whatsappMessage.text}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

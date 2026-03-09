@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronRight, Settings, Plus, Play, Mail, Phone, CheckSquare, Loader2 } from "lucide-react";
+import { ChevronRight, Settings, Plus, Play, Mail, Phone, CheckSquare, Loader2, MessageCircle } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -56,7 +56,7 @@ interface QuarterlyFlowSheetProps {
     onOpenChange: (open: boolean) => void;
 }
 
-type ActionType = "email" | "call" | "task";
+type ActionType = "email" | "call" | "task" | "whatsapp";
 
 export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlowSheetProps) {
     const [viewMode, setViewMode] = useState<"day" | "month">("month");
@@ -176,10 +176,11 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
 
     const monthOptions = getMonthOptionsForStage(stage);
 
-    const actionIcons = {
+    const actionIcons: Record<ActionType, JSX.Element> = {
         email: <Mail className="w-4 h-4" />,
         call: <Phone className="w-4 h-4" />,
-        task: <CheckSquare className="w-4 h-4" />
+        task: <CheckSquare className="w-4 h-4" />,
+        whatsapp: <MessageCircle className="w-4 h-4" />,
     };
 
     return (
@@ -194,7 +195,7 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
                         </div>
                         <DialogTitle className="text-xl font-bold text-foreground">{stageTitle} Process Flow</DialogTitle>
                         <DialogDescription className="text-sm text-muted-foreground">
-                            Set schedule to day-wise or month-wise. For each step choose email or voice; the purpose you write is injected into the email/call bot so it sends or says it accordingly. Set frequency: one-time, daily, weekly, or monthly.
+                            Set schedule to day-wise or month-wise. For each step choose email, voice, WhatsApp, or manual task; the purpose you write is injected into the bot so it sends or says it accordingly. Set frequency: one-time, daily, weekly, or monthly.
                         </DialogDescription>
                     </DialogHeader>
                 </div>
@@ -319,9 +320,10 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
                                                         >
                                                             <option value="email">Email</option>
                                                             <option value="call">Voice Call</option>
+                                                            <option value="whatsapp">WhatsApp Message</option>
                                                             <option value="task">Manual Task</option>
                                                         </select>
-                                                        {(step.action_type === "email" || step.action_type === "call") && (
+                                                        {(step.action_type === "email" || step.action_type === "call" || step.action_type === "whatsapp") && (
                                                             <>
                                                                 <label className="text-[10px] font-medium text-muted-foreground block mt-1">
                                                                     Purpose (injected into email/call bot)

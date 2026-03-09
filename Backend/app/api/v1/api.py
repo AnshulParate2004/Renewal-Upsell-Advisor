@@ -17,6 +17,7 @@ from app.api.v1.endpoints import (
   settings,
   workflows,
   campaigns,
+  whatsapp,
 )
 
 api_router = APIRouter()
@@ -36,3 +37,4 @@ api_router.include_router(ml_trigger.router, prefix="/ml", tags=["ml"])
 api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
 api_router.include_router(workflows.router, prefix="/workflows", tags=["workflows"])
 api_router.include_router(campaigns.router, prefix="/campaigns", tags=["campaigns"])
+api_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["whatsapp"])

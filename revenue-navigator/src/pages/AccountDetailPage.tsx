@@ -329,11 +329,11 @@ export default function AccountDetailPage() {
                             </div>
                         </div>
 
-                        {/* Primary Contact */}
+                        {/* Primary Contact / Customer information */}
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-extrabold tracking-widest uppercase text-gray-400 flex items-center gap-2">
                                 <Users size={14} />
-                                PRIMARY_STAKEHOLDER_RECORD
+                                CUSTOMER_INFORMATION
                             </h3>
                             <ContactInfoSection account={accountWithPredictions} />
                         </div>
@@ -342,7 +342,7 @@ export default function AccountDetailPage() {
                         <div className="space-y-4">
                             <div className="flex items-center gap-2">
                                 <Building2 className="w-5 h-5 text-primary" />
-                                <h3 className="text-[10px] font-extrabold tracking-widest uppercase text-gray-400">METADATA_REGISTRY</h3>
+                                <h3 className="text-[10px] font-extrabold tracking-widest uppercase text-gray-400">CUSTOMER TABLE</h3>
                                 <div className="h-px flex-1 bg-gray-100" />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -427,7 +427,7 @@ function ContactInfoSection({ account }: { account: any }) {
                         <Users className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h4 className="text-[9px] font-black uppercase tracking-widest text-foreground/60 mb-1">PRIMARY_STAKEHOLDER</h4>
+                        <h4 className="text-[9px] font-black uppercase tracking-widest text-foreground/60 mb-1">CUSTOMER NAME</h4>
                         <p className="text-xl font-black tracking-tight text-foreground uppercase">{contactName || "UNASSIGNED"}</p>
                     </div>
                 </div>
@@ -474,7 +474,7 @@ function ContactInfoSection({ account }: { account: any }) {
 
                     {/* Email */}
                     <div className="space-y-3">
-                        <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">SECURE_COMMUNICATION_PATH</label>
+                        <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">EMAIL</label>
                         {isEditing ? (
                             <input
                                 type="email"
@@ -523,7 +523,7 @@ function ContactInfoSection({ account }: { account: any }) {
                 <div className="space-y-6">
                     {/* Phone */}
                     <div className="space-y-3">
-                        <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">DIRECT_VOICE_UPLINK</label>
+                        <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">PHONE NUMBER</label>
                         {isEditing ? (
                             <input
                                 type="tel"
