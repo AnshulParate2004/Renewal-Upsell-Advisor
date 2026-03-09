@@ -120,16 +120,18 @@ export default function Pipeline() {
                     const statusLower = (account.status ?? "").toString().trim().toLowerCase();
                     const renewalStageLower = (account.renewalStage ?? "").toString().trim().toLowerCase();
                     const isRenewed = statusLower === "renewed" || statusLower === "renewal" || renewalStageLower === "renewed";
-                    const isOverdue = !isRenewed && (renewalDays ?? days) < 0;
-                    const isCritical = account.riskScore >= 70 || (isMonthly && isOverdue);
-                    const isMiddle = !isCritical && !isRenewed && account.riskScore >= 40;
+                    const risk = account.riskScore ?? 0;
+                    const isHighRisk = risk >= 70;
+                    const isMiddleRisk = risk >= 40 && risk < 70;
                     // Renewed: show "Renewed" + "Xd to apply renewal" (green); else "Xd to renewal"
                     const renewalLabel = isRenewed
                       ? (renewalDays != null ? `${renewalDays}d to apply renewal` : "Renewed")
                       : (renewalDays != null ? `${renewalDays}d to renewal` : `${days}d to renewal`);
+                    const remaining = renewalDays ?? days;
+                    const urgentThreshold = isMonthly ? 10 : 30;
                     const renewalBadgeStyle = isRenewed
                       ? "text-emerald-600 bg-emerald-500/10"
-                      : (renewalDays ?? days) <= (isMonthly ? 10 : 60)
+                      : remaining <= urgentThreshold
                         ? "text-destructive bg-destructive/10"
                         : "text-muted-foreground bg-muted/50";
                     return (
@@ -137,10 +139,17 @@ export default function Pipeline() {
                         key={account.id}
                         draggable
                         onDragStart={() => handleDragStart(account.id)}
-                        className={`cursor-grab bg-card border-2 border-black rounded-xl p-4 group transition-all active:cursor-grabbing relative overflow-hidden ${isRenewed ? "border-l-4 border-l-emerald-500" : ""}`}
+                        className={`cursor-grab bg-card border-2 border-black rounded-xl p-4 group transition-all active:cursor-grabbing relative overflow-hidden ${
+                          isRenewed ? "border-l-4 border-l-emerald-500" : ""
+                        }`}
                       >
-                        {isCritical && !isRenewed && <div className="absolute top-0 left-0 w-1 h-full bg-destructive rounded-l-xl" />}
-                        {isMiddle && <div className="absolute top-0 left-0 w-1 h-full bg-amber-400 rounded-l-xl" />}
+                        {!isRenewed && (isHighRisk || isMiddleRisk) && (
+                          <div
+                            className={`absolute top-0 left-0 w-1 h-full rounded-l-xl ${
+                              isHighRisk ? "bg-destructive" : "bg-amber-400"
+                            }`}
+                          />
+                        )}
 
                         <div className="flex items-start justify-between mb-3">
                           <div>
@@ -160,12 +169,20 @@ export default function Pipeline() {
                               Renewed
                             </span>
                           )}
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black ${isRenewed ? 'bg-emerald-500/10 text-emerald-600' :
-                            isCritical ? 'bg-destructive/10 text-destructive' :
-                              isMiddle ? 'bg-amber-400/90 text-amber-950' :
-                                'bg-emerald-500/10 text-emerald-600'
-                            }`}>
-                            {isRenewed ? 'Healthy' : isCritical ? 'Critical' : isMiddle ? 'Middle' : 'Healthy'}
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black ${
+                              isHighRisk && !isRenewed
+                                ? "bg-destructive/10 text-destructive"
+                                : isMiddleRisk && !isRenewed
+                                  ? "bg-amber-400/90 text-amber-950"
+                                  : "bg-emerald-500/10 text-emerald-600"
+                            }`}
+                          >
+                            {isHighRisk && !isRenewed
+                              ? "Critical"
+                              : isMiddleRisk && !isRenewed
+                                ? "Middle"
+                                : "Healthy"}
                           </span>
                           <span className={`text-xs font-medium border-2 border-black px-2 py-0.5 rounded ${renewalBadgeStyle}`}>
                             {renewalLabel}

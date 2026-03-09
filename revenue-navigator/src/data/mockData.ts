@@ -101,7 +101,7 @@ export const formatCurrency = (value: number) => {
     return `$${Math.round(value / 1000)}K`;
   } else {
     // Less than 1K: $500
-    return `$${Math.round(value)}`;
+    return `$${value}`;
   }
 };
 
@@ -188,32 +188,20 @@ export function getRenewalStageFromPlan(
 }
 
 /** Stage for monthly billing: only M1 or no_renewed.
- * Overdue (daysToRenewal < 0) always returns no_renewed, even if m1 was saved.
- * Saved no_renewed is respected; saved m1 is only used when not overdue.
+ * - If renewal_stage is 'no_renewed' → stay in Not Renewed (even if date changes)
+ * - Otherwise use days to renewal (same logic as the badge) so negative days go to Not Renewed
  */
 export function getRenewalStageForMonthly(
-  _contractStartDate: string | undefined | null,
+  contractStartDate: string | undefined | null,
   renewalDate: string | undefined | null,
   status?: string | null,
   contractEnd?: string | undefined | null,
   renewalStage?: string | undefined | null
 ): "m1" | "no_renewed" {
-  const s = (status ?? "").toString().trim().toLowerCase();
-  const isRenewed = s === "renewed" || s === "renewal";
-  // Use renewalDate first, then contractEnd as fallback — same as getRenewalInDays
-  const end =
-    (renewalDate && renewalDate.trim())
-      ? renewalDate.trim()
-      : (contractEnd && String(contractEnd).trim())
-        ? String(contractEnd).trim()
-        : null;
-  // If a valid end date exists and it's overdue, always go to no_renewed
-  if (!isRenewed && end && !Number.isNaN(new Date(end).getTime())) {
-    const daysToRenewal = getDaysUntil(end);
-    if (daysToRenewal < 0) return "no_renewed";
-  }
-  // Not overdue: respect saved stage if explicitly set to no_renewed
   const stage = (renewalStage ?? "").toString().trim().toLowerCase();
   if (stage === "no_renewed") return "no_renewed";
+  // Otherwise derive from days to renewal (like getRenewalInDays), so overdue accounts go to Not Renewed
+  const days = getRenewalInDays(renewalDate, contractEnd, status) ?? getDaysUntil(renewalDate ?? "");
+  if (days < 0) return "no_renewed";
   return "m1";
 }

@@ -73,7 +73,8 @@ export default function Opportunities() {
   const filtered = useMemo(() => {
     return enrichedOpportunities.filter((o) => {
       const t = o.type === 'expansion' ? 'upsell' : o.type;
-      const value = typeof o.value === 'number' ? o.value : 0;
+      const rawValue = typeof o.value === 'number' ? o.value : Number(o.value ?? 0);
+      const value = Number.isFinite(rawValue) ? rawValue : 0;
       const isUpsell = t === 'upsell' && value > 0;
       if (typeFilter === "all") return true;
       if (typeFilter === "upsell") return isUpsell; // only show as Upsell when value > 0
@@ -81,16 +82,26 @@ export default function Opportunities() {
     });
   }, [enrichedOpportunities, typeFilter]);
 
-  const totalPipeline = useMemo(() => enrichedOpportunities.reduce((s, o) => s + o.value, 0), [enrichedOpportunities]);
-  const avgDeal = enrichedOpportunities.length > 0 ? totalPipeline / enrichedOpportunities.length : 0;
+  const totalPipeline = useMemo(
+    () =>
+      enrichedOpportunities.reduce((sum, o) => {
+        const rawValue = typeof o.value === 'number' ? o.value : Number(o.value ?? 0);
+        const value = Number.isFinite(rawValue) ? rawValue : 0;
+        return sum + value;
+      }, 0),
+    [enrichedOpportunities]
+  );
+
+  const avgDeal =
+    enrichedOpportunities.length > 0 ? totalPipeline / enrichedOpportunities.length : 0;
   const predictedUpsellCount = useMemo(
     () => enrichedOpportunities.filter((o) => (typeof o.value === 'number' ? o.value : 0) > 0).length,
     [enrichedOpportunities]
   );
 
   const summaryMetrics = [
-    { label: 'Total Upsell Predicted Value', value: formatCurrency(totalPipeline), icon: <DollarSign size={16} />, bg: 'bg-primary/10', color: 'text-primary' },
-    { label: 'Average Prediction Value', value: formatCurrency(avgDeal), icon: <TrendingUp size={16} />, bg: 'bg-amber-500/10', color: 'text-amber-600' },
+    { label: 'Pipeline Total', value: formatCurrency(totalPipeline), icon: <DollarSign size={16} />, bg: 'bg-primary/10', color: 'text-primary' },
+    { label: 'Avg Deal Size', value: formatCurrency(avgDeal), icon: <TrendingUp size={16} />, bg: 'bg-amber-500/10', color: 'text-amber-600' },
     { label: 'Total predicted upsell accounts', value: String(predictedUpsellCount), icon: <Users size={16} />, bg: 'bg-emerald-500/10', color: 'text-emerald-600' },
   ];
 
@@ -169,14 +180,23 @@ export default function Opportunities() {
                 </td></tr>
               ) : (
                 filtered.map((opp) => {
-                  const value = typeof opp.value === 'number' ? opp.value : 0;
-                  const displayType = value === 0 ? 'no_upsell' : (opp.type === 'expansion' ? 'upsell' : opp.type);
-                  const badge = typeBadge[displayType] || { label: 'Upsell', color: 'text-emerald-600', bg: 'bg-emerald-500/10' };
+                  const rawValue = typeof opp.value === 'number' ? opp.value : Number(opp.value ?? 0);
+                  const value = Number.isFinite(rawValue) ? rawValue : 0;
+                  const displayType =
+                    value === 0 ? 'no_upsell' : (opp.type === 'expansion' ? 'upsell' : opp.type);
+                  const badge =
+                    typeBadge[displayType] || {
+                      label: 'Upsell',
+                      color: 'text-emerald-600',
+                      bg: 'bg-emerald-500/10',
+                    };
                   const pct = probabilityPercent(opp.probability);
                   const probStyle = probabilityColor(opp.probability);
                   const stage = displayStage(opp.stage, opp.probability);
-                  const stageStyle = stageBadgeStyle[stage] ?? "bg-muted text-muted-foreground border-black/20";
-                  const valueColor = opp.value > 0 ? "text-emerald-600 font-semibold" : "text-muted-foreground";
+                  const stageStyle =
+                    stageBadgeStyle[stage] ?? 'bg-muted text-muted-foreground border-black/20';
+                  const valueColor =
+                    value > 0 ? 'text-emerald-600 font-semibold' : 'text-muted-foreground';
                   return (
                     <tr key={opp.id} className="hover:bg-muted/20 transition-colors group border-b-2 border-black last:border-b-0">
                       <td className="pl-5 py-3.5 font-medium text-foreground group-hover:text-primary transition-colors">{opp.accountName}</td>
@@ -185,7 +205,7 @@ export default function Opportunities() {
                           {badge.label}
                         </span>
                       </td>
-                      <td className={`text-right py-3.5 pr-4 ${valueColor}`}>{formatCurrency(opp.value)}</td>
+                      <td className={`text-right py-3.5 pr-4 ${valueColor}`}>{formatCurrency(value)}</td>
                       <td className="text-center py-3.5">
                         <div className="flex items-center gap-2 justify-center">
                           <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden border border-black/10">

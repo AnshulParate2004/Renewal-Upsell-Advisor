@@ -26,15 +26,17 @@ export default function Dashboard() {
   const churnRiskCount = accounts.length > 0
     ? accounts.filter(a => (a.riskScore ?? 0) >= 70 && !isStatusRenewed(a)).length
     : (stats?.churn_risk_count ?? 0);
-  const accountIds = new Set(accounts.map((a) => a.id));
-  const enrichedOpportunities = opportunities
-    .filter((opp) => accountIds.has(opp.accountId))
-    .map((opp) => ({ ...opp }));
-
-  const pipelineTotal = enrichedOpportunities.reduce((sum, o) => sum + (typeof o.value === 'number' ? o.value : 0), 0);
-  const predictedUpsellAccountCount = enrichedOpportunities.filter((o) => (typeof o.value === 'number' ? o.value : 0) > 0).length;
-
-  const displayPipeline = revenueType === 'MRR' ? (pipelineTotal / 12) : pipelineTotal;
+  // Filter opportunities to only those tied to the currently visible accounts
+  const visibleAccountIds = new Set(accounts.map((a) => a.id));
+  const visibleOpps = opportunities.filter(
+    (o) => o.accountId && visibleAccountIds.has(o.accountId)
+  );
+  const upsellPipeline = visibleOpps.reduce((sum, o) => {
+    const rawValue = typeof o.value === 'number' ? o.value : Number(o.value ?? 0);
+    const value = Number.isFinite(rawValue) ? rawValue : 0;
+    return sum + value;
+  }, 0);
+  const displayPipeline = upsellPipeline;
   const avgRelationshipScore = stats?.avg_relationship_score ?? 0;
   const avgSentimentScore = (stats?.avg_sentiment_score ?? 0).toFixed(2);
   const isLoading = statsLoading || accountsLoading;
@@ -46,20 +48,24 @@ export default function Dashboard() {
     : 0;
   const avgUtilizationPct = accounts.length > 0
     ? (() => {
-      const total = accounts.reduce((sum, a) => {
-        const u = Number(a.utilization ?? 0);
-        return sum + (u <= 1 && u >= 0 ? u * 100 : u);
-      }, 0);
-      return Math.round(total / accounts.length);
-    })()
+        const total = accounts.reduce((sum, a) => {
+          const u = Number(a.utilization ?? 0);
+          return sum + (u <= 1 && u >= 0 ? u * 100 : u);
+        }, 0);
+        return Math.round(total / accounts.length);
+      })()
     : 0;
+
+  const predictedUpsellAccountCount = visibleOpps.filter(
+    (o) => (typeof o.value === 'number' ? o.value : 0) > 0
+  ).length;
 
   const metricCards = [
     { label: 'Total Customers', value: accounts.length, icon: <Briefcase size={18} />, iconBg: 'bg-blue-500/10', iconColor: 'text-blue-500', borderColor: 'border-blue-500/20' },
     { label: `Total ${revenueLabel}`, value: formatCurrency(displayRevenue), icon: <DollarSign size={18} />, iconBg: 'bg-primary/10', iconColor: 'text-primary', borderColor: 'border-primary/20' },
     { label: 'Accounts on track', value: safeAccountsCount, icon: <ShieldCheck size={18} />, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500', borderColor: 'border-emerald-500/20' },
     { label: 'Churn Prediction', value: churnRiskCount, icon: <AlertTriangle size={18} />, iconBg: 'bg-destructive/10', iconColor: 'text-destructive', isAlert: true, borderColor: 'border-destructive/20' },
-    { label: 'Total Upsell Predicted Value', value: formatCurrency(displayPipeline), icon: <Users size={18} />, iconBg: 'bg-accent/10', iconColor: 'text-accent', borderColor: 'border-accent/20' },
+    { label: 'Total upsell amount predicted', value: formatCurrency(displayPipeline), icon: <Users size={18} />, iconBg: 'bg-accent/10', iconColor: 'text-accent', borderColor: 'border-accent/20' },
     { label: 'Total predicted upsell accounts', value: predictedUpsellAccountCount, icon: <Users size={18} />, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-600', borderColor: 'border-emerald-500/20' },
     { label: 'Avg Relationship', value: `${Math.round(avgRelationshipScore)}`, icon: <Heart size={18} />, iconBg: 'bg-pink-500/10', iconColor: 'text-pink-500', borderColor: 'border-pink-500/20' },
     { label: 'Average Customer Sentiment', value: avgSentimentScore, icon: <Smile size={18} />, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500', borderColor: 'border-amber-500/20' },
