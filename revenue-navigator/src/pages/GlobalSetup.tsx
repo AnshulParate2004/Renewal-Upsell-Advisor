@@ -6,7 +6,7 @@ import { accountsApi } from "@/lib/api/accounts";
 import { useToast } from "@/hooks/use-toast";
 
 export default function GlobalSetup() {
-    const [globalPhone, setGlobalPhone] = useState("+91 8208170566");
+    const [globalPhone, setGlobalPhone] = useState("+91 1234567890");
     const [globalEmail, setGlobalEmail] = useState("anp@ailifebot.com");
     const [smtpHost, setSmtpHost] = useState("smtp.gmail.com");
     const [smtpPort, setSmtpPort] = useState("587");
@@ -35,7 +35,7 @@ export default function GlobalSetup() {
         // Validate phone number format: +91 XXXXXXXXXX (10 digits)
         const phoneRegex = /^\+91 \d{10}$/;
         if (!phoneRegex.test(globalPhone)) {
-            setPhoneError("WRITE_IN_FORMAT: +91 8208170566 (10_DIGITS)");
+            setPhoneError("WRITE_IN_FORMAT: +91 1234567890 (10_DIGITS)");
             return;
         }
         setPhoneError("");
@@ -150,7 +150,7 @@ export default function GlobalSetup() {
                                                 setGlobalPhone(e.target.value);
                                                 if (phoneError) setPhoneError("");
                                             }}
-                                            placeholder="+91 8208170566"
+                                            placeholder="+91 1234567890"
                                             className={`w-full pl-12 pr-4 py-4 bg-white border rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all uppercase ${phoneError ? 'border-red-500' : 'border-black'}`}
                                             required
                                         />

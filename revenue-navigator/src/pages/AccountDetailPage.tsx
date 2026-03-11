@@ -397,7 +397,7 @@ function ContactInfoSection({ account, accountId }: { account: any, accountId: s
         // Validate phone number format: +91 XXXXXXXXXX (10 digits)
         const phoneRegex = /^\+91 \d{10}$/;
         if (!phoneRegex.test(contactPhone)) {
-            setPhoneError("Please write in format: +91 8208170566 (must have 10 digits)");
+            setPhoneError("Please write in format: +91 1234567890 (must have 10 digits)");
             return;
         }
         setPhoneError("");
@@ -572,7 +572,7 @@ function ContactInfoSection({ account, accountId }: { account: any, accountId: s
                                         setContactPhone(e.target.value);
                                         if (phoneError) setPhoneError("");
                                     }}
-                                    placeholder="+91 8208170566"
+                                    placeholder="+91 1234567890"
                                     className={`w-full px-4 py-2 bg-white border-2 rounded-lg text-sm font-black text-foreground uppercase tracking-wide focus:outline-none focus:bg-primary/5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${phoneError ? 'border-red-500' : 'border-black'}`}
                                 />
                                 {phoneError && <p className="text-[10px] font-bold text-red-500 uppercase">{phoneError}</p>}
