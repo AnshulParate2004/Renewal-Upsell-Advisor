@@ -33,6 +33,9 @@ export default function Calls() {
     [voiceCallsRaw, accountIds]
   );
 
+  const isTrulyPickedUp = (c: VoiceCallRow) =>
+    c.outcome === "picked_up" && typeof c.duration_seconds === "number" && c.duration_seconds > 0;
+
   const filtered = useMemo(() => {
     return voiceCalls
       .filter((c) => c.account_name?.toLowerCase().includes(search.toLowerCase()))
@@ -50,7 +53,7 @@ export default function Calls() {
       };
     }
     const total = filtered.length;
-    const pickedUp = filtered.filter((c) => c.outcome === "picked_up").length;
+    const pickedUp = filtered.filter((c) => isTrulyPickedUp(c)).length;
     const pickRate = Math.round((pickedUp / total) * 100);
     const totalSeconds = filtered.reduce(
       (sum, c) => sum + (typeof c.duration_seconds === "number" ? c.duration_seconds : 0),
@@ -190,9 +193,25 @@ export default function Calls() {
                     <td className="py-3.5 text-xs text-muted-foreground">{call.date}</td>
                     <td className="text-center py-3.5 text-sm font-medium text-foreground">{call.duration}</td>
                     <td className="text-center py-3.5">
-                      <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${call.outcome === 'picked_up' ? 'bg-emerald-500/10 text-emerald-600' : call.outcome === 'missed' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
-                        {call.outcome.replace('_', ' ')}
-                      </span>
+                      {(() => {
+                        const rawOutcome = (call.outcome || "").toString();
+                        let effectiveOutcome = rawOutcome || "not_picked";
+                        if (rawOutcome === "picked_up" && !isTrulyPickedUp(call)) {
+                          effectiveOutcome = "not_picked";
+                        }
+                        const label = effectiveOutcome.replace("_", " ");
+                        const badgeClass =
+                          effectiveOutcome === "picked_up"
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : "bg-destructive/10 text-destructive";
+                        return (
+                          <span
+                            className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${badgeClass}`}
+                          >
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="text-center py-3.5 text-base">
                       {call.sentiment === "positive" ? "😊" : call.sentiment === "neutral" ? "😐" : "😟"}

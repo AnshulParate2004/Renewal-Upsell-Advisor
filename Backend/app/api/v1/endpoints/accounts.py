@@ -290,6 +290,33 @@ async def update_account(account_id: str, account_update: dict):
         raise HTTPException(status_code=500, detail=f"Failed to update account: {str(e)}")
 
 
+@router.post("/bulk-update")
+async def bulk_update_accounts(payload: dict):
+    """Update primary_contact_phone and primary_contact_email for ALL accounts."""
+    client = supabase or get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+    
+    phone = payload.get("primary_contact_phone")
+    email = payload.get("primary_contact_email")
+    
+    if not phone and not email:
+        raise HTTPException(status_code=400, detail="Either phone or email must be provided")
+    
+    update_data = {}
+    if phone: update_data["primary_contact_phone"] = phone
+    if email: update_data["primary_contact_email"] = email
+    
+    try:
+        # Performing an update without a .eq() filter in some Supabase clients might fail or require a specific approach.
+        # However, .neq("id", "00000000-0000-0000-0000-000000000000") is a safe way to target all rows.
+        result = client.table("accounts").update(update_data).neq("id", "00000000-0000-0000-0000-000000000000").execute()
+        return {"message": f"Successfully updated {len(result.data)} accounts", "updated_count": len(result.data)}
+    except Exception as e:
+        logger.error(f"Error bulk updating accounts: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to bulk update accounts: {str(e)}")
+
+
 @router.delete("/{account_id}")
 async def delete_account(account_id: str):
     """Delete an account from Supabase."""

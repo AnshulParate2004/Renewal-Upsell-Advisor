@@ -27,22 +27,47 @@ class EmailService:
     """Email service for sending emails via SMTP or SendGrid."""
     
     def __init__(self):
-        """Initialize email service with configuration."""
-        self.smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_username = os.getenv("SMTP_USERNAME")
-        self.smtp_password = os.getenv("SMTP_PASSWORD")
-        self.from_email = os.getenv("FROM_EMAIL", self.smtp_username)
-        self.from_name = os.getenv("FROM_NAME", "Renewal & Upsell Advisor")
-        
-        # SendGrid configuration (optional)
-        self.sendgrid_api_key = os.getenv("SENDGRID_API_KEY")
-        
+        """Initialize email service with configuration.
+
+        IMPORTANT: SMTP credentials are NOT loaded from environment variables.
+        They must be configured via the Settings UI, which persists to the
+        Supabase `app_settings` table (config.email).
+        """
+        # Default host/port only; no credentials from env
+        self.smtp_host = "smtp.gmail.com"
+        self.smtp_port = 587
+        self.smtp_username = None
+        self.smtp_password = None
+        self.from_email = None
+        self.from_name = "Renewal & Upsell Advisor"
+
+        # SendGrid configuration (optional, still from env/settings)
+        self.sendgrid_api_key = os.getenv("SENDGRID_API_KEY") or settings.SENDGRID_API_KEY
+
+        # Load dynamic email config from Supabase app_settings.email
+        email_cfg = self._load_email_config_from_supabase()
+        if email_cfg:
+            try:
+                self.smtp_host = email_cfg.get("smtpHost") or self.smtp_host
+                port_val = email_cfg.get("smtpPort")
+                if port_val is not None:
+                    self.smtp_port = int(port_val)
+            except Exception:
+                # Keep existing host/port on any parsing error
+                pass
+            self.smtp_username = email_cfg.get("smtpUsername") or self.smtp_username
+            if email_cfg.get("smtpPassword"):
+                self.smtp_password = email_cfg.get("smtpPassword")
+            self.from_email = email_cfg.get("fromEmail") or self.from_email or self.smtp_username
+            self.from_name = email_cfg.get("fromName") or self.from_name
+
         # Check if email is configured
         self.is_configured = bool(self.smtp_username and self.smtp_password) or bool(self.sendgrid_api_key)
-        
+
         if not self.is_configured:
-            logger.warning("Email service not configured. Set SMTP_USERNAME/SMTP_PASSWORD or SENDGRID_API_KEY")
+            logger.warning(
+                "Email service not configured. Go to Settings → Email & SMTP to configure SMTP credentials."
+            )
     
     def send_email(
         self,
@@ -76,6 +101,60 @@ class EmailService:
             return self._send_via_sendgrid(to_email, subject, html_body, text_body, to_name, reply_to)
         else:
             return self._send_via_smtp(to_email, subject, html_body, text_body, to_name, reply_to)
+
+    def _get_supabase_client(self):
+        """Local helper to get Supabase client without creating import cycles."""
+        try:
+            from supabase import create_client
+        except ImportError:
+            logger.debug("supabase-py not installed; skipping email config from Supabase.")
+            return None
+
+        supabase_url = os.getenv("SUPABASE_URL") or settings.SUPABASE_URL
+        supabase_key = (
+            os.getenv("SUPABASE_SERVICE_ROLE_SECRET")
+            or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            or os.getenv("SUPABASE_KEY")
+            or os.getenv("SUPABASE_ANON_KEY")
+            or settings.SUPABASE_KEY
+        )
+
+        if not supabase_url or not supabase_key:
+            return None
+
+        try:
+            return create_client(supabase_url, supabase_key)
+        except Exception as e:
+            logger.error(f"Failed to create Supabase client for email config: {e}")
+            return None
+
+    def _load_email_config_from_supabase(self) -> Dict[str, Any]:
+        """
+        Read app_settings.config.email from Supabase, if available.
+        Returns {} when not configured or on error.
+        """
+        client = self._get_supabase_client()
+        if client is None:
+            return {}
+        try:
+            result = (
+                client.table("app_settings")
+                .select("config")
+                .eq("key", "default")
+                .limit(1)
+                .execute()
+            )
+            rows = result.data or []
+            if not rows:
+                return {}
+            raw_cfg = rows[0].get("config") or {}
+            if not isinstance(raw_cfg, dict):
+                return {}
+            email_cfg = raw_cfg.get("email") or {}
+            return email_cfg if isinstance(email_cfg, dict) else {}
+        except Exception as e:
+            logger.error(f"Failed to load email config from app_settings: {e}")
+            return {}
     
     def _send_via_smtp(
         self,

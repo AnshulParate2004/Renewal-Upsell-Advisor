@@ -1,20 +1,35 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Zap, Mail, Lock, ArrowRight, Eye, EyeOff, ShieldCheck, AlertCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SignIn() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [email, setEmail] = useState("anp@ailifebot.com");
+    const [password, setPassword] = useState("1234");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState("");
+    
+    const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setTimeout(() => {
-            navigate("/app");
-        }, 1000);
+        setError("");
+        
+        try {
+            const success = await login(email, password);
+            if (success) {
+                navigate("/setup");
+            } else {
+                setError("INVALID_IDENTITY_OR_KEY: ACCESS_DENIED");
+                setIsLoading(false);
+            }
+        } catch (err) {
+            setError("SYSTEM_FAILURE: AUTH_PROTOCOL_ERROR");
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -47,6 +62,12 @@ export default function SignIn() {
                 </div>
 
                 <div className="bg-white border-2 border-black rounded-lg p-8 sm:p-10 relative overflow-visible shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border-2 border-red-500 rounded-lg flex items-center gap-3 text-red-600 animate-in fade-in slide-in-from-top-2 duration-300">
+                            <AlertCircle className="shrink-0" size={18} />
+                            <p className="text-[10px] font-black uppercase tracking-widest">{error}</p>
+                        </div>
+                    )}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Email Input */}
                         <div className="space-y-3">
@@ -60,7 +81,7 @@ export default function SignIn() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="OPERATOR@SYSTEM.COM"
-                                    className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all"
+                                    className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all uppercase"
                                     required
                                 />
                             </div>
@@ -146,9 +167,16 @@ export default function SignIn() {
                         </button>
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-black flex items-center justify-center gap-2">
-                        <ShieldCheck size={14} className="text-primary" />
-                        <p className="text-[10px] font-black text-foreground/60 uppercase tracking-widest">ENCRYPTED_PATH: RSA_4096_GCM</p>
+                    <div className="mt-8 pt-6 border-t border-black flex flex-col items-center justify-center gap-4">
+                        <div className="p-3 bg-primary/5 border-2 border-dashed border-primary/20 rounded-xl w-full text-center">
+                            <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Demo Access Credentials</p>
+                            <p className="text-xs font-black text-foreground tracking-wide">Username: <span className="text-primary select-all lowercase">anp@ailifebot.com</span></p>
+                            <p className="text-xs font-black text-foreground tracking-wide">Password: <span className="text-primary select-all">1234</span></p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <ShieldCheck size={14} className="text-primary" />
+                            <p className="text-[10px] font-black text-foreground/60 uppercase tracking-widest">ENCRYPTED_PATH: RSA_4096_GCM</p>
+                        </div>
                     </div>
                 </div>
 

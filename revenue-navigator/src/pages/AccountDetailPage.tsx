@@ -8,7 +8,7 @@ import type { Account } from "@/data/mockData";
 import MetricsHistoryChart from "@/components/charts/MetricsHistoryChart";
 import SentimentTrendChart from "@/components/charts/SentimentTrendChart";
 import ActivityTimeline from "@/components/ActivityTimeline";
-import { useAccount } from "@/hooks/useAccounts";
+import { useAccount, useUpdateAccount } from "@/hooks/useAccounts";
 import { usePredictions } from "@/hooks/usePredictions";
 import { accountCommentsApi, type AccountComment } from "@/lib/api/accountComments";
 import { accountsApi } from "@/lib/api/accounts";
@@ -335,7 +335,10 @@ export default function AccountDetailPage() {
                                 <Users size={14} />
                                 CUSTOMER_INFORMATION
                             </h3>
-                            <ContactInfoSection account={accountWithPredictions} />
+                            <ContactInfoSection 
+                                account={accountWithPredictions} 
+                                accountId={accountId || ''} 
+                            />
                         </div>
 
                         {/* Account Information */}
@@ -351,7 +354,7 @@ export default function AccountDetailPage() {
                                 ].map((field, i) => (
                                     <div key={i} className="bg-white border-2 border-black rounded-lg p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all group">
                                         <p className="text-[9px] uppercase font-black text-foreground/60 tracking-widest mb-2">{field.label}</p>
-                                        <p className={`text-base font-black text-foreground tracking-tight uppercase ${field.mono ? 'font-mono' : ''}`}>
+                                        <p className="text-base font-black text-foreground tracking-tight uppercase">
                                             {field.value}
                                         </p>
                                     </div>
@@ -379,18 +382,41 @@ export default function AccountDetailPage() {
 }
 
 // Contact Information Section with Editing
-function ContactInfoSection({ account }: { account: any }) {
+function ContactInfoSection({ account, accountId }: { account: any, accountId: string }) {
     const [isEditing, setIsEditing] = useState(false);
     const [contactName, setContactName] = useState(account.contactName || "");
     const [contactEmail, setContactEmail] = useState(account.contactEmail || "");
     const [contactPhone, setContactPhone] = useState(account.contactPhone || "");
     const [contactCity, setContactCity] = useState(account.contactCity || "");
     const [contactState, setContactState] = useState(account.contactState || "");
+    const [phoneError, setPhoneError] = useState("");
+    
+    const updateAccount = useUpdateAccount();
 
-    const handleSave = () => {
-        // In real app, this would call an API
-        console.log("Saving contact:", { contactName, contactEmail, contactPhone, contactCity, contactState });
-        setIsEditing(false);
+    const handleSave = async () => {
+        // Validate phone number format: +91 XXXXXXXXXX (10 digits)
+        const phoneRegex = /^\+91 \d{10}$/;
+        if (!phoneRegex.test(contactPhone)) {
+            setPhoneError("Please write in format: +91 8208170566 (must have 10 digits)");
+            return;
+        }
+        setPhoneError("");
+
+        try {
+            await updateAccount.mutateAsync({
+                id: accountId,
+                data: {
+                    contactName,
+                    contactEmail,
+                    contactPhone: contactPhone,
+                    contactCity,
+                    contactState
+                }
+            });
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Failed to save contact:", error);
+        }
     };
 
     const handleCancel = () => {
@@ -399,6 +425,7 @@ function ContactInfoSection({ account }: { account: any }) {
         setContactPhone(account.contactPhone || "");
         setContactCity(account.contactCity || "");
         setContactState(account.contactState || "");
+        setPhoneError("");
         setIsEditing(false);
     };
 
@@ -449,9 +476,11 @@ function ContactInfoSection({ account }: { account: any }) {
                         </button>
                         <button
                             onClick={handleSave}
-                            className="px-4 py-2 bg-primary text-white border-2 border-black rounded-lg text-[9px] font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
+                            disabled={updateAccount.isPending}
+                            className="px-4 py-2 bg-primary text-white border-2 border-black rounded-lg text-[9px] font-black uppercase tracking-widest shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                         >
-                            COMMIT_CHANGES
+                            {updateAccount.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                            {updateAccount.isPending ? 'COMMITTING...' : 'COMMIT_CHANGES'}
                         </button>
                     </div>
                 )}
@@ -518,6 +547,16 @@ function ContactInfoSection({ account }: { account: any }) {
                             </div>
                         </div>
                     </div>
+
+                    {/* CSM info under dates */}
+                    <div className="mt-4 space-y-3">
+                        <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">CUSTOMER SUCCESS MANAGER</label>
+                        <div className="bg-white border-2 border-black rounded-lg p-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                            <span className="text-sm font-black text-foreground uppercase tracking-wide">
+                                {account.csm || "N/A"}
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="space-y-6">
@@ -525,12 +564,19 @@ function ContactInfoSection({ account }: { account: any }) {
                     <div className="space-y-3">
                         <label className="text-[9px] uppercase font-black text-gray-400 tracking-widest">PHONE NUMBER</label>
                         {isEditing ? (
-                            <input
-                                type="tel"
-                                value={contactPhone}
-                                onChange={(e) => setContactPhone(e.target.value)}
-                                className="w-2/3 px-4 py-2 bg-white border-2 border-black rounded-lg text-sm font-black text-foreground uppercase tracking-wide focus:outline-none focus:bg-primary/5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                            />
+                            <div className="space-y-1">
+                                <input
+                                    type="tel"
+                                    value={contactPhone}
+                                    onChange={(e) => {
+                                        setContactPhone(e.target.value);
+                                        if (phoneError) setPhoneError("");
+                                    }}
+                                    placeholder="+91 8208170566"
+                                    className={`w-full px-4 py-2 bg-white border-2 rounded-lg text-sm font-black text-foreground uppercase tracking-wide focus:outline-none focus:bg-primary/5 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${phoneError ? 'border-red-500' : 'border-black'}`}
+                                />
+                                {phoneError && <p className="text-[10px] font-bold text-red-500 uppercase">{phoneError}</p>}
+                            </div>
                         ) : (
                             <div className="bg-white border-2 border-black rounded-lg p-4 group shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
                                 <a

@@ -56,6 +56,25 @@ class MetricsConfig(BaseModel):
   healthScoreAtRiskBelowPercent: int = Field(50, ge=0, le=100, description="Health score below this % treated as at-risk")
 
 
+class EmailConfig(BaseModel):
+  """
+  Outbound email / SMTP configuration.
+
+  These values override environment variables when present. Leaving fields empty
+  keeps the current server configuration.
+  """
+
+  smtpHost: Optional[str] = Field(None, description="SMTP host, e.g. smtp.gmail.com")
+  smtpPort: Optional[int] = Field(None, ge=1, le=65535, description="SMTP port, e.g. 587")
+  smtpUsername: Optional[str] = Field(None, description="SMTP username / login, often the email address")
+  smtpPassword: Optional[str] = Field(
+    None,
+    description="SMTP password or app password. WARNING: stored in database; use an app-specific password.",
+  )
+  fromEmail: Optional[str] = Field(None, description="From email address shown to recipients")
+  fromName: Optional[str] = Field("Renewal & Upsell Advisor", description="From name shown to recipients")
+
+
 class PipelineFlowConfig(BaseModel):
   """
   Per–pipeline-stage action: what to send for each stage (email, call, both, or none).
@@ -77,6 +96,7 @@ class AppSettings(BaseModel):
   schedule: ScheduleConfig = ScheduleConfig()
   metrics: MetricsConfig = MetricsConfig()
   pipeline_flow: Optional[PipelineFlowConfig] = Field(default_factory=PipelineFlowConfig, description="Per-stage action for pipeline flow (email/call/both/none)")
+  email: Optional[EmailConfig] = Field(default_factory=EmailConfig, description="SMTP / email sending configuration")
 
 
 DEFAULT_SETTINGS = AppSettings()

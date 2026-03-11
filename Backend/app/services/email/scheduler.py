@@ -709,7 +709,10 @@ async def send_email_to_single_account(
     if not client:
         return {"success": False, "error": "Supabase not configured."}
     if not email_service.is_configured:
-        return {"success": False, "error": "Email service not configured."}
+        return {
+            "success": False,
+            "error": "Email service not configured. Please configure SMTP in Settings → Email & SMTP first.",
+        }
     try:
         if subject is not None and html_body is not None and text_body is not None:
             # Custom content: fetch account for recipient only (schema has primary_contact_*, csm_email; no contact_email/contact_name)

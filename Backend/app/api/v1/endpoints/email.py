@@ -25,7 +25,10 @@ router = APIRouter()
 async def send_test_email(to_email: str):
     """Send a test email to verify email configuration."""
     if not email_service.is_configured:
-        raise HTTPException(status_code=503, detail="Email service not configured. Set SMTP_USERNAME/SMTP_PASSWORD or SENDGRID_API_KEY")
+        raise HTTPException(
+            status_code=503,
+            detail="Email service not configured. Please open Settings → Email & SMTP in the UI and configure SMTP first.",
+        )
     
     subject = "Test Email - Renewal & Upsell Advisor"
     html_body = """

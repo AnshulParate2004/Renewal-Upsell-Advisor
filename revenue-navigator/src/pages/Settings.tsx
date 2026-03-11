@@ -41,6 +41,15 @@ export default function SettingsPage() {
     healthScoreAtRiskBelowPercent: 50,
   });
 
+  const [emailSettings, setEmailSettings] = useState({
+    smtpHost: "",
+    smtpPort: 587,
+    smtpUsername: "",
+    smtpPassword: "",
+    fromEmail: "",
+    fromName: "Renewal & Upsell Advisor",
+  });
+
   const [isDirty, setIsDirty] = useState(false);
 
   const toggleNotif = (key: keyof typeof notifications) =>
@@ -59,17 +68,31 @@ export default function SettingsPage() {
   // Hydrate metrics from backend. Only pipeline schedules run; no global call/email schedule in use.
   useEffect(() => {
     const metrics = appSettings?.metrics;
-    if (!metrics) return;
-    setMetricDefaults({
-      churnRiskThreshold: metrics.churnRiskThreshold ?? 30,
-      renewalTarget: metrics.renewalTarget ?? 90,
-      upsellPipelineTarget: metrics.upsellPipelineTarget ?? 100000,
-      renewalReminderAtCompletionPercent: metrics.renewalReminderAtCompletionPercent ?? 90,
-      highRiskScoreThresholdPercent: metrics.highRiskScoreThresholdPercent ?? 70,
-      churnProbabilityThresholdPercent: metrics.churnProbabilityThresholdPercent ?? 70,
-      minUsagePercentForCall: metrics.minUsagePercentForCall ?? 20,
-      healthScoreAtRiskBelowPercent: metrics.healthScoreAtRiskBelowPercent ?? 50,
-    });
+    if (metrics) {
+      setMetricDefaults({
+        churnRiskThreshold: metrics.churnRiskThreshold ?? 30,
+        renewalTarget: metrics.renewalTarget ?? 90,
+        upsellPipelineTarget: metrics.upsellPipelineTarget ?? 100000,
+        renewalReminderAtCompletionPercent: metrics.renewalReminderAtCompletionPercent ?? 90,
+        highRiskScoreThresholdPercent: metrics.highRiskScoreThresholdPercent ?? 70,
+        churnProbabilityThresholdPercent: metrics.churnProbabilityThresholdPercent ?? 70,
+        minUsagePercentForCall: metrics.minUsagePercentForCall ?? 20,
+        healthScoreAtRiskBelowPercent: metrics.healthScoreAtRiskBelowPercent ?? 50,
+      });
+    }
+
+    const emailCfg = appSettings?.email;
+    if (emailCfg) {
+      setEmailSettings({
+        smtpHost: emailCfg.smtpHost ?? "",
+        smtpPort: emailCfg.smtpPort ?? 587,
+        smtpUsername: emailCfg.smtpUsername ?? "",
+        smtpPassword: emailCfg.smtpPassword ?? "",
+        fromEmail: emailCfg.fromEmail ?? "",
+        fromName: emailCfg.fromName ?? "Renewal & Upsell Advisor",
+      });
+    }
+
     setIsDirty(false);
   }, [appSettings]);
 
@@ -96,6 +119,16 @@ export default function SettingsPage() {
           churnProbabilityThresholdPercent: metricDefaults.churnProbabilityThresholdPercent,
           minUsagePercentForCall: metricDefaults.minUsagePercentForCall,
           healthScoreAtRiskBelowPercent: metricDefaults.healthScoreAtRiskBelowPercent,
+          callMilestonePercents: appSettings?.metrics?.callMilestonePercents ?? [],
+          emailMilestonePercents: appSettings?.metrics?.emailMilestonePercents ?? [],
+        },
+        email: {
+          smtpHost: emailSettings.smtpHost || undefined,
+          smtpPort: emailSettings.smtpPort || undefined,
+          smtpUsername: emailSettings.smtpUsername || undefined,
+          smtpPassword: emailSettings.smtpPassword || undefined,
+          fromEmail: emailSettings.fromEmail || undefined,
+          fromName: emailSettings.fromName || undefined,
         },
       });
       setIsDirty(false);
@@ -142,7 +175,7 @@ export default function SettingsPage() {
 
       <div className="p-6 max-w-[1200px] mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left Col: Integrations */}
+          {/* Left Col: Integrations + Email */}
           <div className="lg:col-span-8 space-y-5">
             <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <div className="px-5 py-3.5 border-b-2 border-black flex items-center justify-between">
@@ -217,6 +250,103 @@ export default function SettingsPage() {
                     />
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Email / SMTP settings */}
+            <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
+                <ShieldCheck size={15} className="text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Email & SMTP</h3>
+              </div>
+              <div className="p-4 space-y-3 text-xs">
+                <p className="text-[11px] text-muted-foreground">
+                  Configure how emails are sent. Use an app password from your email provider (Gmail, Outlook, Zoho, etc.).
+                  These values override any SMTP settings from the server&apos;s environment.
+                </p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-medium text-foreground">SMTP Host</Label>
+                    <input
+                      type="text"
+                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      placeholder="e.g. smtp.gmail.com"
+                      value={emailSettings.smtpHost}
+                      onChange={(e) => {
+                        setEmailSettings((prev) => ({ ...prev, smtpHost: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-foreground">Port</Label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={65535}
+                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                        value={emailSettings.smtpPort}
+                        onChange={(e) => {
+                          const v = Number(e.target.value);
+                          setEmailSettings((prev) => ({ ...prev, smtpPort: isNaN(v) ? 587 : v }));
+                          setIsDirty(true);
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-medium text-foreground">SMTP Username</Label>
+                      <input
+                        type="text"
+                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                        placeholder="Login / email address"
+                        value={emailSettings.smtpUsername}
+                        onChange={(e) => {
+                          setEmailSettings((prev) => ({ ...prev, smtpUsername: e.target.value }));
+                          setIsDirty(true);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-medium text-foreground">SMTP Password / App Password</Label>
+                    <input
+                      type="password"
+                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      placeholder="Use provider app password, not your login password"
+                      value={emailSettings.smtpPassword}
+                      onChange={(e) => {
+                        setEmailSettings((prev) => ({ ...prev, smtpPassword: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-medium text-foreground">From Email</Label>
+                    <input
+                      type="email"
+                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      placeholder="notifications@yourdomain.com"
+                      value={emailSettings.fromEmail}
+                      onChange={(e) => {
+                        setEmailSettings((prev) => ({ ...prev, fromEmail: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-medium text-foreground">From Name</Label>
+                    <input
+                      type="text"
+                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      value={emailSettings.fromName}
+                      onChange={(e) => {
+                        setEmailSettings((prev) => ({ ...prev, fromName: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
