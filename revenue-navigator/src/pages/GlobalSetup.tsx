@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Zap, Mail, ArrowRight, Phone, ShieldCheck, Settings2, Globe, Server, Key, User } from "lucide-react";
 import { useAppSettings, useUpdateAppSettings } from "@/hooks/useSettings";
 import { accountsApi } from "@/lib/api/accounts";
@@ -235,7 +235,26 @@ export default function GlobalSetup() {
                         </button>
                     </form>
 
+                    {/* Documentation Link */}
                     <div className="mt-8 pt-6 border-t border-black flex flex-col items-center justify-center gap-4">
+                        <Link 
+                            to="/setup/guide"
+                            className="w-full flex items-center justify-between p-4 bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/40 rounded-lg transition-colors group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white rounded-md border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] group-hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] group-hover:translate-x-[1px] group-hover:translate-y-[1px] transition-all">
+                                    <ShieldCheck className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-black text-black uppercase tracking-wider">Configuration Guide</h4>
+                                    <p className="text-[10px] text-foreground/60 uppercase tracking-widest mt-0.5">Need help setting up?</p>
+                                </div>
+                            </div>
+                            <ArrowRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                    </div>
+
+                    <div className="mt-6 flex flex-col items-center justify-center gap-4">
                         <div className="flex items-center gap-2">
                             <ShieldCheck size={14} className="text-primary" />
                             <p className="text-[10px] font-black text-foreground/60 uppercase tracking-widest">RSA_4096_GCM: SYSTEM_READY</p>

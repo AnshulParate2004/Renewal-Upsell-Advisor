@@ -22,6 +22,7 @@ import SettingsPage from "./pages/Settings";
 import ManualTriggersPage from "./pages/ManualTriggers";
 import AccountDetailPage from "./pages/AccountDetailPage";
 import GlobalSetup from "./pages/GlobalSetup";
+import SetupGuide from "./pages/SetupGuide";
 import NotFound from "./pages/NotFound";
 import "./styles/animations.css";
 import { RevenueProvider } from "@/contexts/RevenueContext";
@@ -48,6 +49,7 @@ const App = () => (
               {/* App Routes (Protected) */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/setup" element={<GlobalSetup />} />
+                <Route path="/setup/guide" element={<SetupGuide />} />
                 <Route path="/app" element={<AppLayout />}>
                   <Route index element={<Dashboard />} />
                   <Route path="accounts" element={<Accounts />} />
