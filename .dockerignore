@@ -1,0 +1,41 @@
+# Version control
+.git
+.gitignore
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.sqlite3
+
+# Environments
+.venv
+venv/
+env/
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# OS / misc
+.DS_Store
+Thumbs.db
+
+# Local configuration & secrets
+.env
+.env.*
+
+# Data, notebooks, research artifacts
+Research/
+docs/
+*.ipynb
+
+# Frontend (deployed separately)
+revenue-navigator/
+
+# Lock / project files (image uses requirements.txt only)
+Backend/uv.lock
+Backend/pyproject.toml
+
