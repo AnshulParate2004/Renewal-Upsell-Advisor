@@ -65,14 +65,13 @@ export function AppSidebar() {
       <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path ||
-            (item.path === "/app" && location.pathname === "/app") ||
-            (item.path === "/demo" && location.pathname === "/demo");
+            (item.path === "/app" && location.pathname === "/app");
 
           return (
             <NavLink
               key={item.path}
               to={item.path}
-              end={item.path === "/app" || item.path === "/demo"}
+              end={item.path === "/app"}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium rounded-lg transition-all border-2 border-transparent",
                 collapsed && "justify-center px-0 py-2.5",

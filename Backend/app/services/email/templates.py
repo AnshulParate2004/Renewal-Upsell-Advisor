@@ -646,3 +646,140 @@ This is an automated email. Please do not reply directly to this message.
     """
     
     return subject, html_body, text_body
+
+
+def get_churn_discount_template(account: Dict[str, Any], discount_percentage: int = 20) -> tuple[str, str, str]:
+    """
+    Generate churn win-back discount email template.
+    
+    Args:
+        account: Account data dictionary
+        discount_percentage: The integer percentage discount to offer (e.g. 20)
+        
+    Returns:
+        Tuple of (subject, html_body, text_body)
+    """
+    account_name = account.get("name", "Valued Customer")
+    csm_name = account.get("csm_name", "Your Customer Success Manager")
+    csm_email = account.get("csm_email", "")
+    
+    subject = f"We miss you, {account_name} - Special Offer Inside"
+    
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+            }}
+            .header {{
+                background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+                color: white;
+                padding: 30px;
+                text-align: center;
+                border-radius: 10px 10px 0 0;
+            }}
+            .content {{
+                background: #f9f9f9;
+                padding: 30px;
+                border-radius: 0 0 10px 10px;
+            }}
+            .highlight {{
+                background: #e6fffa;
+                padding: 20px;
+                border-left: 4px solid #38ef7d;
+                margin: 20px 0;
+                text-align: center;
+                font-size: 18px;
+            }}
+            .button {{
+                display: inline-block;
+                padding: 14px 35px;
+                background: #11998e;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+                margin: 20px 0;
+                font-weight: bold;
+            }}
+            .footer {{
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #ddd;
+                font-size: 12px;
+                color: #666;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Come back to {account_name}'s Platform!</h1>
+        </div>
+        <div class="content">
+            <p>Hi {account_name} Team,</p>
+            
+            <p>We've noticed you recently left us, and we already miss you. We understand that business needs change, but we would love the opportunity to win you back and show you what you're missing.</p>
+            
+            <div class="highlight">
+                <p><strong>Exclusive Reactivation Offer</strong></p>
+                <p>Get <strong style="color: #11998e; font-size: 24px;">{discount_percentage}% OFF</strong> your next 12 months if you reactivate your subscription.</p>
+            </div>
+            
+            <p>Since you left, we have launched new features and improvements that we believe can significantly help your revenue operations. Let's get on a quick call to re-assess your needs.</p>
+            
+            <p style="text-align: center;">
+                <a href="#" class="button">Claim My Discount</a>
+            </p>
+            
+            <p>Your previous dedicated Customer Success Manager is ready to assist and apply the discount to your account manually:</p>
+            
+            <p>
+                <strong>{csm_name}</strong><br>
+                {f'Email: <a href="mailto:{csm_email}">{csm_email}</a>' if csm_email else ''}
+            </p>
+            
+            <p>We hope to see you again soon!</p>
+            
+            <p>Best regards,<br>
+            Renewal & Upsell Advisor Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated email. Please do not reply directly to this message.</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    text_body = f"""
+We miss you, {account_name} - Special Offer Inside
+
+Hi {account_name} Team,
+
+We've noticed you recently left us, and we already miss you. We understand that business needs change, but we would love the opportunity to win you back and show you what you're missing.
+
+Exclusive Reactivation Offer
+Get {discount_percentage}% OFF your next 12 months if you reactivate your subscription.
+
+Since you left, we have launched new features and improvements that we believe can significantly help your revenue operations. Let's get on a quick call to re-assess your needs.
+
+Your previous dedicated Customer Success Manager is ready to assist and apply the discount:
+{csm_name}
+{f'Email: {csm_email}' if csm_email else ''}
+
+We hope to see you again soon!
+
+Best regards,
+Renewal & Upsell Advisor Team
+
+---
+This is an automated email. Please do not reply directly to this message.
+    """
+    
+    return subject, html_body, text_body

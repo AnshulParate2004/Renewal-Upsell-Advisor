@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Zap, Mail, ArrowRight, Phone, ShieldCheck, Settings2, Globe, Server, Key, User } from "lucide-react";
+import { Zap, Mail, ArrowRight, Phone, ShieldCheck, Settings2, Globe, Server, Key, User, AlertTriangle, LogOut } from "lucide-react";
 import { useAppSettings, useUpdateAppSettings } from "@/hooks/useSettings";
 import { accountsApi } from "@/lib/api/accounts";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function GlobalSetup() {
     const [globalPhone, setGlobalPhone] = useState("+91 1234567890");
@@ -16,18 +17,12 @@ export default function GlobalSetup() {
     
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { logout } = useAuth();
     const updateSettings = useUpdateAppSettings();
     const { data: appSettings } = useAppSettings();
 
-    // Prefill from appSettings if they exist
-    useEffect(() => {
-        if (appSettings?.email) {
-            if (appSettings.email.smtpHost) setSmtpHost(appSettings.email.smtpHost);
-            if (appSettings.email.smtpPort) setSmtpPort(appSettings.email.smtpPort.toString());
-            if (appSettings.email.smtpUsername) setGlobalEmail(appSettings.email.smtpUsername);
-            if (appSettings.email.smtpPassword) setSmtpPassword(appSettings.email.smtpPassword);
-        }
-    }, [appSettings]);
+    // NOTE: Form intentionally starts blank on every login.
+    // Credentials are stored in Supabase but never shown to the next user.
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,6 +49,7 @@ export default function GlobalSetup() {
             if (appSettings) {
                 await updateSettings.mutateAsync({
                     ...appSettings,
+                    automation_paused: false,
                     email: {
                         ...appSettings.email,
                         smtpHost: smtpHost || undefined,
@@ -82,11 +78,40 @@ export default function GlobalSetup() {
         }
     };
 
+    const handleClearConfiguration = async () => {
+        setIsLoading(true);
+        try {
+            if (appSettings) {
+                // Soft-disable: credentials stay in DB, automation is just paused
+                await updateSettings.mutateAsync({
+                    ...appSettings,
+                    automation_paused: true,
+                });
+            }
+            toast({
+                title: "SESSION_ENDED",
+                description: "Automation paused. Your credentials remain stored securely in the database.",
+            });
+            logout();
+            navigate("/");
+        } catch (error) {
+            console.error("Failed to pause automation:", error);
+            toast({
+                title: "LOGOUT_FAILED",
+                description: "Unable to pause automation. Try again.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <div
             className="min-h-screen bg-white flex items-center justify-center p-4 overflow-hidden"
             style={{
                 backgroundImage: `
+        <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 md:p-8 font-sans relative overflow-hidden">
                     linear-gradient(to right, rgba(0,0,0,0.4) 1px, transparent 1px),
                     linear-gradient(to bottom, rgba(0,0,0,0.4) 1px, transparent 1px)
                 `,
@@ -108,6 +133,22 @@ export default function GlobalSetup() {
                     <h1 className="text-4xl font-black text-black uppercase tracking-tight mb-2">GLOBAL_SYNC_PROTOCOL</h1>
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-black bg-black text-white border-2 border-black rounded-md uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,0.5)]">
                         STATUS: AWAITING_SYNCHRONIZATION
+                    </div>
+                </div>
+
+                {/* Important Warning Alert */}
+                <div className="mb-6 border-2 border-amber-500 bg-amber-50 rounded-lg p-4 shadow-[4px_4px_0px_0px_rgba(245,158,11,1)]">
+                    <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <h3 className="text-xs font-black text-amber-800 uppercase tracking-widest mb-1">
+                                CRITICAL WARNING: AUTOMATED PIPELINES ACTIVE
+                            </h3>
+                            <p className="text-xs text-amber-700 font-bold leading-relaxed">
+                                This bot will <strong>store your information</strong> and initiate <strong>automated phone calls</strong> and <strong>automated emails</strong> using these credentials.
+                                Be sure to <strong>clear your configuration and log out</strong> after usage to prevent unauthorized background activity.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
@@ -151,7 +192,7 @@ export default function GlobalSetup() {
                                                 if (phoneError) setPhoneError("");
                                             }}
                                             placeholder="+91 1234567890"
-                                            className={`w-full pl-12 pr-4 py-4 bg-white border rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all uppercase ${phoneError ? 'border-red-500' : 'border-black'}`}
+                                            className={`w-full pl-12 pr-4 py-4 bg-white border rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all uppercase ${phoneError ? "border-red-500" : "border-black"}`}
                                             required
                                         />
                                         {phoneError && <p className="mt-1 text-[10px] font-bold text-red-500 uppercase">{phoneError}</p>}
@@ -220,19 +261,32 @@ export default function GlobalSetup() {
                             </div>
                         </div>
 
-                        {/* Initialize Button */}
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className={`w-full px-6 py-5 bg-black text-white border border-black rounded-lg flex items-center justify-center gap-3 text-lg font-black uppercase tracking-wider hover:shadow-md transition-all group ${isLoading ? 'opacity-70 cursor-wait' : ''}`}
-                        >
-                            {isLoading ? 'SYNCHRONIZING_RECORDS...' : (
-                                <>
-                                    INITIALIZE_SYSTEM_LOAD
-                                    <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
-                                </>
-                            )}
-                        </button>
+                        <div className="flex gap-4">
+                            {/* Initialize Button */}
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className={`flex-1 px-6 py-5 bg-black text-white border border-black rounded-lg flex items-center justify-center gap-3 text-lg font-black uppercase tracking-wider hover:shadow-md transition-all group ${isLoading ? "opacity-70 cursor-wait" : ""}`}
+                            >
+                                {isLoading ? "SYNCHRONIZING_RECORDS..." : (
+                                    <>
+                                        INITIALIZE_SYSTEM_LOAD
+                                        <ArrowRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
+                                    </>
+                                )}
+                            </button>
+
+                            {/* Clear Config / Logout Button */}
+                            <button
+                                type="button"
+                                onClick={handleClearConfiguration}
+                                disabled={isLoading}
+                                className="px-6 py-5 bg-white text-red-600 border-2 border-red-600 flex items-center justify-center gap-2 rounded-lg font-black uppercase tracking-widest hover:bg-red-50 hover:shadow-[4px_4px_0px_0px_rgba(220,38,38,0.5)] transition-all"
+                                title="CLEAR CONFIGURATION &amp; LOGOUT"
+                            >
+                                <LogOut className="w-6 h-6" />
+                            </button>
+                        </div>
                     </form>
 
                     {/* Documentation Link */}

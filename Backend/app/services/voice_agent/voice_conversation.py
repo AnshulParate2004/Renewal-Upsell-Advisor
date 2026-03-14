@@ -187,7 +187,7 @@ Guidelines:
 - Address customer concerns immediately
 - If discussing renewal, be helpful but not pushy
 - If customer mentions issues, offer solutions
-- End calls politely if customer is busy
+- If the customer says they are busy or cannot talk right now, ALWAYS ask: "I completely understand. When would be a better time to call you back today or tomorrow?"
 - Sound natural and conversational
 
 Previous conversation:
@@ -261,6 +261,41 @@ Your response:"""
         
         return 'completed'
 
+    def extract_callback_time(self, user_input: str, timezone_offset: str = "UTC") -> Optional[str]:
+        """
+        Extract a specific callback time from the user's spoken input.
+        Returns an ISO-8601 UTC datetime string if a time is found, else None.
+        """
+        llm = get_langchain_llm()
+        if not llm:
+            return None
+            
+        try:
+            now_iso = datetime.now().astimezone().isoformat()
+            
+            system_template = f"""You are a datetime extraction tool. 
+Current time is {now_iso} (Timezone: {timezone_offset}).
+
+If the user mentions a specific time to call back (e.g. "tomorrow at 3 PM", "in an hour", "next week Monday morning"), calculate that exact datetime in UTC and output ONLY the ISO-8601 string (e.g. 2026-03-15T15:00:00Z).
+If the user DOES NOT mention a specific time or is too vague (e.g. "later", "busy right now"), output exactly: NONE.
+Do not output any conversational text. ONLY output the ISO string or NONE."""
+
+            human_template = "User input: {user_input}"
+            
+            prompt = ChatPromptTemplate.from_messages([
+                SystemMessagePromptTemplate.from_template(system_template),
+                HumanMessagePromptTemplate.from_template(human_template)
+            ])
+            
+            chain = prompt | llm | StrOutputParser()
+            result = chain.invoke({"user_input": user_input}).strip()
+            
+            if result == "NONE" or not result:
+                return None
+            return result
+        except Exception as e:
+            logger.error(f"Failed to extract callback time: {e}")
+            return None
 
 # Global instance
 voice_conversation_handler = VoiceConversationHandler()

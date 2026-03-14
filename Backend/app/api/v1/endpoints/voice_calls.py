@@ -570,11 +570,13 @@ async def handle_input(
         # Calculate usage percentage
         usage_percentage = calculate_plan_completion_percentage(account)
         call_type = call_data.get("call_type", "check_in")
+        should_end = False
         
         # When user didn't say or press anything (timeout), prompt again so the call doesn't drop
         if not (user_input and user_input.strip()):
             logger.info("No input received (timeout); prompting user to press 1 or 2")
             response = "We didn't catch that. To continue, press 1. To end the call, press 2."
+            updated_transcript = f"{transcript}\nAgent: {response}"
         else:
             # Generate response
             logger.info(f"Generating response for user input: {user_input[:50]}...")
@@ -591,12 +593,22 @@ async def handle_input(
             except Exception as resp_error:
                 logger.error(f"Error generating response: {resp_error}", exc_info=True)
                 response = "I understand. Is there anything else I can help you with regarding your contract renewal?"
+            
+            updated_transcript = f"{transcript}\nUser: {user_input}\nAgent: {response}"
+                
+            # Basic intent check to end call
+            if any(word in user_input.lower() for word in ['goodbye', 'bye', 'hang up', 'stop']):
+                should_end = True
         
-        # Update transcript
-        updated_transcript = f"{transcript}\nUser: {user_input}\nAgent: {response}"
-        
-        # Check if call should end (user says goodbye, etc.)
-        should_end = any(word in user_input.lower() for word in ['goodbye', 'bye', 'thank you', 'no', 'not interested'])
+        # Check if user asked to reschedule
+        callback_time_iso = None
+        if user_input and not should_end:
+            extracted_time = voice_conversation_handler.extract_callback_time(user_input)
+            if extracted_time:
+                callback_time_iso = extracted_time
+                should_end = True
+                response = "Perfect, I have noted that time down and will call you back then. Have a wonderful day!"
+                updated_transcript = f"{transcript}\nUser: {user_input}\nAgent: {response}"
         
         if should_end:
             # Determine call outcome
@@ -604,6 +616,8 @@ async def handle_input(
                 updated_transcript,
                 usage_percentage
             )
+            if callback_time_iso:
+                outcome = "callback_requested"
             
             # Perform sentiment analysis
             sentiment_data = sentiment_analyzer.analyze_sentiment(updated_transcript)
@@ -623,7 +637,7 @@ async def handle_input(
                     "completed_at": completed_at,
                     "outcome": outcome,
                     "metadata": {
-                        **call_data.get("metadata", {}),
+                        **(call_data.get("metadata") or {}),
                         "usage_percentage": usage_percentage,
                         "sentiment_score": sentiment_data["sentiment_score"],
                         "sentiment_category": sentiment_data["sentiment_category"],
@@ -632,7 +646,6 @@ async def handle_input(
                     }
                 }).eq("id", call_id).execute()
                 
-                # Store sentiment analysis in sentiment_analysis table
                 sentiment_result = client.table("sentiment_analysis").insert({
                     "account_id": account_id,
                     "analysis_date": datetime.now(timezone.utc).date().isoformat(),
@@ -642,6 +655,20 @@ async def handle_input(
                     "text_analyzed": updated_transcript,
                     "keywords": sentiment_data["keywords"]
                 }).execute()
+                
+                # If a callback was requested and parsed, schedule it
+                if callback_time_iso:
+                    client.table("voice_calls").insert({
+                        "account_id": account_id,
+                        "call_type": "reschedule",
+                        "status": "scheduled",
+                        "scheduled_at": callback_time_iso,
+                        "metadata": {
+                            "original_call_id": call_id,
+                            "reason": "User requested callback"
+                        }
+                    }).execute()
+                    logger.info(f"Scheduled callback for {account_id} at {callback_time_iso}")
                 
                 sentiment_analysis_id = sentiment_result.data[0]["id"] if sentiment_result.data else None
                 
@@ -690,7 +717,7 @@ async def handle_input(
                 client.table("voice_calls").update({
                     "transcript": updated_transcript,
                     "metadata": {
-                        **call_data.get("metadata", {}),
+                        **(call_data.get("metadata") or {}),
                         "last_updated": datetime.now(timezone.utc).isoformat(),
                         "conversation_turns": len([line for line in updated_transcript.split('\n') if line.strip()])
                     }
@@ -880,19 +907,58 @@ async def trigger_calls():
         return {"status": "error", "message": str(e)}
 
 
+from pydantic import BaseModel
+
+class TriggerAccountCallRequest(BaseModel):
+    account_id: str
+    purpose: Optional[str] = None
+
 @router.post("/trigger-call-to-account")
-async def trigger_call_to_account(body: dict):
+async def trigger_call_to_account(request: TriggerAccountCallRequest):
     """
     Manually trigger a voice call to a single account.
-    Body: {"account_id": "<uuid>", "purpose": "optional reason for the call"}.
     """
     from app.services.voice_agent.voice_call_scheduler import trigger_voice_call_for_account
 
-    account_id = body.get("account_id") if isinstance(body, dict) else None
-    purpose = (body.get("purpose") or "").strip() or None if isinstance(body, dict) else None
-    if not account_id:
-        raise HTTPException(status_code=400, detail="account_id is required")
-    result = await trigger_voice_call_for_account(account_id, purpose=purpose)
+    result = await trigger_voice_call_for_account(request.account_id, purpose=request.purpose)
     if result.get("success"):
         return {"status": "success", "message": result.get("message"), "call_sid": result.get("call_sid")}
     raise HTTPException(status_code=400, detail=result.get("error", "Failed to trigger call"))
+
+@router.post("/recording-status")
+async def recording_status(
+    request: Request,
+    RecordingSid: Optional[str] = Form(None),
+    RecordingUrl: Optional[str] = Form(None),
+    CallSid: Optional[str] = Form(None)
+):
+    """
+    Handle completed call recordings from Twilio.
+    """
+    try:
+        if RecordingUrl and CallSid:
+            logger.info(f"Received recording for CallSid: {CallSid}. URL: {RecordingUrl}")
+            
+            # Update the Supabase voice_calls record with this URL
+            client = get_supabase_client()
+            if client:
+                call_result = client.table("voice_calls").select("id, metadata").eq(
+                    "metadata->>twilio_call_sid", CallSid
+                ).execute()
+
+                if call_result.data:
+                    call_id = call_result.data[0]["id"]
+                    existing_metadata = call_result.data[0].get("metadata") or {}
+                    
+                    client.table("voice_calls").update({
+                        "metadata": {
+                            **existing_metadata,
+                            "recording_url": RecordingUrl,
+                            "recording_sid": RecordingSid
+                        }
+                    }).eq("id", call_id).execute()
+                    
+    except Exception as e:
+        logger.error(f"Error handling recording status: {e}")
+        
+    return {"status": "ok"}

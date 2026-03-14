@@ -352,16 +352,6 @@ export default function Features() {
                 >
                   <Link to="/pricing">View Pricing</Link>
                 </Button>
-                <Button
-                  variant="outline"
-                  asChild
-                  className="border-2 border-black"
-                >
-                  <Link to="/demo">
-                    <Phone className="w-4 h-4 mr-2" />
-                    Try Demo
-                  </Link>
-                </Button>
               </div>
             </Card>
           </div>

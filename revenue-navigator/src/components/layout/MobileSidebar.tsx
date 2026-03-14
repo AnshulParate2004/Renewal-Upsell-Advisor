@@ -78,7 +78,7 @@ export function MobileSidebar() {
                   <NavLink
                     key={item.path}
                     to={item.path}
-                    end={item.path === "/app" || item.path === "/demo"}
+                    end={item.path === "/app"}
                     onClick={() => setIsOpen(false)}
                     className={({ isActive }) => cn(
                       "flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-muted-foreground rounded-xl transition-all hover:bg-muted hover:text-foreground border-[0.5px] border-black",

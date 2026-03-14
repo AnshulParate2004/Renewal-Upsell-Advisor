@@ -16,6 +16,7 @@ from app.services.email.templates import (
     get_upsell_opportunity_template,
     get_churn_prevention_template,
     get_wellness_check_template,
+    get_churn_discount_template,
 )
 from app.services.email.llm_personalization import personalize_email_content
 import os
@@ -143,8 +144,8 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
         return
     
     try:
-        # Get all active accounts
-        accounts_result = client.table("accounts").select("*").eq("status", "active").execute()
+        # Get all active and churned accounts
+        accounts_result = client.table("accounts").select("*").in_("status", ["active", "churned"]).execute()
         accounts = accounts_result.data if accounts_result.data else []
         
         if not accounts:
@@ -187,9 +188,10 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                 account_name = account.get("name", "Unknown")
                 
                 # Check last email sent for this account from Supabase email_campaigns table
+                # We do not filter by "sent" anymore so we can see if the last attempt was a "failed" attempt
                 email_campaigns_result = client.table("email_campaigns").select(
                     "sent_at, campaign_type, status"
-                ).eq("account_id", account_id).eq("status", "sent").order("sent_at", desc=True).limit(1).execute()
+                ).eq("account_id", account_id).order("sent_at", desc=True).limit(1).execute()
                 
                 last_email_sent = None
                 should_send = False
@@ -197,6 +199,7 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                 if email_campaigns_result.data and len(email_campaigns_result.data) > 0:
                     last_email_data = email_campaigns_result.data[0]
                     last_email_sent_str = last_email_data.get("sent_at")
+                    last_email_status = last_email_data.get("status", "").lower()
                     
                     if last_email_sent_str:
                         try:
@@ -219,19 +222,28 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                             
                             days_since_email = (current_time - last_email_sent).days
                             
-                            # Only send if N or more days have passed
-                            if days_since_email >= interval_days:
+                            # Determine allowed interval
+                            full_config = _get_app_settings_config(client)
+                            notifications = full_config.get("notifications") or {}
+                            failed_calls_enabled = notifications.get("failedCalls", True)
+                            
+                            allowed_interval = interval_days
+                            if last_email_status == "failed" and failed_calls_enabled:
+                                allowed_interval = 1 # Allow retry after 1 day if it failed
+                                
+                            # Only send if enough days have passed
+                            if days_since_email >= allowed_interval:
                                 should_send = True
                                 logger.info(
                                     f"Account {account_name}: Last email sent {days_since_email} days ago. "
-                                    f"Threshold is {interval_days} days. Will send email."
+                                    f"Threshold is {allowed_interval} days. Will send email."
                                 )
                             else:
                                 should_send = False
                                 skipped_count += 1
                                 logger.debug(
                                     f"Account {account_name}: Last email sent {days_since_email} days ago. "
-                                    f"Skipping (need {interval_days} days)."
+                                    f"Skipping (need {allowed_interval} days)."
                                 )
                         except Exception as e:
                             logger.warning(f"Error parsing last email date for account {account_name}: {e}. Will send email.")
@@ -359,7 +371,10 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                 
                 # Generate base email content from templates
                 opportunity = None
-                if email_type == "upsell" and has_upsell_opportunity:
+                if email_type == "churn_discount":
+                    discount_percentage = app_settings.metrics.get("churnDiscountPercentage", 20)
+                    base_subject, base_html_body, base_text_body = get_churn_discount_template(account, discount_percentage)
+                elif email_type == "upsell" and has_upsell_opportunity:
                     opportunity = opportunities_result.data[0]
                     base_subject, base_html_body, base_text_body = get_upsell_opportunity_template(account, opportunity)
                 elif email_type == "churn_prevention":

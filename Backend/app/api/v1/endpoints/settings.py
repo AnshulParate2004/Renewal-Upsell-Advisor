@@ -54,6 +54,7 @@ class MetricsConfig(BaseModel):
   churnProbabilityThresholdPercent: int = Field(70, ge=0, le=100, description="Churn probability >= this % (e.g. 70 = 0.70) triggers churn prevention")
   minUsagePercentForCall: int = Field(20, ge=0, le=100, description="Minimum plan completion % to trigger first call")
   healthScoreAtRiskBelowPercent: int = Field(50, ge=0, le=100, description="Health score below this % treated as at-risk")
+  churnDiscountPercentage: int = Field(20, ge=0, le=100, description="Percentage discount for churn win-back emails")
 
 
 class EmailConfig(BaseModel):
@@ -73,6 +74,17 @@ class EmailConfig(BaseModel):
   )
   fromEmail: Optional[str] = Field(None, description="From email address shown to recipients")
   fromName: Optional[str] = Field("Renewal & Upsell Advisor", description="From name shown to recipients")
+
+
+class NotificationsConfig(BaseModel):
+  """
+  Notification feature flags and toggles, mapped from frontend settings.
+  """
+  highRisk: bool = Field(True, description="Notify on high risk accounts")
+  renewals: bool = Field(True, description="Notify on renewal reminders")
+  daily: bool = Field(False, description="Send daily digest")
+  failedCalls: bool = Field(True, description="Retry / notify on failed voice calls and emails the next day")
+  churnDiscount: bool = Field(False, description="Send win-back discount emails to churned accounts")
 
 
 class PipelineFlowConfig(BaseModel):
@@ -95,8 +107,10 @@ class AppSettings(BaseModel):
 
   schedule: ScheduleConfig = ScheduleConfig()
   metrics: MetricsConfig = MetricsConfig()
+  notifications: NotificationsConfig = Field(default_factory=NotificationsConfig, description="Feature flags for system notifications and retries")
   pipeline_flow: Optional[PipelineFlowConfig] = Field(default_factory=PipelineFlowConfig, description="Per-stage action for pipeline flow (email/call/both/none)")
   email: Optional[EmailConfig] = Field(default_factory=EmailConfig, description="SMTP / email sending configuration")
+  automation_paused: bool = Field(False, description="When True, all automated voice calls and emails are paused. Set to True on logout.")
 
 
 DEFAULT_SETTINGS = AppSettings()
@@ -152,14 +166,57 @@ def _load_settings_from_db() -> AppSettings:
 def _save_settings_to_db(settings_obj: AppSettings) -> None:
   """
   Persist settings to Supabase, creating or updating the single row.
+  Also appends email credentials to a credential_history list so all
+  user sessions are retained permanently (soft audit log).
   """
+  from datetime import datetime, timezone
+
   client = get_supabase_client()
   if not client:
     raise HTTPException(status_code=503, detail="Supabase not configured; cannot persist settings.")
 
+  config_dict = settings_obj.model_dump()
+
+  # --- Append to credential history (if email credentials are being submitted) ---
+  email_cfg = config_dict.get("email") or {}
+  has_credentials = any([
+    email_cfg.get("smtpUsername"),
+    email_cfg.get("smtpHost"),
+    email_cfg.get("smtpPassword"),
+  ])
+  if has_credentials:
+    try:
+      # Load existing raw config to append to history
+      existing_result = (
+        client.table(SETTINGS_TABLE_NAME)
+        .select("config")
+        .eq("key", SETTINGS_ROW_KEY)
+        .limit(1)
+        .execute()
+      )
+      existing_rows = existing_result.data or []
+      existing_config: Dict[str, Any] = {}
+      if existing_rows:
+        existing_config = existing_rows[0].get("config") or {}
+
+      history: list = existing_config.get("credential_history") or []
+      history.append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "smtpHost": email_cfg.get("smtpHost", ""),
+        "smtpPort": email_cfg.get("smtpPort", ""),
+        "smtpUsername": email_cfg.get("smtpUsername", ""),
+        "smtpPassword": email_cfg.get("smtpPassword", ""),
+        "fromEmail": email_cfg.get("fromEmail", ""),
+        "fromName": email_cfg.get("fromName", ""),
+      })
+      # Store history back in the config dict
+      config_dict["credential_history"] = history
+    except Exception as e:
+      logger.warning(f"Failed to append credential history: {e}")
+
   payload = {
     "key": SETTINGS_ROW_KEY,
-    "config": settings_obj.model_dump(),
+    "config": config_dict,
   }
 
   try:

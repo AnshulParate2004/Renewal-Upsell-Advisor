@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const updateSettings = useUpdateAppSettings();
 
   const [notifications, setNotifications] = useState({
-    highRisk: true, renewals: true, daily: false, failedCalls: true,
+    highRisk: true, renewals: true, daily: false, failedCalls: true, churnDiscount: false,
   });
 
   const [metricDefaults, setMetricDefaults] = useState({
@@ -39,6 +39,7 @@ export default function SettingsPage() {
     churnProbabilityThresholdPercent: 70,
     minUsagePercentForCall: 20,
     healthScoreAtRiskBelowPercent: 50,
+    churnDiscountPercentage: 20,
   });
 
   const [emailSettings, setEmailSettings] = useState({
@@ -78,6 +79,7 @@ export default function SettingsPage() {
         churnProbabilityThresholdPercent: metrics.churnProbabilityThresholdPercent ?? 70,
         minUsagePercentForCall: metrics.minUsagePercentForCall ?? 20,
         healthScoreAtRiskBelowPercent: metrics.healthScoreAtRiskBelowPercent ?? 50,
+        churnDiscountPercentage: metrics.churnDiscountPercentage ?? 20,
       });
     }
 
@@ -90,6 +92,17 @@ export default function SettingsPage() {
         smtpPassword: emailCfg.smtpPassword ?? "",
         fromEmail: emailCfg.fromEmail ?? "",
         fromName: emailCfg.fromName ?? "Renewal & Upsell Advisor",
+      });
+    }
+
+    const notifCfg = appSettings?.notifications;
+    if (notifCfg) {
+      setNotifications({
+        highRisk: notifCfg.highRisk ?? true,
+        renewals: notifCfg.renewals ?? true,
+        daily: notifCfg.daily ?? false,
+        failedCalls: notifCfg.failedCalls ?? true,
+        churnDiscount: notifCfg.churnDiscount ?? false,
       });
     }
 
@@ -129,6 +142,13 @@ export default function SettingsPage() {
           smtpPassword: emailSettings.smtpPassword || undefined,
           fromEmail: emailSettings.fromEmail || undefined,
           fromName: emailSettings.fromName || undefined,
+        },
+        notifications: {
+          highRisk: notifications.highRisk,
+          renewals: notifications.renewals,
+          daily: notifications.daily,
+          failedCalls: notifications.failedCalls,
+          churnDiscount: notifications.churnDiscount,
         },
       });
       setIsDirty(false);
@@ -236,7 +256,8 @@ export default function SettingsPage() {
                   ["highRisk", "High Risk Accounts"],
                   ["renewals", "Renewal Reminders"],
                   ["daily", "Daily Digest"],
-                  ["failedCalls", "Failed Calls"]
+                  ["failedCalls", "Failed Calls"],
+                  ["churnDiscount", "Churn Win-Back Discounts"]
                 ] as const).map(([key, label]) => (
                   <div key={key} className="flex items-center justify-between py-2.5 px-2 hover:bg-muted/40 rounded-lg transition-colors">
                     <div>
@@ -244,8 +265,11 @@ export default function SettingsPage() {
                       <p className="text-[11px] text-muted-foreground">Push & email</p>
                     </div>
                     <Switch
-                      checked={notifications[key]}
-                      onCheckedChange={() => toggleNotif(key)}
+                      checked={notifications[key as keyof typeof notifications]}
+                      onCheckedChange={() => {
+                        toggleNotif(key as keyof typeof notifications);
+                        setIsDirty(true);
+                      }}
                       className="data-[state=checked]:bg-primary border-2 border-black"
                     />
                   </div>
@@ -479,6 +503,18 @@ export default function SettingsPage() {
                         />
                       </div>
                       <p className="text-[10px] text-muted-foreground -mt-2">Health score below this % is treated as at-risk.</p>
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <Label className="text-[11px] font-medium text-foreground">Churn Win-Back Discount (%)</Label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="w-16 shrink-0 px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background text-right focus:ring-0 focus:border-primary transition-colors"
+                          value={metricDefaults.churnDiscountPercentage}
+                          onChange={(e) => updateMetric("churnDiscountPercentage", Number(e.target.value))}
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground -mt-2">Discount given in automated churn win-back emails.</p>
                     </div>
                   </div>
                 </div>

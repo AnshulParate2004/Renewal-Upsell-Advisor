@@ -11,7 +11,6 @@ import Landing from "./pages/Landing";
 import SignIn from "./pages/SignIn";
 import Features from "./pages/Features";
 import Pricing from "./pages/Pricing";
-import Demo from "./pages/Demo";
 import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
 import Pipeline from "./pages/Pipeline";
@@ -44,8 +43,6 @@ const App = () => (
               <Route path="/signin" element={<SignIn />} />
               <Route path="/features" element={<Features />} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/demo" element={<Demo />} />
-
               {/* App Routes (Protected) */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/setup" element={<GlobalSetup />} />

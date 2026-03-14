@@ -103,9 +103,6 @@ export default function Landing() {
                         <Link to="/pricing" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
                             Pricing
                         </Link>
-                        <Link to="/demo" className="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors">
-                            Demo
-                        </Link>
                     </div>
 
                     {/* Right CTA */}

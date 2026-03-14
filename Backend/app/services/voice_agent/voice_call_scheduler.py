@@ -87,13 +87,17 @@ def calculate_plan_completion_percentage(account: Dict[str, Any]) -> float:
         # Parse dates
         if isinstance(contract_start_date, str):
             start_dt = datetime.fromisoformat(contract_start_date.replace('Z', '+00:00'))
-        else:
+        elif isinstance(contract_start_date, datetime):
             start_dt = contract_start_date
+        else:
+            return 0.0
         
         if isinstance(contract_end_date, str):
             end_dt = datetime.fromisoformat(contract_end_date.replace('Z', '+00:00'))
-        else:
+        elif isinstance(contract_end_date, datetime):
             end_dt = contract_end_date
+        else:
+            return 0.0
         
         # Ensure timezone awareness
         if start_dt.tzinfo is None:
@@ -188,6 +192,10 @@ def should_make_call(
         # Check for calls in the last 7 days for the same milestone
         seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         
+        full_config = _get_app_config(client)
+        notifications = full_config.get("notifications") or {}
+        failed_calls_enabled = notifications.get("failedCalls", True)
+
         for call in recent_calls:
             call_completed = call.get('completed_at')
             call_status = call.get('status', '').lower()
@@ -198,11 +206,15 @@ def should_make_call(
                 if call_status == 'completed' and call_outcome not in ['no_answer', 'busy', 'failed']:
                     # Already had a successful call recently, skip
                     return False, f"Already called successfully recently (completed: {call_completed})"
-                elif call_outcome == 'no_answer':
-                    # If no-answer, we can retry after 2 days
-                    two_days_ago = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
-                    if call_completed >= two_days_ago:
-                        return False, f"No-answer call was recent (completed: {call_completed}), retry after 2 days"
+                elif call_outcome in ['no_answer', 'busy', 'failed'] or call_status == 'failed' or call_status == 'no_answer':
+                    if failed_calls_enabled:
+                        # If retries are enabled, retry after 1 day
+                        one_day_ago = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+                        if call_completed >= one_day_ago:
+                            return False, f"Failed call recently ({call_completed}), retry tomorrow"
+                    else:
+                        # Retries disabled, wait the full 7 days interval
+                        return False, f"Failed call recently ({call_completed}) but retries are disabled"
         
     except Exception as e:
         logger.error(f"Error checking call history: {e}")
@@ -386,7 +398,13 @@ async def process_scheduled_calls():
     if not client:
         logger.error("Supabase not configured. Cannot process calls.")
         return
-    
+
+    # Check if automation is paused (set via logout from frontend)
+    app_config = _get_app_config(client)
+    if app_config.get("automation_paused", False):
+        logger.warning("Automation is PAUSED (automation_paused=True in settings). Skipping all voice calls. Log back in and re-initialize setup to resume.")
+        return
+
     try:
         # Get all active accounts
         accounts_result = client.table("accounts").select("*").eq("status", "active").execute()
@@ -403,8 +421,8 @@ async def process_scheduled_calls():
         except Exception:
             pass
         # Process accounts one by one (sequential to avoid server load)
-        calls_made = 0
-        calls_skipped = 0
+        calls_made: int = 0
+        calls_skipped: int = 0
         
         for account in accounts:
             try:
@@ -419,15 +437,15 @@ async def process_scheduled_calls():
                     call_sid = await make_voice_call(account, client)
                     
                     if call_sid:
-                        calls_made += 1
+                        calls_made = calls_made + 1
                         logger.info(f"Call made to {account.get('name')} (Usage: {usage_percentage:.1f}%)")
                     else:
-                        calls_skipped += 1
+                        calls_skipped = calls_skipped + 1
                     
                     # Wait between calls to avoid server load (30 seconds delay)
                     await asyncio.sleep(30)
                 else:
-                    calls_skipped += 1
+                    calls_skipped = calls_skipped + 1
                     logger.debug(f"Skipped {account.get('name')}: {reason}")
                 
             except Exception as e:
@@ -444,9 +462,71 @@ async def process_scheduled_calls():
         except Exception:
             pass
     except Exception as e:
-        logger.error(f"Error processing scheduled calls: {e}")
-        import traceback
         logger.error(traceback.format_exc())
+
+async def process_explicitly_scheduled_calls():
+    """
+    Process explicitly rescheduled voice calls (e.g. from a 'busy' intent extraction).
+    Queries for calls where status = 'scheduled' and scheduled_at <= NOW().
+    """
+    client = get_supabase_client()
+    if not client:
+        return
+        
+    try:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        # Get pending scheduled calls
+        calls_result = client.table("voice_calls").select(
+            "id, account_id, metadata"
+        ).eq("status", "scheduled").lte("scheduled_at", now_iso).execute()
+        
+        pending_calls = calls_result.data if calls_result.data else []
+        
+        if not pending_calls:
+            return
+            
+        logger.info(f"Processing {len(pending_calls)} explicitly scheduled callback(s)")
+        
+        for call_record in pending_calls:
+            try:
+                account_id = call_record.get("account_id")
+                call_id = call_record.get("id")
+                
+                # Fetch full account data
+                acc_result = client.table("accounts").select("*").eq("id", account_id).execute()
+                if not acc_result.data:
+                    client.table("voice_calls").update({"status": "failed", "outcome": "account_not_found"}).eq("id", call_id).execute()
+                    continue
+                    
+                account = acc_result.data[0]
+                
+                # Make the call
+                call_sid = await make_voice_call(account, client, skip_eligibility_check=True, purpose="Scheduled Callback")
+                
+                if call_sid:
+                    logger.info(f"Triggered scheduled callback to {account.get('name')} (SID: {call_sid})")
+                    client.table("voice_calls").update({
+                        "status": "in_progress",
+                        "metadata": {
+                            **(call_record.get("metadata") or {}),
+                            "processed_at": now_iso
+                        }
+                    }).eq("id", call_id).execute()
+                else:
+                    client.table("voice_calls").update({
+                        "status": "failed",
+                        "outcome": "twilio_error"
+                    }).eq("id", call_id).execute()
+                    
+                # Rate limiting
+                await asyncio.sleep(5)
+                
+            except Exception as loop_e:
+                logger.error(f"Error triggering explicit callback for call {call_record.get('id')}: {loop_e}")
+                
+    except Exception as e:
+        logger.error(f"Error in process_explicitly_scheduled_calls: {e}", exc_info=True)
 
 
 async def trigger_voice_call_for_account(account_id: str, purpose: Optional[str] = None) -> Dict[str, Any]:
