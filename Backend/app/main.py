@@ -2,9 +2,10 @@
 FastAPI Application Entry Point.
 """
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
+from starlette.middleware.base import BaseHTTPMiddleware
 from datetime import datetime
+import re
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.core.exceptions import (
@@ -62,14 +63,51 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORS middleware with wildcard subdomain support (e.g., *.vercel.app)
+CORS_EXACT = [
+    "http://localhost:8080",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "https://renewal-upsell-advisor.onrender.com",
+    "https://renewal-upsell-advisor.vercel.app",
+    "https://renewal-upsell-advisor.services.ailifebot.com",
+    "https://renewal-upsell-advisor.greenforest-ccc56264.centralindia.azurecontainerapps.io",
+]
+CORS_PATTERNS = [
+    re.compile(r"https://.*\.vercel\.app$"),
+]
+
+if settings.FRONTEND_URL:
+    CORS_EXACT.append(settings.FRONTEND_URL)
+
+def is_allowed_origin(origin: str) -> bool:
+    if origin in CORS_EXACT:
+        return True
+    return any(p.match(origin) for p in CORS_PATTERNS)
+
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin", "")
+        allowed = is_allowed_origin(origin)
+
+        if request.method == "OPTIONS":
+            resp = Response(status_code=204)
+            if allowed:
+                resp.headers["Access-Control-Allow-Origin"] = origin
+                resp.headers["Access-Control-Allow-Credentials"] = "true"
+                resp.headers["Access-Control-Allow-Methods"] = "*"
+                resp.headers["Access-Control-Allow-Headers"] = "*"
+            return resp
+
+        response = await call_next(request)
+        if allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+app.add_middleware(DynamicCORSMiddleware)
 
 # Request logging middleware
 app.add_middleware(RequestLoggingMiddleware)

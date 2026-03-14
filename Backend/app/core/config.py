@@ -3,7 +3,7 @@ Application configuration using Pydantic Settings.
 """
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 
 class Settings(BaseSettings):
@@ -17,7 +17,15 @@ class Settings(BaseSettings):
     
     # API Settings
     API_V1_PREFIX: str = "/api/v1"
-    CORS_ORIGINS: list[str] = ["http://localhost:8080", "http://localhost:3000"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:8080",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://renewal-upsell-advisor.onrender.com",
+        "",
+        "https://*.vercel.app",
+    ]
+    FRONTEND_URL: Optional[str] = None  # Set to your Vercel URL in Render env vars
     
     # Database
     DATABASE_URL: Optional[str] = None  # PostgreSQL connection string (takes priority)
