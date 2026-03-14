@@ -41,6 +41,25 @@ async def lifespan(app: FastAPI):
     # - Renewal pipeline scheduler: runs campaigns when due per their plan (daily/weekly/monthly).
     # - Manual triggers: POST /email/trigger-campaign, /ml/trigger, /voice/trigger-calls, etc. still work.
     import asyncio
+    import aiohttp
+
+    async def keep_alive_ping():
+        """Ping the health endpoint every 3 minutes to keep the Render instance awake."""
+        url = "https://renewal-upsell-advisor.onrender.com/health"
+        while True:
+            try:
+                await asyncio.sleep(180)  # 3 minutes
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, timeout=10) as response:
+                        print(f"✅ Keep-alive ping sent to {url}, status: {response.status}")
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"⚠️ Keep-alive ping failed: {e}")
+
+    # Start the keep-alive task
+    ping_task = asyncio.create_task(keep_alive_ping())
+
     try:
         from app.services.campaign_runner import run_campaign_scheduler
         asyncio.create_task(run_campaign_scheduler())
@@ -50,8 +69,8 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown (if needed)
-    pass
+    # Shutdown
+    ping_task.cancel()
 
 # Create FastAPI app
 app = FastAPI(
