@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Zap, Mail, ArrowRight, Phone, ShieldCheck, Settings2, Globe, Server, Key, User, AlertTriangle, LogOut } from "lucide-react";
+import { Zap, Mail, ArrowRight, Phone, ShieldCheck, Settings2, Key, AlertTriangle, LogOut } from "lucide-react";
 import { useAppSettings, useUpdateAppSettings } from "@/hooks/useSettings";
 import { accountsApi } from "@/lib/api/accounts";
 import { useToast } from "@/hooks/use-toast";
@@ -9,12 +9,18 @@ import { useAuth } from "@/contexts/AuthContext";
 export default function GlobalSetup() {
     const [globalPhone, setGlobalPhone] = useState("+91 1234567890");
     const [globalEmail, setGlobalEmail] = useState("anp@ailifebot.com");
-    const [smtpHost, setSmtpHost] = useState("smtp.gmail.com");
-    const [smtpPort, setSmtpPort] = useState("587");
-    const [smtpPassword, setSmtpPassword] = useState("");
+    const [senderEmail, setSenderEmail] = useState("");
+    const [sendgridApiKey, setSendgridApiKey] = useState("");
+
+    // Twilio fields
+    const [twilioAccountSid, setTwilioAccountSid] = useState("");
+    const [twilioAuthToken, setTwilioAuthToken] = useState("");
+    const [twilioPhoneNumber, setTwilioPhoneNumber] = useState("");
+    const [twilioWhatsappNumber, setTwilioWhatsappNumber] = useState("");
+
     const [isLoading, setIsLoading] = useState(false);
     const [phoneError, setPhoneError] = useState("");
-    
+
     const navigate = useNavigate();
     const { toast } = useToast();
     const { logout } = useAuth();
@@ -26,7 +32,7 @@ export default function GlobalSetup() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         // Validate phone number format: +91 XXXXXXXXXX (10 digits)
         const phoneRegex = /^\+91 \d{10}$/;
         if (!phoneRegex.test(globalPhone)) {
@@ -34,38 +40,35 @@ export default function GlobalSetup() {
             return;
         }
         setPhoneError("");
-        
+
         setIsLoading(true);
-        
+
         try {
-            // Perform global synchronization
             // 1. Bulk update all accounts with new phone and email
             await accountsApi.bulkUpdate({
                 primary_contact_phone: globalPhone,
                 primary_contact_email: globalEmail
             });
 
-            // 2. Sync app settings with the registration email and SMTP config
-            if (appSettings) {
-                await updateSettings.mutateAsync({
-                    ...appSettings,
-                    automation_paused: false,
-                    email: {
-                        ...appSettings.email,
-                        smtpHost: smtpHost || undefined,
-                        smtpPort: parseInt(smtpPort) || 587,
-                        smtpUsername: globalEmail,
-                        smtpPassword: smtpPassword || undefined,
-                        fromEmail: globalEmail
-                    }
-                });
-            }
+            // 2. Save flat setup configuration (inserts new row in setup_config)
+            const { setupApi } = await import('@/lib/api/settings');
+            
+            await setupApi.saveSetup({
+                from_email: senderEmail || globalEmail,
+                from_name: "Renewal & Upsell Advisor",
+                sendgrid_api_key: sendgridApiKey || undefined,
+                twilio_account_sid: twilioAccountSid || undefined,
+                twilio_auth_token: twilioAuthToken || undefined,
+                twilio_phone_number: twilioPhoneNumber || undefined,
+                twilio_whatsapp_number: twilioWhatsappNumber || undefined,
+                automation_paused: false,
+            });
 
             toast({
                 title: "SYSTEM_READY",
                 description: "GLOBAL_SYNC_COMPLETED: ACCESS_GRANTED",
             });
-            
+
             navigate("/app");
         } catch (err) {
             console.error("SYNC_FAILURE:", err);
@@ -81,13 +84,9 @@ export default function GlobalSetup() {
     const handleClearConfiguration = async () => {
         setIsLoading(true);
         try {
-            if (appSettings) {
-                // Soft-disable: credentials stay in DB, automation is just paused
-                await updateSettings.mutateAsync({
-                    ...appSettings,
-                    automation_paused: true,
-                });
-            }
+            const { setupApi } = await import('@/lib/api/settings');
+            await setupApi.pauseAutomation();
+            
             toast({
                 title: "SESSION_ENDED",
                 description: "Automation paused. Your credentials remain stored securely in the database.",
@@ -111,14 +110,13 @@ export default function GlobalSetup() {
             className="min-h-screen bg-white flex items-center justify-center p-4 overflow-hidden"
             style={{
                 backgroundImage: `
-        <div className="min-h-screen bg-[#F5F5F5] flex items-center justify-center p-4 md:p-8 font-sans relative overflow-hidden">
                     linear-gradient(to right, rgba(0,0,0,0.4) 1px, transparent 1px),
                     linear-gradient(to bottom, rgba(0,0,0,0.4) 1px, transparent 1px)
                 `,
                 backgroundSize: '40px 40px'
             }}
         >
-            <div className="w-full max-w-2xl scale-[0.75] origin-center -translate-y-4 transition-transform py-4">
+            <div className="w-full max-w-3xl scale-[0.80] origin-center -translate-y-4 transition-transform py-4">
                 {/* Logo & Branding */}
                 <div className="text-center mb-6">
                     <div className="inline-flex items-center gap-4 mb-4">
@@ -154,16 +152,18 @@ export default function GlobalSetup() {
 
                 <div className="bg-white border-2 border-black rounded-lg p-8 sm:p-10 relative overflow-visible shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
                     <form onSubmit={handleSubmit} className="space-y-8">
+
+                        {/* Row 1: Account + SendGrid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             {/* Account Parameters */}
                             <div className="space-y-6">
                                 <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded text-[9px] font-black uppercase tracking-widest">
                                     Master_Account_Parameters
                                 </div>
-                                
+
                                 <div className="space-y-3">
                                     <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
-                                        // REGISTRATION_EMAIL (SYNC_TO_FROM_EMAIL)
+                                        // TESTING_EMAIL (SYNC_TO_ALL_ACCOUNTS)
                                     </label>
                                     <div className="relative">
                                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
@@ -172,6 +172,23 @@ export default function GlobalSetup() {
                                             value={globalEmail}
                                             onChange={(e) => setGlobalEmail(e.target.value)}
                                             placeholder="ANP@AILIFEBOT.COM"
+                                            className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all uppercase"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
+                                        // SENDER_EMAIL (SENDGRID_FROM_ADDRESS)
+                                    </label>
+                                    <div className="relative">
+                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
+                                        <input
+                                            type="email"
+                                            value={senderEmail}
+                                            onChange={(e) => setSenderEmail(e.target.value)}
+                                            placeholder="SENDER@YOURDOMAIN.COM"
                                             className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all uppercase"
                                             required
                                         />
@@ -200,69 +217,114 @@ export default function GlobalSetup() {
                                 </div>
                             </div>
 
-                            {/* SMTP Parameters */}
+                            {/* SendGrid Parameters */}
                             <div className="space-y-6">
                                 <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-[#5F63F2]/10 text-[#5F63F2] border border-[#5F63F2]/20 rounded text-[9px] font-black uppercase tracking-widest">
-                                    SMTP_Bridge_Configuration
+                                    SendGrid_Configuration
                                 </div>
 
                                 <div className="space-y-3">
                                     <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
-                                        // SMTP_HOST
+                                        // SENDGRID_API_KEY
                                     </label>
                                     <div className="relative">
-                                        <Server className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
+                                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
                                         <input
-                                            type="text"
-                                            value={smtpHost}
-                                            onChange={(e) => setSmtpHost(e.target.value)}
-                                            placeholder="SMTP.GMAIL.COM"
-                                            className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all uppercase"
+                                            type="password"
+                                            value={sendgridApiKey}
+                                            onChange={(e) => setSendgridApiKey(e.target.value)}
+                                            placeholder="SG.••••••••••••••••"
+                                            className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all"
                                             required
                                         />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-6">
-                                    <div className="space-y-3">
-                                        <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
-                                            // SMTP_PORT
-                                        </label>
-                                        <div className="relative">
-                                            <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
-                                            <input
-                                                type="number"
-                                                value={smtpPort}
-                                                onChange={(e) => setSmtpPort(e.target.value)}
-                                                placeholder="587"
-                                                className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all uppercase"
-                                                required
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
-                                            // SMTP_PASSWORD
-                                        </label>
-                                        <div className="relative">
-                                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
-                                            <input
-                                                type="password"
-                                                value={smtpPassword}
-                                                onChange={(e) => setSmtpPassword(e.target.value)}
-                                                placeholder="••••••••••••••••"
-                                                className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-primary/5 hover:shadow-md transition-all"
-                                                required
-                                            />
-                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {/* Row 2: Twilio Configuration (full-width) */}
+                        <div className="border-t border-black/10 pt-6">
+                            <div className="inline-flex items-center gap-2 px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded text-[9px] font-black uppercase tracking-widest mb-6">
+                                Twilio_Voice_&amp;_WhatsApp_Configuration
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Account SID */}
+                                <div className="space-y-3">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
+                                        // TWILIO_ACCOUNT_SID
+                                    </label>
+                                    <div className="relative">
+                                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
+                                        <input
+                                            id="twilio-account-sid"
+                                            type="text"
+                                            value={twilioAccountSid}
+                                            onChange={(e) => setTwilioAccountSid(e.target.value)}
+                                            placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                            className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-green-50/50 hover:shadow-md transition-all font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Auth Token */}
+                                <div className="space-y-3">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
+                                        // TWILIO_AUTH_TOKEN
+                                    </label>
+                                    <div className="relative">
+                                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
+                                        <input
+                                            id="twilio-auth-token"
+                                            type="password"
+                                            value={twilioAuthToken}
+                                            onChange={(e) => setTwilioAuthToken(e.target.value)}
+                                            placeholder="••••••••••••••••••••••••••••••••"
+                                            className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-green-50/50 hover:shadow-md transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Voice Phone Number */}
+                                <div className="space-y-3">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
+                                        // TWILIO_VOICE_PHONE_NUMBER
+                                    </label>
+                                    <div className="relative">
+                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
+                                        <input
+                                            id="twilio-phone-number"
+                                            type="tel"
+                                            value={twilioPhoneNumber}
+                                            onChange={(e) => setTwilioPhoneNumber(e.target.value)}
+                                            placeholder="+11111111"
+                                            className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-green-50/50 hover:shadow-md transition-all font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* WhatsApp Number */}
+                                <div className="space-y-3">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.4em] text-foreground/60">
+                                        // TWILIO_WHATSAPP_NUMBER
+                                    </label>
+                                    <div className="relative">
+                                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-foreground/40" />
+                                        <input
+                                            id="twilio-whatsapp-number"
+                                            type="tel"
+                                            value={twilioWhatsappNumber}
+                                            onChange={(e) => setTwilioWhatsappNumber(e.target.value)}
+                                            placeholder="+1411111111"
+                                            className="w-full pl-12 pr-4 py-4 bg-white border border-black rounded-lg text-sm font-black text-foreground placeholder:text-foreground/30 focus:outline-none focus:bg-green-50/50 hover:shadow-md transition-all font-mono"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Submit Buttons */}
                         <div className="flex gap-4">
-                            {/* Initialize Button */}
                             <button
                                 type="submit"
                                 disabled={isLoading}
@@ -276,7 +338,6 @@ export default function GlobalSetup() {
                                 )}
                             </button>
 
-                            {/* Clear Config / Logout Button */}
                             <button
                                 type="button"
                                 onClick={handleClearConfiguration}
@@ -291,7 +352,7 @@ export default function GlobalSetup() {
 
                     {/* Documentation Link */}
                     <div className="mt-8 pt-6 border-t border-black flex flex-col items-center justify-center gap-4">
-                        <Link 
+                        <Link
                             to="/setup/guide"
                             className="w-full flex items-center justify-between p-4 bg-primary/5 hover:bg-primary/10 border border-primary/20 hover:border-primary/40 rounded-lg transition-colors group"
                         >
@@ -318,7 +379,7 @@ export default function GlobalSetup() {
 
                 <div className="mt-6 text-center">
                     <p className="text-[10px] font-black text-black/40 uppercase tracking-widest">
-                        v4.2.0 // MASTER_CONFIG_LOADER
+                        v4.3.0 // MASTER_CONFIG_LOADER
                     </p>
                 </div>
             </div>

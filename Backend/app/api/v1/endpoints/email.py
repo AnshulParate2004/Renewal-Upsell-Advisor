@@ -27,7 +27,7 @@ async def send_test_email(to_email: str):
     if not email_service.is_configured:
         raise HTTPException(
             status_code=503,
-            detail="Email service not configured. Please open Settings → Email & SMTP in the UI and configure SMTP first.",
+            detail="Email service not configured. Please open Settings → Email & SendGrid in the UI and add your SendGrid API Key first.",
         )
     
     subject = "Test Email - Renewal & Upsell Advisor"
@@ -97,7 +97,6 @@ async def get_email_status():
     """Get email service status and configuration."""
     return {
         "configured": email_service.is_configured,
-        "smtp_host": email_service.smtp_host if email_service.is_configured else None,
         "from_email": email_service.from_email if email_service.is_configured else None,
         "from_name": email_service.from_name if email_service.is_configured else None,
         "has_sendgrid": bool(email_service.sendgrid_api_key)

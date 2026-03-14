@@ -12,17 +12,62 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _get_twilio_credentials_from_db() -> dict:
+    """
+    Load Twilio credentials from Supabase setup_config (latest row).
+    Returns a dict; missing/blank values are None so callers can fall back to env.
+    """
+    try:
+        from app.services.email.scheduler import get_supabase_client  # avoid circular import
+
+        client = get_supabase_client()
+        if not client:
+            return {}
+        result = (
+            client.table("setup_config")
+            .select("twilio_account_sid,twilio_auth_token,twilio_phone_number,twilio_whatsapp_number")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = result.data or []
+        if not rows:
+            return {}
+        
+        row = rows[0]
+        return {
+            "account_sid": row.get("twilio_account_sid") or None,
+            "auth_token": row.get("twilio_auth_token") or None,
+            "phone_number": row.get("twilio_phone_number") or None,
+            "whatsapp_number": row.get("twilio_whatsapp_number") or None,
+        }
+    except Exception as e:
+        logger.warning(f"Could not load Twilio credentials from DB for WhatsApp: {e}")
+        return {}
+
+
 class WhatsAppService:
     """Service for sending WhatsApp messages via Twilio."""
 
     def __init__(self) -> None:
-        # Use same credentials as voice calls
-        self.account_sid = os.getenv("TWILIO_ACCOUNT_SID") or settings.TWILIO_ACCOUNT_SID
-        self.auth_token = os.getenv("TWILIO_AUTH_TOKEN") or settings.TWILIO_AUTH_TOKEN
-        # Prefer dedicated WhatsApp number if provided; fall back to generic Twilio number.
+        # Prefer DB-stored credentials; fall back to env / pydantic settings
+        db = _get_twilio_credentials_from_db()
+
+        self.account_sid = (
+            db.get("account_sid")
+            or os.getenv("TWILIO_ACCOUNT_SID")
+            or settings.TWILIO_ACCOUNT_SID
+        )
+        self.auth_token = (
+            db.get("auth_token")
+            or os.getenv("TWILIO_AUTH_TOKEN")
+            or settings.TWILIO_AUTH_TOKEN
+        )
+        # Prefer dedicated WhatsApp number; fall back to voice number
         self.phone_number = (
-            os.getenv("TWILIO_WHASTASPP_PHONE_NUMBER")  # user-requested env var name
-            or os.getenv("TWILIO_WHATSAPP_PHONE_NUMBER")  # common spelling, as a fallback
+            db.get("whatsapp_number")
+            or os.getenv("TWILIO_WHASTASPP_PHONE_NUMBER")   # user-requested env var name
+            or os.getenv("TWILIO_WHATSAPP_PHONE_NUMBER")    # common spelling fallback
             or os.getenv("TWILIO_PHONE_NUMBER")
             or settings.TWILIO_PHONE_NUMBER
         )
@@ -32,7 +77,8 @@ class WhatsAppService:
             self.client: Optional[Client] = None
         else:
             self.client = Client(self.account_sid, self.auth_token)
-            logger.info("Twilio WhatsApp client initialized")
+            source = "DB" if db.get("account_sid") else "env"
+            logger.info(f"Twilio WhatsApp client initialized from {source}")
 
     def is_configured(self) -> bool:
         return self.client is not None and bool(self.phone_number)
@@ -43,7 +89,6 @@ class WhatsAppService:
             raise ValueError("Empty WhatsApp phone")
         if phone.startswith("whatsapp:"):
             return phone
-        # Normalize: remove spaces/dashes and ensure leading + for E.164
         cleaned = "".join(ch for ch in phone if ch.isdigit() or ch == "+")
         if not cleaned:
             raise ValueError(f"Invalid WhatsApp phone: {phone!r}")
@@ -75,5 +120,15 @@ class WhatsAppService:
             return None
 
 
-whatsapp_service = WhatsAppService()
+def get_whatsapp_service() -> WhatsAppService:
+    """
+    Factory that returns a WhatsAppService with fresh DB credentials.
+    Call this inside background tasks / request handlers instead of using
+    the module-level singleton when up-to-date credentials are required.
+    """
+    return WhatsAppService()
 
+
+# Module-level singleton (initialised at import time from env/DB snapshot).
+# For tasks that need the latest DB credentials, call get_whatsapp_service() instead.
+whatsapp_service = WhatsAppService()

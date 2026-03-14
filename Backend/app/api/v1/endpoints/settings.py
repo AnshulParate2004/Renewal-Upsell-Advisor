@@ -1,14 +1,12 @@
 """
-Settings API endpoints for app-wide scheduling and metric defaults.
+Settings API endpoints for app-wide scheduling and metric defaults,
+plus setup-page credentials (SendGrid / Twilio).
 
-These endpoints expose a small configuration object that controls:
-- Call & email scheduling preferences (time windows, follow-up cadence)
-- Default metric guardrails (churn risk threshold, renewal/upsell targets)
-
-The configuration is stored in Supabase in a single-row table `app_settings`
-with at least the following columns:
-- key (text, primary key) – we use value "default"
-- config (jsonb) – arbitrary JSON payload
+Two separate storage areas:
+  1. `app_settings`  (key/config jsonb) – schedule, metrics, notifications, pipeline_flow
+  2. `setup_config`  (flat columns, append-only) – credentials (SendGrid, Twilio) + automation_paused
+     Every POST to /settings/setup inserts a NEW row; history is always preserved.
+     The latest row (ORDER BY created_at DESC LIMIT 1) is the active config.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -21,238 +19,278 @@ from app.services.email.scheduler import get_supabase_client
 logger = get_logger(__name__)
 router = APIRouter()
 
+SETTINGS_TABLE_NAME = "app_settings"
+SETTINGS_ROW_KEY = "default"
+SETUP_TABLE_NAME = "setup_config"
+
+
+# ---------------------------------------------------------------------------
+# Pydantic models – schedule / metrics (unchanged)
+# ---------------------------------------------------------------------------
 
 class ScheduleConfig(BaseModel):
-  """
-  Call & email scheduling preferences.
-
-  Times are stored in 24h "HH:MM" format (no timezone attached).
-  Auto schedule times define when the daily email and call jobs run (e.g. IST).
-  """
-
-  callWindowStart: str = Field("09:00", description="Preferred call window start time (HH:MM, 24h)")
-  callWindowEnd: str = Field("17:00", description="Preferred call window end time (HH:MM, 24h)")
-  emailWindowStart: str = Field("08:00", description="Preferred email window start time (HH:MM, 24h)")
-  emailWindowEnd: str = Field("18:00", description="Preferred email window end time (HH:MM, 24h)")
-  followUpDays: int = Field(3, ge=1, le=60, description="Default days between follow-ups (throttle interval)")
-  autoEmailScheduleTime: str = Field("12:00", description="Daily time to run auto email campaign (HH:MM, 24h)")
-  autoCallScheduleTime: str = Field("14:00", description="Daily time to run auto call processing (HH:MM, 24h)")
-  reminderDaysBeforeRenewal: int = Field(1, ge=0, le=365, description="Trigger call/email when this many days before renewal (e.g. 1 = 1 day before)")
+    callWindowStart: str = Field("09:00")
+    callWindowEnd: str = Field("17:00")
+    emailWindowStart: str = Field("08:00")
+    emailWindowEnd: str = Field("18:00")
+    followUpDays: int = Field(3, ge=1, le=60)
+    autoEmailScheduleTime: str = Field("12:00")
+    autoCallScheduleTime: str = Field("14:00")
+    reminderDaysBeforeRenewal: int = Field(1, ge=0, le=365)
 
 
 class MetricsConfig(BaseModel):
-  """
-  Default metric guardrails and percentage-wise thresholds.
-  """
-
-  churnRiskThreshold: int = Field(30, ge=0, le=100, description="Churn risk % above which accounts are high-risk")
-  renewalTarget: int = Field(90, ge=0, le=100, description="Target renewal rate % for the portfolio")
-  upsellPipelineTarget: int = Field(100_000, ge=0, description="Upsell pipeline ARR target used in dashboards")
-  # Percentage-wise thresholds
-  renewalReminderAtCompletionPercent: int = Field(90, ge=0, le=100, description="Send renewal reminder when plan completion >= this %")
-  highRiskScoreThresholdPercent: int = Field(70, ge=0, le=100, description="Risk score >= this % treated as high-risk")
-  churnProbabilityThresholdPercent: int = Field(70, ge=0, le=100, description="Churn probability >= this % (e.g. 70 = 0.70) triggers churn prevention")
-  minUsagePercentForCall: int = Field(20, ge=0, le=100, description="Minimum plan completion % to trigger first call")
-  healthScoreAtRiskBelowPercent: int = Field(50, ge=0, le=100, description="Health score below this % treated as at-risk")
-  churnDiscountPercentage: int = Field(20, ge=0, le=100, description="Percentage discount for churn win-back emails")
-
-
-class EmailConfig(BaseModel):
-  """
-  Outbound email / SMTP configuration.
-
-  These values override environment variables when present. Leaving fields empty
-  keeps the current server configuration.
-  """
-
-  smtpHost: Optional[str] = Field(None, description="SMTP host, e.g. smtp.gmail.com")
-  smtpPort: Optional[int] = Field(None, ge=1, le=65535, description="SMTP port, e.g. 587")
-  smtpUsername: Optional[str] = Field(None, description="SMTP username / login, often the email address")
-  smtpPassword: Optional[str] = Field(
-    None,
-    description="SMTP password or app password. WARNING: stored in database; use an app-specific password.",
-  )
-  fromEmail: Optional[str] = Field(None, description="From email address shown to recipients")
-  fromName: Optional[str] = Field("Renewal & Upsell Advisor", description="From name shown to recipients")
+    churnRiskThreshold: int = Field(30, ge=0, le=100)
+    renewalTarget: int = Field(90, ge=0, le=100)
+    upsellPipelineTarget: int = Field(100_000, ge=0)
+    renewalReminderAtCompletionPercent: int = Field(90, ge=0, le=100)
+    highRiskScoreThresholdPercent: int = Field(70, ge=0, le=100)
+    churnProbabilityThresholdPercent: int = Field(70, ge=0, le=100)
+    minUsagePercentForCall: int = Field(20, ge=0, le=100)
+    healthScoreAtRiskBelowPercent: int = Field(50, ge=0, le=100)
+    churnDiscountPercentage: int = Field(20, ge=0, le=100)
 
 
 class NotificationsConfig(BaseModel):
-  """
-  Notification feature flags and toggles, mapped from frontend settings.
-  """
-  highRisk: bool = Field(True, description="Notify on high risk accounts")
-  renewals: bool = Field(True, description="Notify on renewal reminders")
-  daily: bool = Field(False, description="Send daily digest")
-  failedCalls: bool = Field(True, description="Retry / notify on failed voice calls and emails the next day")
-  churnDiscount: bool = Field(False, description="Send win-back discount emails to churned accounts")
+    highRisk: bool = Field(True)
+    renewals: bool = Field(True)
+    daily: bool = Field(False)
+    failedCalls: bool = Field(True)
+    churnDiscount: bool = Field(False)
 
 
 class PipelineFlowConfig(BaseModel):
-  """
-  Per–pipeline-stage action: what to send for each stage (email, call, both, or none).
-  Keys: q1, q2, q3, q4, renewed. Values: "email" | "voice" | "both" | "none".
-  Used by the daily pipeline flow runner to send messages according to Settings.
-  """
-  q1: str = Field("email", description="Q1 (271+ days): email | voice | both | none")
-  q2: str = Field("email", description="Q2 (181–270 days)")
-  q3: str = Field("email", description="Q3 (91–180 days)")
-  q4: str = Field("both", description="Q4 (0–90 days)")
-  renewed: str = Field("none", description="Renewed stage")
+    q1: str = Field("email")
+    q2: str = Field("email")
+    q3: str = Field("email")
+    q4: str = Field("both")
+    renewed: str = Field("none")
 
 
 class AppSettings(BaseModel):
-  """
-  Root settings object persisted in Supabase.
-  """
-
-  schedule: ScheduleConfig = ScheduleConfig()
-  metrics: MetricsConfig = MetricsConfig()
-  notifications: NotificationsConfig = Field(default_factory=NotificationsConfig, description="Feature flags for system notifications and retries")
-  pipeline_flow: Optional[PipelineFlowConfig] = Field(default_factory=PipelineFlowConfig, description="Per-stage action for pipeline flow (email/call/both/none)")
-  email: Optional[EmailConfig] = Field(default_factory=EmailConfig, description="SMTP / email sending configuration")
-  automation_paused: bool = Field(False, description="When True, all automated voice calls and emails are paused. Set to True on logout.")
+    """Root settings object – schedule / metrics / notifications only (no credentials here)."""
+    schedule: ScheduleConfig = ScheduleConfig()
+    metrics: MetricsConfig = MetricsConfig()
+    notifications: NotificationsConfig = Field(default_factory=NotificationsConfig)
+    pipeline_flow: Optional[PipelineFlowConfig] = Field(default_factory=PipelineFlowConfig)
+    automation_paused: bool = Field(False)
 
 
 DEFAULT_SETTINGS = AppSettings()
-SETTINGS_TABLE_NAME = "app_settings"
-SETTINGS_ROW_KEY = "default"
 
+
+# ---------------------------------------------------------------------------
+# Pydantic model – setup / credentials (new, flat)
+# ---------------------------------------------------------------------------
+
+class SetupConfig(BaseModel):
+    """
+    Credentials stored in the flat-column `setup_config` table.
+    Each save inserts a new row; history is preserved.
+    """
+    sendgrid_api_key: Optional[str] = Field(None, description="SendGrid API Key (starts with SG.)")
+    from_email: Optional[str] = Field(None, description="From email address")
+    from_name: str = Field("Renewal & Upsell Advisor", description="From name")
+    twilio_account_sid: Optional[str] = Field(None, description="Twilio Account SID")
+    twilio_auth_token: Optional[str] = Field(None, description="Twilio Auth Token")
+    twilio_phone_number: Optional[str] = Field(None, description="Twilio voice number (E.164)")
+    twilio_whatsapp_number: Optional[str] = Field(None, description="Twilio WhatsApp number (E.164)")
+    automation_paused: bool = Field(False)
+    created_at: Optional[str] = Field(None, description="Row timestamp (read-only)")
+
+
+DEFAULT_SETUP = SetupConfig()
+
+
+# ---------------------------------------------------------------------------
+# Helpers – app_settings (schedule / metrics)
+# ---------------------------------------------------------------------------
 
 def _load_settings_from_db() -> AppSettings:
-  """
-  Load settings from Supabase. Falls back to defaults if table/row is missing
-  or Supabase is not configured.
-  """
-  client = get_supabase_client()
-  if not client:
-    logger.warning("Supabase not configured; returning default settings only.")
-    return DEFAULT_SETTINGS
-
-  try:
-    result = (
-      client.table(SETTINGS_TABLE_NAME)
-      .select("config")
-      .eq("key", SETTINGS_ROW_KEY)
-      .limit(1)
-      .execute()
-    )
-  except Exception as e:
-    logger.error(f"Failed to load app settings from Supabase: {e}")
-    return DEFAULT_SETTINGS
-
-  rows = result.data or []
-  if not rows:
-    # No row yet – create one with defaults so future reads are fast.
+    client = get_supabase_client()
+    if not client:
+        logger.warning("Supabase not configured; returning default settings.")
+        return DEFAULT_SETTINGS
     try:
-      client.table(SETTINGS_TABLE_NAME).insert(
-        {
-          "key": SETTINGS_ROW_KEY,
-          "config": DEFAULT_SETTINGS.model_dump(),
-        }
-      ).execute()
+        result = (
+            client.table(SETTINGS_TABLE_NAME)
+            .select("config")
+            .eq("key", SETTINGS_ROW_KEY)
+            .limit(1)
+            .execute()
+        )
     except Exception as e:
-      logger.error(f"Failed to initialize default app settings row: {e}")
-    return DEFAULT_SETTINGS
+        logger.error(f"Failed to load app settings: {e}")
+        return DEFAULT_SETTINGS
 
-  raw_config: Dict[str, Any] = rows[0].get("config") or {}
-  try:
-    # Pydantic will fill in any missing fields with defaults.
-    return AppSettings(**raw_config)
-  except Exception as e:
-    logger.error(f"Invalid config shape in app_settings row; using defaults. Error: {e}")
-    return DEFAULT_SETTINGS
+    rows = result.data or []
+    if not rows:
+        try:
+            client.table(SETTINGS_TABLE_NAME).insert(
+                {"key": SETTINGS_ROW_KEY, "config": DEFAULT_SETTINGS.model_dump()}
+            ).execute()
+        except Exception as e:
+            logger.error(f"Failed to initialise default settings row: {e}")
+        return DEFAULT_SETTINGS
+
+    raw_config: Dict[str, Any] = rows[0].get("config") or {}
+    # Strip credential fields that now live in setup_config
+    raw_config.pop("email", None)
+    raw_config.pop("twilio", None)
+    raw_config.pop("credential_history", None)
+    try:
+        return AppSettings(**raw_config)
+    except Exception as e:
+        logger.error(f"Invalid config shape; using defaults. Error: {e}")
+        return DEFAULT_SETTINGS
 
 
 def _save_settings_to_db(settings_obj: AppSettings) -> None:
-  """
-  Persist settings to Supabase, creating or updating the single row.
-  Also appends email credentials to a credential_history list so all
-  user sessions are retained permanently (soft audit log).
-  """
-  from datetime import datetime, timezone
+    client = get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured.")
 
-  client = get_supabase_client()
-  if not client:
-    raise HTTPException(status_code=503, detail="Supabase not configured; cannot persist settings.")
-
-  config_dict = settings_obj.model_dump()
-
-  # --- Append to credential history (if email credentials are being submitted) ---
-  email_cfg = config_dict.get("email") or {}
-  has_credentials = any([
-    email_cfg.get("smtpUsername"),
-    email_cfg.get("smtpHost"),
-    email_cfg.get("smtpPassword"),
-  ])
-  if has_credentials:
+    config_dict = settings_obj.model_dump()
     try:
-      # Load existing raw config to append to history
-      existing_result = (
-        client.table(SETTINGS_TABLE_NAME)
-        .select("config")
-        .eq("key", SETTINGS_ROW_KEY)
-        .limit(1)
-        .execute()
-      )
-      existing_rows = existing_result.data or []
-      existing_config: Dict[str, Any] = {}
-      if existing_rows:
-        existing_config = existing_rows[0].get("config") or {}
-
-      history: list = existing_config.get("credential_history") or []
-      history.append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "smtpHost": email_cfg.get("smtpHost", ""),
-        "smtpPort": email_cfg.get("smtpPort", ""),
-        "smtpUsername": email_cfg.get("smtpUsername", ""),
-        "smtpPassword": email_cfg.get("smtpPassword", ""),
-        "fromEmail": email_cfg.get("fromEmail", ""),
-        "fromName": email_cfg.get("fromName", ""),
-      })
-      # Store history back in the config dict
-      config_dict["credential_history"] = history
+        update_result = (
+            client.table(SETTINGS_TABLE_NAME)
+            .update({"config": config_dict})
+            .eq("key", SETTINGS_ROW_KEY)
+            .execute()
+        )
+        if not (update_result.data or []):
+            client.table(SETTINGS_TABLE_NAME).insert(
+                {"key": SETTINGS_ROW_KEY, "config": config_dict}
+            ).execute()
     except Exception as e:
-      logger.warning(f"Failed to append credential history: {e}")
+        logger.error(f"Failed to save app settings: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save settings.")
 
-  payload = {
-    "key": SETTINGS_ROW_KEY,
-    "config": config_dict,
-  }
 
-  try:
-    # Try update first; if no row updated, insert a new one.
-    update_result = (
-      client.table(SETTINGS_TABLE_NAME)
-      .update({"config": payload["config"]})
-      .eq("key", SETTINGS_ROW_KEY)
-      .execute()
-    )
-    updated_rows = update_result.data or []
-    if not updated_rows:
-      client.table(SETTINGS_TABLE_NAME).insert(payload).execute()
-  except Exception as e:
-    logger.error(f"Failed to save app settings to Supabase: {e}")
-    raise HTTPException(status_code=500, detail="Failed to save settings.")
+# ---------------------------------------------------------------------------
+# Helpers – setup_config (credentials)
+# ---------------------------------------------------------------------------
 
+def _load_setup_config_from_db() -> SetupConfig:
+    """Return the latest row from setup_config, or defaults if none exists."""
+    client = get_supabase_client()
+    if not client:
+        logger.warning("Supabase not configured; returning default setup config.")
+        return DEFAULT_SETUP
+    try:
+        result = (
+            client.table(SETUP_TABLE_NAME)
+            .select(
+                "id,sendgrid_api_key,from_email,from_name,"
+                "twilio_account_sid,twilio_auth_token,"
+                "twilio_phone_number,twilio_whatsapp_number,"
+                "automation_paused,created_at"
+            )
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+        )
+        rows = result.data or []
+        if not rows:
+            return DEFAULT_SETUP
+        row = rows[0]
+        return SetupConfig.model_validate({
+            "sendgrid_api_key": row.get("sendgrid_api_key"),
+            "from_email": row.get("from_email"),
+            "from_name": row.get("from_name") or "Renewal & Upsell Advisor",
+            "twilio_account_sid": row.get("twilio_account_sid"),
+            "twilio_auth_token": row.get("twilio_auth_token"),
+            "twilio_phone_number": row.get("twilio_phone_number"),
+            "twilio_whatsapp_number": row.get("twilio_whatsapp_number"),
+            "automation_paused": bool(row.get("automation_paused", False)),
+            "created_at": str(row.get("created_at") or ""),
+        })
+    except Exception as e:
+        logger.error(f"Failed to load setup config: {e}")
+        return DEFAULT_SETUP
+
+
+def _insert_setup_config_to_db(cfg: SetupConfig) -> None:
+    """Insert a new row into setup_config (never updates existing rows)."""
+    client = get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured.")
+
+    payload: Dict[str, Any] = {
+        "from_name": cfg.from_name or "Renewal & Upsell Advisor",
+        "automation_paused": cfg.automation_paused,
+    }
+    # Only include non-empty credential fields
+    if cfg.sendgrid_api_key:
+        payload["sendgrid_api_key"] = cfg.sendgrid_api_key
+    if cfg.from_email:
+        payload["from_email"] = cfg.from_email
+    if cfg.twilio_account_sid:
+        payload["twilio_account_sid"] = cfg.twilio_account_sid
+    if cfg.twilio_auth_token:
+        payload["twilio_auth_token"] = cfg.twilio_auth_token
+    if cfg.twilio_phone_number:
+        payload["twilio_phone_number"] = cfg.twilio_phone_number
+    if cfg.twilio_whatsapp_number:
+        payload["twilio_whatsapp_number"] = cfg.twilio_whatsapp_number
+
+    try:
+        client.table(SETUP_TABLE_NAME).insert(payload).execute()
+        logger.info("Inserted new setup_config row.")
+    except Exception as e:
+        logger.error(f"Failed to insert setup config: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save setup config.")
+
+
+# ---------------------------------------------------------------------------
+# Routes – app_settings (schedule / metrics)
+# ---------------------------------------------------------------------------
 
 @router.get("/config", response_model=AppSettings)
 async def get_app_settings() -> AppSettings:
-  """
-  Get current application settings (schedule + metrics).
-
-  If Supabase is not available or the settings row does not exist,
-  this returns built-in defaults.
-  """
-  return _load_settings_from_db()
+    """Get current schedule / metric settings."""
+    return _load_settings_from_db()
 
 
 @router.post("/config", response_model=AppSettings)
 async def update_app_settings(settings_payload: AppSettings) -> AppSettings:
-  """
-  Replace the current application settings with the provided payload.
+    """Replace schedule / metric settings."""
+    _save_settings_to_db(settings_payload)
+    return settings_payload
 
-  The full object must be sent from the client (schedule + metrics).
-  """
-  _save_settings_to_db(settings_payload)
-  return settings_payload
 
+# ---------------------------------------------------------------------------
+# Routes – setup_config (credentials)
+# ---------------------------------------------------------------------------
+
+@router.get("/setup", response_model=SetupConfig)
+async def get_setup_config() -> SetupConfig:
+    """
+    Get the latest setup credentials from setup_config.
+    Returns defaults when no row exists yet.
+    """
+    return _load_setup_config_from_db()
+
+
+@router.post("/setup", response_model=SetupConfig)
+async def save_setup_config(payload: SetupConfig) -> SetupConfig:
+    """
+    Save setup credentials by inserting a NEW row into setup_config.
+    Previous rows are NOT deleted – they remain as history.
+    """
+    _insert_setup_config_to_db(payload)
+    # Return the newly saved latest
+    return _load_setup_config_from_db()
+
+
+@router.patch("/setup/pause")
+async def pause_automation():
+    """
+    Insert a new setup_config row copying the latest credentials
+    but with automation_paused = True.  Called on logout.
+    """
+    latest = _load_setup_config_from_db()
+    latest.automation_paused = True
+    latest.created_at = None  # will be set by DB default
+    _insert_setup_config_to_db(latest)
+    return {"detail": "Automation paused. New row inserted."}

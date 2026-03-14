@@ -11,9 +11,10 @@ import {
   Plus,
   SlidersHorizontal,
   Kanban,
+  Phone,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAppSettings, useUpdateAppSettings } from "@/hooks/useSettings";
+import { useAppSettings, useUpdateAppSettings, useSetupConfig, useUpdateSetupConfig } from "@/hooks/useSettings";
 
 const integrations = [
   { name: "Google Sheets / Excel", status: "not_connected", lastSync: null, icon: "XL", color: "bg-emerald-500/10 text-emerald-600" },
@@ -23,8 +24,12 @@ const integrations = [
 export default function SettingsPage() {
   const toastHook = useToast();
   const toast = toastHook?.toast ?? (() => { });
+  
   const { data: appSettings } = useAppSettings();
   const updateSettings = useUpdateAppSettings();
+
+  const { data: setupConfig } = useSetupConfig();
+  const updateSetupConfig = useUpdateSetupConfig();
 
   const [notifications, setNotifications] = useState({
     highRisk: true, renewals: true, daily: false, failedCalls: true, churnDiscount: false,
@@ -43,18 +48,24 @@ export default function SettingsPage() {
   });
 
   const [emailSettings, setEmailSettings] = useState({
-    smtpHost: "",
-    smtpPort: 587,
-    smtpUsername: "",
-    smtpPassword: "",
+    sendgridApiKey: "",
     fromEmail: "",
     fromName: "Renewal & Upsell Advisor",
   });
 
+  const [twilioSettings, setTwilioSettings] = useState({
+    twilioSid: "",
+    twilioToken: "",
+    twilioPhone: "",
+    globalPhone: "",
+  });
+
   const [isDirty, setIsDirty] = useState(false);
 
-  const toggleNotif = (key: keyof typeof notifications) =>
+  const toggleNotif = (key: keyof typeof notifications) => {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
+    setIsDirty(true);
+  };
 
   function updateMetric(key: keyof typeof metricDefaults, value: number) {
     setMetricDefaults((prev) => ({
@@ -64,9 +75,7 @@ export default function SettingsPage() {
     setIsDirty(true);
   }
 
-
-
-  // Hydrate metrics from backend. Only pipeline schedules run; no global call/email schedule in use.
+  // Hydrate metrics from backend. 
   useEffect(() => {
     const metrics = appSettings?.metrics;
     if (metrics) {
@@ -80,18 +89,6 @@ export default function SettingsPage() {
         minUsagePercentForCall: metrics.minUsagePercentForCall ?? 20,
         healthScoreAtRiskBelowPercent: metrics.healthScoreAtRiskBelowPercent ?? 50,
         churnDiscountPercentage: metrics.churnDiscountPercentage ?? 20,
-      });
-    }
-
-    const emailCfg = appSettings?.email;
-    if (emailCfg) {
-      setEmailSettings({
-        smtpHost: emailCfg.smtpHost ?? "",
-        smtpPort: emailCfg.smtpPort ?? 587,
-        smtpUsername: emailCfg.smtpUsername ?? "",
-        smtpPassword: emailCfg.smtpPassword ?? "",
-        fromEmail: emailCfg.fromEmail ?? "",
-        fromName: emailCfg.fromName ?? "Renewal & Upsell Advisor",
       });
     }
 
@@ -109,9 +106,26 @@ export default function SettingsPage() {
     setIsDirty(false);
   }, [appSettings]);
 
+  // Hydrate setup config from new backend endpoint
+  useEffect(() => {
+    if (setupConfig) {
+      setEmailSettings({
+        sendgridApiKey: setupConfig.sendgrid_api_key ?? "",
+        fromEmail: setupConfig.from_email ?? "",
+        fromName: setupConfig.from_name ?? "Renewal & Upsell Advisor",
+      });
+      setTwilioSettings({
+        twilioSid: setupConfig.twilio_account_sid ?? "",
+        twilioToken: setupConfig.twilio_auth_token ?? "",
+        twilioPhone: setupConfig.twilio_phone_number ?? "",
+        globalPhone: setupConfig.twilio_whatsapp_number ?? "",
+      });
+    }
+  }, [setupConfig]);
+
   const handleSaveSettings = async () => {
     try {
-      // Only pipeline schedules run; send default schedule for API compatibility, save only metrics.
+      // 1. Save general app settings (metrics / schedule / notifications)
       await updateSettings.mutateAsync({
         schedule: {
           callWindowStart: "09:00",
@@ -135,14 +149,6 @@ export default function SettingsPage() {
           callMilestonePercents: appSettings?.metrics?.callMilestonePercents ?? [],
           emailMilestonePercents: appSettings?.metrics?.emailMilestonePercents ?? [],
         },
-        email: {
-          smtpHost: emailSettings.smtpHost || undefined,
-          smtpPort: emailSettings.smtpPort || undefined,
-          smtpUsername: emailSettings.smtpUsername || undefined,
-          smtpPassword: emailSettings.smtpPassword || undefined,
-          fromEmail: emailSettings.fromEmail || undefined,
-          fromName: emailSettings.fromName || undefined,
-        },
         notifications: {
           highRisk: notifications.highRisk,
           renewals: notifications.renewals,
@@ -151,10 +157,24 @@ export default function SettingsPage() {
           churnDiscount: notifications.churnDiscount,
         },
       });
+
+      // 2. Save credentials to setup API (merging with existing setupConfig to not erase Twilio accidentally)
+      await updateSetupConfig.mutateAsync({
+        ...setupConfig,
+        sendgrid_api_key: emailSettings.sendgridApiKey || undefined,
+        from_email: emailSettings.fromEmail || undefined,
+        from_name: emailSettings.fromName || "Renewal & Upsell Advisor",
+        twilio_account_sid: twilioSettings.twilioSid || undefined,
+        twilio_auth_token: twilioSettings.twilioToken || undefined,
+        twilio_phone_number: twilioSettings.twilioPhone || undefined,
+        twilio_whatsapp_number: twilioSettings.globalPhone || undefined,
+        automation_paused: setupConfig?.automation_paused ?? false,
+      });
+
       setIsDirty(false);
       toast({
         title: "Settings saved",
-        description: "Metric defaults have been updated.",
+        description: "Metric defaults and email settings have been updated.",
       });
     } catch (error: any) {
       toast({
@@ -277,70 +297,27 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Email / SMTP settings */}
+            {/* Email / SendGrid settings */}
             <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
                 <ShieldCheck size={15} className="text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Email & SMTP</h3>
+                <h3 className="text-sm font-semibold text-foreground">Email & SendGrid</h3>
               </div>
               <div className="p-4 space-y-3 text-xs">
                 <p className="text-[11px] text-muted-foreground">
-                  Configure how emails are sent. Use an app password from your email provider (Gmail, Outlook, Zoho, etc.).
-                  These values override any SMTP settings from the server&apos;s environment.
+                  Configure how emails are sent using SendGrid. The API key here overrides the server's environment.
+                  Ensure you verify the From Email as a Single Sender in SendGrid first.
                 </p>
                 <div className="space-y-3">
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">SMTP Host</Label>
-                    <input
-                      type="text"
-                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      placeholder="e.g. smtp.gmail.com"
-                      value={emailSettings.smtpHost}
-                      onChange={(e) => {
-                        setEmailSettings((prev) => ({ ...prev, smtpHost: e.target.value }));
-                        setIsDirty(true);
-                      }}
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-foreground">Port</Label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={65535}
-                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                        value={emailSettings.smtpPort}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setEmailSettings((prev) => ({ ...prev, smtpPort: isNaN(v) ? 587 : v }));
-                          setIsDirty(true);
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-medium text-foreground">SMTP Username</Label>
-                      <input
-                        type="text"
-                        className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                        placeholder="Login / email address"
-                        value={emailSettings.smtpUsername}
-                        onChange={(e) => {
-                          setEmailSettings((prev) => ({ ...prev, smtpUsername: e.target.value }));
-                          setIsDirty(true);
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-[11px] font-medium text-foreground">SMTP Password / App Password</Label>
+                    <Label className="text-[11px] font-medium text-foreground">SendGrid API Key</Label>
                     <input
                       type="password"
                       className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
-                      placeholder="Use provider app password, not your login password"
-                      value={emailSettings.smtpPassword}
+                      placeholder="SG.xxxxxxxxxxxxxxxxxx"
+                      value={emailSettings.sendgridApiKey}
                       onChange={(e) => {
-                        setEmailSettings((prev) => ({ ...prev, smtpPassword: e.target.value }));
+                        setEmailSettings((prev) => ({ ...prev, sendgridApiKey: e.target.value }));
                         setIsDirty(true);
                       }}
                     />
@@ -366,6 +343,73 @@ export default function SettingsPage() {
                       value={emailSettings.fromName}
                       onChange={(e) => {
                         setEmailSettings((prev) => ({ ...prev, fromName: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Twilio settings */}
+            <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
+                <Phone size={15} className="text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Voice & WhatsApp (Twilio)</h3>
+              </div>
+              <div className="p-4 space-y-3 text-xs">
+                <p className="text-[11px] text-muted-foreground">
+                  Configure Twilio credentials for automated voice calls and WhatsApp messages.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-[11px] font-medium text-foreground">Twilio Account SID</Label>
+                    <input
+                      type="text"
+                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      value={twilioSettings.twilioSid}
+                      onChange={(e) => {
+                        setTwilioSettings((prev) => ({ ...prev, twilioSid: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-[11px] font-medium text-foreground">Twilio Auth Token</Label>
+                    <input
+                      type="password"
+                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      placeholder="••••••••••••••••••••••••••••••••"
+                      value={twilioSettings.twilioToken}
+                      onChange={(e) => {
+                        setTwilioSettings((prev) => ({ ...prev, twilioToken: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-medium text-foreground">Twilio Phone Number</Label>
+                    <input
+                      type="text"
+                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      placeholder="+1234567890"
+                      value={twilioSettings.twilioPhone}
+                      onChange={(e) => {
+                        setTwilioSettings((prev) => ({ ...prev, twilioPhone: e.target.value }));
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[11px] font-medium text-foreground">Twilio WhatsApp Number</Label>
+                    <input
+                      type="text"
+                      className="w-full px-2 py-1.5 text-xs border-2 border-black rounded-lg bg-background"
+                      placeholder="+1234567890"
+                      value={twilioSettings.globalPhone}
+                      onChange={(e) => {
+                        setTwilioSettings((prev) => ({ ...prev, globalPhone: e.target.value }));
                         setIsDirty(true);
                       }}
                     />

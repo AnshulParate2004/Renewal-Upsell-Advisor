@@ -47,26 +47,17 @@ class EmailService:
         # Load dynamic email config from Supabase app_settings.email
         email_cfg = self._load_email_config_from_supabase()
         if email_cfg:
-            try:
-                self.smtp_host = email_cfg.get("smtpHost") or self.smtp_host
-                port_val = email_cfg.get("smtpPort")
-                if port_val is not None:
-                    self.smtp_port = int(port_val)
-            except Exception:
-                # Keep existing host/port on any parsing error
-                pass
-            self.smtp_username = email_cfg.get("smtpUsername") or self.smtp_username
-            if email_cfg.get("smtpPassword"):
-                self.smtp_password = email_cfg.get("smtpPassword")
-            self.from_email = email_cfg.get("fromEmail") or self.from_email or self.smtp_username
+            if email_cfg.get("sendgridApiKey"):
+                self.sendgrid_api_key = email_cfg.get("sendgridApiKey")
+            self.from_email = email_cfg.get("fromEmail") or self.from_email
             self.from_name = email_cfg.get("fromName") or self.from_name
 
         # Check if email is configured
-        self.is_configured = bool(self.smtp_username and self.smtp_password) or bool(self.sendgrid_api_key)
+        self.is_configured = bool(self.sendgrid_api_key)
 
         if not self.is_configured:
             logger.warning(
-                "Email service not configured. Go to Settings → Email & SMTP to configure SMTP credentials."
+                "Email service not configured. Go to Settings → Email & SMTP to configure SendGrid API Key."
             )
     
     def send_email(
@@ -130,7 +121,7 @@ class EmailService:
 
     def _load_email_config_from_supabase(self) -> Dict[str, Any]:
         """
-        Read app_settings.config.email from Supabase, if available.
+        Read email config from the new `setup_config` table.
         Returns {} when not configured or on error.
         """
         client = self._get_supabase_client()
@@ -138,22 +129,27 @@ class EmailService:
             return {}
         try:
             result = (
-                client.table("app_settings")
-                .select("config")
-                .eq("key", "default")
+                client.table("setup_config")
+                .select("sendgrid_api_key,from_email,from_name,automation_paused")
+                .order("created_at", desc=True)
                 .limit(1)
                 .execute()
             )
             rows = result.data or []
             if not rows:
                 return {}
-            raw_cfg = rows[0].get("config") or {}
-            if not isinstance(raw_cfg, dict):
-                return {}
-            email_cfg = raw_cfg.get("email") or {}
-            return email_cfg if isinstance(email_cfg, dict) else {}
+            
+            row = rows[0]
+            # Map SQL snake_case to the JS/old JSON camelCase expected downstream
+            # or just return it mapped
+            return {
+                "sendgridApiKey": row.get("sendgrid_api_key"),
+                "fromEmail": row.get("from_email"),
+                "fromName": row.get("from_name"),
+                "automation_paused": row.get("automation_paused", False)
+            }
         except Exception as e:
-            logger.error(f"Failed to load email config from app_settings: {e}")
+            logger.error(f"Failed to load email config from setup_config: {e}")
             return {}
     
     def _send_via_smtp(

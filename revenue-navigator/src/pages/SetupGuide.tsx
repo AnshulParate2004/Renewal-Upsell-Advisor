@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ShieldCheck, ArrowLeft, Mail, Phone, Server, Key, Info } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Key, Info, MessageSquare } from "lucide-react";
 
 export default function SetupGuide() {
     return (
@@ -15,8 +15,8 @@ export default function SetupGuide() {
         >
             <div className="w-full max-w-3xl mt-12 mb-24">
                 {/* Navigation */}
-                <Link 
-                    to="/setup" 
+                <Link
+                    to="/setup"
                     className="inline-flex items-center gap-2 px-4 py-2 mb-8 bg-white border-2 border-black rounded-lg text-sm font-black uppercase tracking-wider hover:bg-black hover:text-white transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
                 >
                     <ArrowLeft className="w-4 h-4" />
@@ -41,83 +41,121 @@ export default function SetupGuide() {
 
                 {/* Sections */}
                 <div className="space-y-6">
-                    {/* Section 1: SMTP Settings */}
+
+                    {/* Section 1: SendGrid API Key */}
                     <div className="bg-white border-2 border-black rounded-xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-[#5F63F2]/5 rounded-bl-[100px] -z-10" />
-                        
+
                         <div className="flex items-start gap-4">
                             <div className="mt-1 p-2 bg-[#5F63F2]/10 rounded border border-[#5F63F2]/20 text-[#5F63F2]">
-                                <Server className="w-5 h-5" />
+                                <Key className="w-5 h-5" />
                             </div>
-                            <div>
-                                <h3 className="text-lg font-black uppercase tracking-wide text-black mb-3">1. SMTP Host & Port Configuration</h3>
-                                <p className="text-sm text-foreground/70 mb-4">The bridge configuration uses standard SMTP protocols to send emails directly from your account.</p>
-                                
-                                <div className="grid sm:grid-cols-2 gap-4">
-                                    <div className="border border-black/20 rounded-lg p-4 bg-gray-50">
-                                        <h4 className="text-xs font-black uppercase mb-2 flex items-center gap-2"><Mail className="w-3 h-3"/> Gmail / Workspace</h4>
-                                        <div className="space-y-2 font-mono text-xs">
-                                            <div className="flex justify-between border-b pb-1">
-                                                <span className="text-black/50">Host:</span>
-                                                <span className="font-bold">smtp.gmail.com</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-black/50">Port:</span>
-                                                <span className="font-bold">587</span>
-                                            </div>
-                                        </div>
+                            <div className="flex-1">
+                                <h3 className="text-lg font-black uppercase tracking-wide text-black mb-3">1. Generating a SendGrid API Key</h3>
+                                <p className="text-sm text-foreground/70 mb-4">The bridge configuration uses SendGrid to safely and reliably deliver emails on behalf of the application.</p>
+
+                                <div className="space-y-3">
+                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                        <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">1</div>
+                                        <p className="text-sm font-medium">Create a free account at <a href="https://sendgrid.com" target="_blank" rel="noreferrer" className="text-[#5F63F2] hover:underline font-bold">SendGrid</a>.</p>
                                     </div>
-                                    
-                                    <div className="border border-black/20 rounded-lg p-4 bg-gray-50">
-                                        <h4 className="text-xs font-black uppercase mb-2 flex items-center gap-2"><Mail className="w-3 h-3"/> Outlook / Office 365</h4>
-                                        <div className="space-y-2 font-mono text-xs">
-                                            <div className="flex justify-between border-b pb-1">
-                                                <span className="text-black/50">Host:</span>
-                                                <span className="font-bold">smtp-mail.outlook.com</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span className="text-black/50">Port:</span>
-                                                <span className="font-bold">587</span>
-                                            </div>
-                                        </div>
+                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                        <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">2</div>
+                                        <p className="text-sm font-medium">Navigate to <span className="font-bold">Settings → Sender Authentication</span> and click <span className="font-bold">Verify a Single Sender</span>.</p>
+                                    </div>
+                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                        <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">3</div>
+                                        <p className="text-sm font-medium">Enter your details and click Create. <span className="font-bold text-red-600">You must check your inbox and click the verification link they send you!</span></p>
+                                    </div>
+                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                        <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">4</div>
+                                        <p className="text-sm font-medium">Navigate to <span className="font-bold">Settings → API Keys</span> and click <span className="font-bold">Create API Key</span>.</p>
+                                    </div>
+                                    <div className="flex gap-4 items-center bg-green-50 p-3 rounded border border-green-200">
+                                        <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-black shrink-0">5</div>
+                                        <p className="text-sm font-medium text-green-900">Name it, give it <span className="font-bold">Full Access</span>, and copy the key (starts with <code className="font-mono bg-green-100 px-1 py-0.5 rounded">SG.</code>) into the Setup Form.</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Section 2: App Password */}
+                    {/* Section 2: Twilio Voice & WhatsApp */}
                     <div className="bg-white border-2 border-black rounded-xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-[#5F63F2]/5 rounded-bl-[100px] -z-10" />
-                        
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-bl-[100px] -z-10" />
+
                         <div className="flex items-start gap-4">
-                            <div className="mt-1 p-2 bg-[#5F63F2]/10 rounded border border-[#5F63F2]/20 text-[#5F63F2]">
-                                <Key className="w-5 h-5" />
+                            <div className="mt-1 p-2 bg-green-100 rounded border border-green-200 text-green-700">
+                                <Phone className="w-5 h-5" />
                             </div>
                             <div className="flex-1">
-                                <h3 className="text-lg font-black uppercase tracking-wide text-black mb-3">2. Generating a Google App Password</h3>
-                                <p className="text-sm text-foreground/70 mb-4">Standard account passwords will not work for security reasons. You must generate a dedicated App Password.</p>
-                                
-                                <div className="space-y-3">
-                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
-                                        <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black">1</div>
-                                        <p className="text-sm font-medium">Go to your <a href="https://myaccount.google.com/security" target="_blank" rel="noreferrer" className="text-[#5F63F2] hover:underline font-bold">Google Account Security</a> settings.</p>
+                                <h3 className="text-lg font-black uppercase tracking-wide text-black mb-1">2. Twilio — Voice Calls & WhatsApp</h3>
+                                <p className="text-sm text-foreground/70 mb-4">Twilio powers the automated AI voice calls and WhatsApp messages sent to clients. You need an Account SID, Auth Token, a voice phone number, and a WhatsApp number.</p>
+
+                                {/* 2a. Account SID + Auth Token */}
+                                <div className="mb-5">
+                                    <p className="text-xs font-black uppercase tracking-widest text-black mb-3 flex items-center gap-2">
+                                        <Key className="w-3.5 h-3.5" /> Getting Your Account SID &amp; Auth Token
+                                    </p>
+                                    <div className="space-y-3">
+                                        <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                            <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">1</div>
+                                            <p className="text-sm font-medium">Sign up or log in at <a href="https://www.twilio.com/console" target="_blank" rel="noreferrer" className="text-green-700 hover:underline font-bold">twilio.com/console</a>.</p>
+                                        </div>
+                                        <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                            <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">2</div>
+                                            <p className="text-sm font-medium">On the <span className="font-bold">Dashboard</span>, your <code className="font-mono bg-gray-200 px-1 rounded text-xs">Account SID</code> (starts with <code className="font-mono bg-gray-200 px-1 rounded text-xs">AC</code>) and <code className="font-mono bg-gray-200 px-1 rounded text-xs">Auth Token</code> are shown in the Account Info panel.</p>
+                                        </div>
+                                        <div className="flex gap-4 items-center bg-green-50 p-3 rounded border border-green-200">
+                                            <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-black shrink-0">3</div>
+                                            <p className="text-sm font-medium text-green-900">Click the <span className="font-bold">eye icon</span> next to Auth Token to reveal it, then copy both values into the Setup Form.</p>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
-                                        <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black">2</div>
-                                        <p className="text-sm font-medium">Ensure <span className="font-bold">2-Step Verification</span> is turned on.</p>
+                                </div>
+
+                                {/* 2b. Voice Phone Number */}
+                                <div className="mb-5">
+                                    <p className="text-xs font-black uppercase tracking-widest text-black mb-3 flex items-center gap-2">
+                                        <Phone className="w-3.5 h-3.5" /> Getting a Twilio Voice Phone Number
+                                    </p>
+                                    <div className="space-y-3">
+                                        <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                            <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">1</div>
+                                            <p className="text-sm font-medium">In the Twilio Console, go to <span className="font-bold">Phone Numbers → Manage → Buy a number</span>.</p>
+                                        </div>
+                                        <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                            <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">2</div>
+                                            <p className="text-sm font-medium">Filter by capability: ensure <span className="font-bold">Voice</span> is checked. Search for a number and click <span className="font-bold">Buy</span>.</p>
+                                        </div>
+                                        <div className="flex gap-4 items-center bg-green-50 p-3 rounded border border-green-200">
+                                            <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-black shrink-0">3</div>
+                                            <p className="text-sm font-medium text-green-900">Copy the number in <span className="font-bold">E.164 format</span> (e.g. <code className="font-mono bg-green-100 px-1 rounded text-xs">+11111111</code>) and paste it in the <span className="font-bold">Voice Phone Number</span> field.</p>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
-                                        <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black">3</div>
-                                        <p className="text-sm font-medium">Search for <span className="font-bold">"App Passwords"</span> in the settings search bar.</p>
-                                    </div>
-                                    <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
-                                        <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black">4</div>
-                                        <p className="text-sm font-medium">Select "Other" (or create a custom name) and type <span className="font-mono bg-black/10 px-1 rounded">Advisor Bot</span>, then click Generate.</p>
-                                    </div>
-                                    <div className="flex gap-4 items-center bg-green-50 p-3 rounded border border-green-200">
-                                        <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-black">5</div>
-                                        <p className="text-sm font-medium text-green-900">Copy the 16-character password block and paste it into the Setup Form.</p>
+                                </div>
+
+                                {/* 2c. WhatsApp Sandbox */}
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-widest text-black mb-3 flex items-center gap-2">
+                                        <MessageSquare className="w-3.5 h-3.5" /> Setting Up WhatsApp (Sandbox)
+                                    </p>
+                                    <div className="space-y-3">
+                                        <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                            <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">1</div>
+                                            <p className="text-sm font-medium">Go to <span className="font-bold">Messaging → Try it out → Send a WhatsApp message</span> in the Twilio Console.</p>
+                                        </div>
+                                        <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                            <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">2</div>
+                                            <p className="text-sm font-medium">The sandbox number shown on that page (e.g. <code className="font-mono bg-gray-200 px-1 rounded text-xs">+1411111111</code>) is your <span className="font-bold">WhatsApp Number</span>.</p>
+                                        </div>
+                                        <div className="flex gap-4 items-center bg-gray-50 p-3 rounded border border-black/10">
+                                            <div className="w-6 h-6 rounded-full bg-black text-white flex items-center justify-center text-xs font-black shrink-0">3</div>
+                                            <p className="text-sm font-medium">Activate the sandbox by sending the shown join-code from your WhatsApp to that number (one-time setup per device).</p>
+                                        </div>
+                                        <div className="flex gap-4 items-center bg-green-50 p-3 rounded border border-green-200">
+                                            <div className="w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-black shrink-0">4</div>
+                                            <p className="text-sm font-medium text-green-900">Paste the sandbox number in <span className="font-bold">E.164 format</span> into the <span className="font-bold">WhatsApp Number</span> field in Setup. For production use, apply for a WhatsApp Business number through Twilio.</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -127,10 +165,10 @@ export default function SetupGuide() {
                     {/* Section 3: Master Sync */}
                     <div className="bg-white border-2 border-black rounded-xl p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-[100px] -z-10" />
-                        
+
                         <div className="flex items-start gap-4">
                             <div className="mt-1 p-2 bg-primary/10 rounded border border-primary/20 text-primary">
-                                <Phone className="w-5 h-5" />
+                                <Mail className="w-5 h-5" />
                             </div>
                             <div>
                                 <h3 className="text-lg font-black uppercase tracking-wide text-black mb-3">3. Master Account Synchronization</h3>
@@ -147,8 +185,8 @@ export default function SetupGuide() {
                 </div>
 
                 <div className="mt-12 flex justify-center">
-                    <Link 
-                        to="/setup" 
+                    <Link
+                        to="/setup"
                         className="px-8 py-4 bg-black text-white border-2 border-black rounded-lg text-lg font-black uppercase tracking-wider hover:bg-gray-800 transition-colors shadow-[6px_6px_0px_0px_rgba(0,0,0,0.5)] flex items-center gap-3"
                     >
                         Return to Setup <ArrowLeft className="w-5 h-5 rotate-180" />

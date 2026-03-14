@@ -31,14 +31,25 @@ export interface AppSettings {
     failedCalls?: boolean;
     churnDiscount?: boolean;
   };
-  email?: {
-    smtpHost?: string;
-    smtpPort?: number;
-    smtpUsername?: string;
-    smtpPassword?: string;
-    fromEmail?: string;
-    fromName?: string;
+  pipeline_flow?: {
+    q1: string;
+    q2: string;
+    q3: string;
+    q4: string;
+    renewed: string;
   };
+}
+
+export interface SetupConfig {
+  sendgrid_api_key?: string;
+  from_email?: string;
+  from_name: string;
+  twilio_account_sid?: string;
+  twilio_auth_token?: string;
+  twilio_phone_number?: string;
+  twilio_whatsapp_number?: string;
+  automation_paused: boolean;
+  created_at?: string;
 }
 
 export const settingsApi = {
@@ -49,6 +60,24 @@ export const settingsApi = {
     return fetchApi('/settings/config', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+};
+
+export const setupApi = {
+  getSetup: async () => {
+    return fetchApi('/settings/setup');
+  },
+  saveSetup: async (data: SetupConfig) => {
+    return fetchApi('/settings/setup', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  pauseAutomation: async () => {
+    return fetchApi('/settings/setup/pause', {
+      method: 'PATCH',
+      body: JSON.stringify({}),
     });
   },
 };
