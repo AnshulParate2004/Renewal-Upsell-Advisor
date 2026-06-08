@@ -4,26 +4,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { accountsApi } from '@/lib/api/accounts';
 import { useRevenue } from '@/contexts/RevenueContext';
+import { filterAccountsByRevenueType, billingIntervalParam } from '@/lib/revenueUtils';
 import type { Account } from '@/data/mockData';
 
-/** Filter strictly by revenue field: arr present => annual; mrr present (and no arr) => monthly. */
 export const useAccounts = (skip = 0, limit = 1000) => {
   const { revenueType } = useRevenue();
-  const billingInterval = revenueType === 'MRR' ? 'monthly' : 'annual';
+  const billingInterval = billingIntervalParam(revenueType);
   return useQuery({
     queryKey: ['accounts', skip, limit, billingInterval],
     queryFn: async () => {
       const raw = await accountsApi.getAll(skip, limit, billingInterval);
-      const hasArr = (a: Account) => (a.arr ?? 0) > 0;
-      const hasMrr = (a: Account) => (a.mrr ?? 0) > 0;
-      const isStrictlyAnnual = (a: Account) => hasArr(a);
-      const isStrictlyMonthly = (a: Account) => hasMrr(a) && !hasArr(a);
-      return revenueType === 'MRR'
-        ? raw.filter(isStrictlyMonthly)
-        : raw.filter(isStrictlyAnnual);
+      return filterAccountsByRevenueType(raw, revenueType);
     },
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
     retry: 1,
   });
 };

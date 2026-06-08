@@ -4,13 +4,15 @@ plus setup-page credentials (SendGrid / Twilio).
 
 Two separate storage areas:
   1. `app_settings`  (key/config jsonb) – schedule, metrics, notifications, pipeline_flow
-  2. `setup_config`  (flat columns, append-only) – credentials (SendGrid, Twilio) + automation_paused
+  2. `setup_config`  (flat columns, append-only) – credentials (Resend, Cube) + automation_paused
      Every POST to /settings/setup inserts a NEW row; history is always preserved.
      The latest row (ORDER BY created_at DESC LIMIT 1) is the active config.
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Any, Dict, List, Optional
+
+from app.services.lifecycle.bucket_config import LifecycleBucketsConfig
 
 from app.core.logging import get_logger
 from app.services.email.scheduler import get_supabase_client
@@ -37,6 +39,8 @@ class ScheduleConfig(BaseModel):
     autoEmailScheduleTime: str = Field("12:00")
     autoCallScheduleTime: str = Field("14:00")
     reminderDaysBeforeRenewal: int = Field(1, ge=0, le=365)
+    churnCallFrequencyDays: int = Field(1, ge=1, le=30)
+    objectionFollowUpHours: int = Field(24, ge=1, le=720)
 
 
 class MetricsConfig(BaseModel):
@@ -73,6 +77,7 @@ class AppSettings(BaseModel):
     metrics: MetricsConfig = MetricsConfig()
     notifications: NotificationsConfig = Field(default_factory=NotificationsConfig)
     pipeline_flow: Optional[PipelineFlowConfig] = Field(default_factory=PipelineFlowConfig)
+    lifecycle_buckets: LifecycleBucketsConfig = Field(default_factory=LifecycleBucketsConfig)
     automation_paused: bool = Field(False)
 
 
@@ -88,14 +93,17 @@ class SetupConfig(BaseModel):
     Credentials stored in the flat-column `setup_config` table.
     Each save inserts a new row; history is preserved.
     """
-    sendgrid_api_key: Optional[str] = Field(None, description="SendGrid API Key (starts with SG.)")
+    resend_api_key: Optional[str] = Field(None, description="Resend API Key")
     from_email: Optional[str] = Field(None, description="From email address")
     from_name: str = Field("Renewal & Upsell Advisor", description="From name")
+    cube_api_url: Optional[str] = Field(None, description="Cube Software API Base URL")
+    cube_api_key: Optional[str] = Field(None, description="Cube Software API Key")
     twilio_account_sid: Optional[str] = Field(None, description="Twilio Account SID")
     twilio_auth_token: Optional[str] = Field(None, description="Twilio Auth Token")
-    twilio_phone_number: Optional[str] = Field(None, description="Twilio voice number (E.164)")
-    twilio_whatsapp_number: Optional[str] = Field(None, description="Twilio WhatsApp number (E.164)")
+    twilio_phone_number: Optional[str] = Field(None, description="Twilio Phone Number (Voice)")
+    twilio_whatsapp_number: Optional[str] = Field(None, description="Twilio WhatsApp Number")
     automation_paused: bool = Field(False)
+    pipeline_type: str = Field("cloudflare", description="Pipeline Focus: cloudflare or aditya_birla")
     created_at: Optional[str] = Field(None, description="Row timestamp (read-only)")
 
 
@@ -181,10 +189,10 @@ def _load_setup_config_from_db() -> SetupConfig:
         result = (
             client.table(SETUP_TABLE_NAME)
             .select(
-                "id,sendgrid_api_key,from_email,from_name,"
-                "twilio_account_sid,twilio_auth_token,"
-                "twilio_phone_number,twilio_whatsapp_number,"
-                "automation_paused,created_at"
+                "id,resend_api_key,from_email,from_name,"
+                "cube_api_url,cube_api_key,"
+                "twilio_account_sid,twilio_auth_token,twilio_phone_number,twilio_whatsapp_number,"
+                "automation_paused,pipeline_type,created_at"
             )
             .order("created_at", desc=True)
             .limit(1)
@@ -195,18 +203,53 @@ def _load_setup_config_from_db() -> SetupConfig:
             return DEFAULT_SETUP
         row = rows[0]
         return SetupConfig.model_validate({
-            "sendgrid_api_key": row.get("sendgrid_api_key"),
+            "resend_api_key": row.get("resend_api_key"),
             "from_email": row.get("from_email"),
             "from_name": row.get("from_name") or "Renewal & Upsell Advisor",
-            "twilio_account_sid": row.get("twilio_account_sid"),
-            "twilio_auth_token": row.get("twilio_auth_token"),
-            "twilio_phone_number": row.get("twilio_phone_number"),
-            "twilio_whatsapp_number": row.get("twilio_whatsapp_number"),
+            "cube_api_url": row.get("cube_api_url"),
+            "cube_api_key": row.get("cube_api_key"),
             "automation_paused": bool(row.get("automation_paused", False)),
+            "pipeline_type": row.get("pipeline_type") or "cloudflare",
             "created_at": str(row.get("created_at") or ""),
         })
     except Exception as e:
         logger.error(f"Failed to load setup config: {e}")
+        # If the failure is due to a missing column (PGRST204), try to load without it as a fallback
+        if "PGRST204" in str(e) or "pipeline_type" in str(e).lower():
+            try:
+                result = (
+                    client.table(SETUP_TABLE_NAME)
+                    .select(
+                        "id,resend_api_key,from_email,from_name,"
+                        "cube_api_url,cube_api_key,"
+                        "twilio_account_sid,twilio_auth_token,twilio_phone_number,"
+                        "automation_paused,created_at"
+                    )
+                    .order("created_at", desc=True)
+                    .limit(1)
+                    .execute()
+                )
+                rows = result.data or []
+                if not rows:
+                    return DEFAULT_SETUP
+                row = rows[0]
+                return SetupConfig.model_validate({
+                    "resend_api_key": row.get("resend_api_key"),
+                    "from_email": row.get("from_email"),
+                    "from_name": row.get("from_name") or "Renewal & Upsell Advisor",
+                    "cube_api_url": row.get("cube_api_url"),
+                    "cube_api_key": row.get("cube_api_key"),
+                    "twilio_account_sid": row.get("twilio_account_sid"),
+                    "twilio_auth_token": row.get("twilio_auth_token"),
+                    "twilio_phone_number": row.get("twilio_phone_number"),
+                    "twilio_whatsapp_number": row.get("twilio_whatsapp_number"),
+                    "automation_paused": bool(row.get("automation_paused", False)),
+                    "pipeline_type": "cloudflare", # Fallback default
+                    "created_at": str(row.get("created_at") or ""),
+                })
+            except Exception as e2:
+                logger.error(f"Fallback load also failed: {e2}")
+
         return DEFAULT_SETUP
 
 
@@ -219,12 +262,17 @@ def _insert_setup_config_to_db(cfg: SetupConfig) -> None:
     payload: Dict[str, Any] = {
         "from_name": cfg.from_name or "Renewal & Upsell Advisor",
         "automation_paused": cfg.automation_paused,
+        "pipeline_type": cfg.pipeline_type,
     }
     # Only include non-empty credential fields
-    if cfg.sendgrid_api_key:
-        payload["sendgrid_api_key"] = cfg.sendgrid_api_key
+    if cfg.resend_api_key:
+        payload["resend_api_key"] = cfg.resend_api_key
     if cfg.from_email:
         payload["from_email"] = cfg.from_email
+    if cfg.cube_api_url:
+        payload["cube_api_url"] = cfg.cube_api_url
+    if cfg.cube_api_key:
+        payload["cube_api_key"] = cfg.cube_api_key
     if cfg.twilio_account_sid:
         payload["twilio_account_sid"] = cfg.twilio_account_sid
     if cfg.twilio_auth_token:
@@ -239,7 +287,13 @@ def _insert_setup_config_to_db(cfg: SetupConfig) -> None:
         logger.info("Inserted new setup_config row.")
     except Exception as e:
         logger.error(f"Failed to insert setup config: {e}")
-        raise HTTPException(status_code=500, detail="Failed to save setup config.")
+        err_str = str(e)
+        if "PGRST204" in err_str or "pipeline_type" in err_str.lower():
+            raise HTTPException(
+                status_code=500, 
+                detail="Critical: Database schema mismatch. Please add the 'pipeline_type' column to the 'setup_config' table in Supabase."
+            )
+        raise HTTPException(status_code=500, detail=f"Failed to save setup config: {err_str}")
 
 
 # ---------------------------------------------------------------------------

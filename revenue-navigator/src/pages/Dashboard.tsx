@@ -1,152 +1,350 @@
-import { Users, AlertTriangle, DollarSign, Heart, Smile, Loader2, ShieldCheck, Briefcase, Activity, Gauge } from "lucide-react";
-import { formatCurrency } from "@/data/mockData";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { useDashboardStats } from "@/hooks/useAnalytics";
-import { useAccounts } from "@/hooks/useAccounts";
-import { useOpportunities } from "@/hooks/useOpportunities";
-import { useRevenue } from "@/contexts/RevenueContext";
+import { useState, useMemo } from "react";
+
+import { AlertTriangle, Loader2, Shield, Sparkles } from "lucide-react";
+
 import { motion } from "framer-motion";
-import RelationshipTrendChart from "@/components/charts/RelationshipScoreChart";
+
+import { useAccounts } from "@/hooks/useAccounts";
+
+import { useDashboardStats } from "@/hooks/useAnalytics";
+
+import { useOpportunities } from "@/hooks/useOpportunities";
+
+import { useRevenue } from "@/contexts/RevenueContext";
+
+import { useLifecycleDashboard } from "@/hooks/useLifecycleDashboard";
+import { useAgentRecommendation } from "@/hooks/useAgentRecommendation";
+
+import { LIFECYCLE_STAGES } from "@/lib/lifecycleEngine";
+
+import { getVendorDisplayName, getVendorId } from "@/lib/vendorProducts";
+
+import { LifecycleStageCard } from "@/components/lifecycle/LifecycleStageCard";
+
+import { NBADigestPanel } from "@/components/lifecycle/NBADigestPanel";
+
+import { LifecycleAgentPanel } from "@/components/lifecycle/LifecycleAgentPanel";
+
+import { LifecycleStageFilter, type StageFilter } from "@/components/lifecycle/LifecycleStageFilter";
+
+import { DashboardMetricCards } from "@/components/dashboard/DashboardMetricCards";
+
+import type { LifecycleStageId } from "@/types/lifecycle";
+
+
 
 export default function Dashboard() {
+
   const { revenueType } = useRevenue();
+
   const { data: stats, isLoading: statsLoading, error: statsError } = useDashboardStats();
+
   const { data: accounts = [], isLoading: accountsLoading, error: accountsError } = useAccounts();
+
   const { data: opportunities = [] } = useOpportunities();
 
-  const totalArr = accounts.reduce((sum, a) => sum + (a.arr ?? 0), 0);
-  const totalMrr = accounts.reduce((sum, a) => sum + (a.mrr ?? 0), 0);
-  const displayRevenue = revenueType === 'MRR' ? totalMrr : totalArr;
-  const revenueLabel = revenueType === 'ARR' ? 'Annual Recurring Revenue' : 'Monthly Recurring Revenue';
-  // Renewed status: don't count in churn; do count as on track
-  const isStatusRenewed = (a: { status?: string | null }) => {
-    const s = (a?.status ?? '').toString().trim().toLowerCase();
-    return s === 'renewed' || s === 'renewal';
+  const {
+
+    data: lifecycle,
+
+    isLoading: lifecycleLoading,
+
+    error: lifecycleError,
+
+  } = useLifecycleDashboard(accounts);
+
+  const vendorName = getVendorDisplayName(getVendorId());
+
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+
+  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+
+  const filteredAccounts = useMemo(() => {
+    if (stageFilter === "all" || !lifecycle?.accountAlerts?.length) {
+      return accounts;
+    }
+    const ids = new Set(
+      lifecycle.accountAlerts
+        .filter((alert) => alert.stage === stageFilter)
+        .map((alert) => alert.account.id)
+    );
+    return accounts.filter((account) => ids.has(account.id));
+  }, [accounts, lifecycle?.accountAlerts, stageFilter]);
+
+  const fatalError = accountsError || statsError;
+  const lifecycleSectionLoading = lifecycleLoading && !lifecycle;
+
+
+
+  const totalArr = filteredAccounts.reduce((sum, a) => sum + (a.arr ?? 0), 0);
+
+  const totalMrr = filteredAccounts.reduce((sum, a) => sum + (a.mrr ?? 0), 0);
+
+  const displayRevenue = revenueType === "MRR" ? totalMrr : totalArr;
+
+  const revenueLabel = revenueType === "ARR" ? "Total Annual Recurring Revenue" : "Total Monthly Recurring Revenue";
+
+
+
+  const stageCounts = useMemo(() => {
+
+    const raw = lifecycle?.stageCounts ?? { all: accounts.length };
+
+    return {
+
+      all: raw.all ?? accounts.length,
+
+      protect: raw.protect ?? 0,
+
+      renew: raw.renew ?? 0,
+
+      adopt: raw.adopt ?? 0,
+
+      expand: raw.expand ?? 0,
+
+      activate: raw.activate ?? 0,
+
+    };
+
+  }, [lifecycle?.stageCounts, accounts.length]);
+
+
+
+  const filteredNbaItems = useMemo(() => {
+    if (!lifecycle) return [];
+    if (stageFilter === "all") return lifecycle.nbaItems;
+    return lifecycle.nbaItems.filter((item) => item.stage === stageFilter);
+  }, [lifecycle, stageFilter]);
+
+  const handleStageFilterChange = (filter: StageFilter) => {
+    setStageFilter(filter);
+    if (filter === "all") {
+      setSelectedAccountId(null);
+      return;
+    }
+    const first = lifecycle?.accountAlerts.find((a) => a.stage === filter);
+    setSelectedAccountId(first?.account.id ?? null);
   };
-  const churnRiskCount = accounts.length > 0
-    ? accounts.filter(a => (a.riskScore ?? 0) >= 70 && !isStatusRenewed(a)).length
-    : (stats?.churn_risk_count ?? 0);
-  // Filter opportunities to only those tied to the currently visible accounts
-  const visibleAccountIds = new Set(accounts.map((a) => a.id));
-  const visibleOpps = opportunities.filter(
-    (o) => o.accountId && visibleAccountIds.has(o.accountId)
-  );
-  const upsellPipeline = visibleOpps.reduce((sum, o) => {
-    const rawValue = typeof o.value === 'number' ? o.value : Number(o.value ?? 0);
-    const value = Number.isFinite(rawValue) ? rawValue : 0;
-    return sum + value;
-  }, 0);
-  const displayPipeline = upsellPipeline;
-  const avgRelationshipScore = stats?.avg_relationship_score ?? 0;
-  const avgSentimentScore = (stats?.avg_sentiment_score ?? 0).toFixed(2);
-  const isLoading = statsLoading || accountsLoading;
 
-  // On track: Healthy (risk < 40) or explicitly renewed (status renewed/renewal); Middle not counted unless renewed
-  const safeAccountsCount = accounts.filter(a => (a.riskScore ?? 0) < 40 || isStatusRenewed(a)).length;
-  const avgHealthScore = accounts.length > 0
-    ? Math.round(accounts.reduce((sum, a) => sum + (a.healthScore ?? 0), 0) / accounts.length)
-    : 0;
-  const avgUtilizationPct = accounts.length > 0
-    ? (() => {
-        const total = accounts.reduce((sum, a) => {
-          const u = Number(a.utilization ?? 0);
-          return sum + (u <= 1 && u >= 0 ? u * 100 : u);
-        }, 0);
-        return Math.round(total / accounts.length);
-      })()
-    : 0;
+  const selectedAlert = useMemo(() => {
+    if (!lifecycle) return null;
 
-  const predictedUpsellAccountCount = visibleOpps.filter(
-    (o) => (typeof o.value === 'number' ? o.value : 0) > 0
-  ).length;
+    if (stageFilter !== "all") {
+      if (selectedAccountId) {
+        const match = lifecycle.accountAlerts.find((a) => a.account.id === selectedAccountId);
+        if (match?.stage === stageFilter) return match;
+      }
+      return lifecycle.accountAlerts.find((a) => a.stage === stageFilter) ?? null;
+    }
 
-  const metricCards = [
-    { label: 'Total Customers', value: accounts.length, icon: <Briefcase size={18} />, iconBg: 'bg-blue-500/10', iconColor: 'text-blue-500', borderColor: 'border-blue-500/20' },
-    { label: `Total ${revenueLabel}`, value: formatCurrency(displayRevenue), icon: <DollarSign size={18} />, iconBg: 'bg-primary/10', iconColor: 'text-primary', borderColor: 'border-primary/20' },
-    { label: 'Accounts on track', value: safeAccountsCount, icon: <ShieldCheck size={18} />, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500', borderColor: 'border-emerald-500/20' },
-    { label: 'Churn Prediction', value: churnRiskCount, icon: <AlertTriangle size={18} />, iconBg: 'bg-destructive/10', iconColor: 'text-destructive', isAlert: true, borderColor: 'border-destructive/20' },
-    { label: 'Total upsell amount predicted', value: formatCurrency(displayPipeline), icon: <Users size={18} />, iconBg: 'bg-accent/10', iconColor: 'text-accent', borderColor: 'border-accent/20' },
-    { label: 'Total predicted upsell accounts', value: predictedUpsellAccountCount, icon: <Users size={18} />, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-600', borderColor: 'border-emerald-500/20' },
-    { label: 'Avg Relationship', value: `${Math.round(avgRelationshipScore)}`, icon: <Heart size={18} />, iconBg: 'bg-pink-500/10', iconColor: 'text-pink-500', borderColor: 'border-pink-500/20' },
-    { label: 'Average Customer Sentiment', value: avgSentimentScore, icon: <Smile size={18} />, iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500', borderColor: 'border-amber-500/20' },
-    { label: 'Average Health Score', value: avgHealthScore, icon: <Activity size={18} />, iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-600', borderColor: 'border-emerald-500/20' },
-    { label: 'Average Licence Used %', value: `${avgUtilizationPct}%`, icon: <Gauge size={18} />, iconBg: 'bg-sky-500/10', iconColor: 'text-sky-600', borderColor: 'border-sky-500/20' },
-  ];
+    if (selectedAccountId) {
+      const match = lifecycle.accountAlerts.find((a) => a.account.id === selectedAccountId);
+      if (match) return match;
+    }
+
+    const topNba = filteredNbaItems[0];
+    if (topNba) {
+      const fromNba = lifecycle.accountAlerts.find((a) => a.account.id === topNba.accountId);
+      if (fromNba) return fromNba;
+    }
+
+    const protectRep = lifecycle.stageAlerts.find((a) => a.stage === "protect");
+    if (protectRep) return protectRep;
+
+    return lifecycle.stageAlerts[0] ?? null;
+  }, [selectedAccountId, lifecycle, stageFilter, filteredNbaItems]);
+
+
+
+  const { data: agentRecommendation } = useAgentRecommendation(selectedAlert?.account.id ?? null);
+
+
+
+  const stageAlertMap = useMemo(() => {
+
+    const map = new Map<LifecycleStageId, NonNullable<typeof lifecycle>["stageAlerts"][0]>();
+
+    lifecycle?.stageAlerts.forEach((a) => map.set(a.stage, a));
+
+    return map;
+
+  }, [lifecycle?.stageAlerts]);
+
+
 
   return (
+
     <div className="h-[calc(100vh-56px)] flex flex-col bg-background">
-      {/* Page Header */}
+
       <motion.div
+
         initial={{ opacity: 0, y: -10 }}
+
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="bg-card border-b-2 border-black px-6 py-5 shrink-0"
+
+        className="bg-card border-b-2 border-black px-6 py-4 shrink-0"
+
       >
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Real-time performance intelligence</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-background text-muted-foreground border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              Live
+
+        <div className="max-w-[1600px] mx-auto space-y-4">
+
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+
+            <div className="min-w-0 flex-1">
+
+              <div className="flex items-center gap-2 mb-1">
+
+                <Shield className="w-4 h-4 text-primary shrink-0" />
+
+                <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+
+                  Agentic Customer Lifecycle Management
+
+                </span>
+
+              </div>
+
+              <h1 className="text-xl font-bold">Unified Renewal Command Centre</h1>
+
+              <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+
+                AI agents scale customer lifecycle management for {vendorName} — accelerate deployment,
+
+                drive expansion, boost renewals, and minimize churn with consumption-based alerts.
+
+              </p>
+
             </div>
+
+            <div className="flex items-center gap-2 shrink-0 sm:pt-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 border-2 border-emerald-500 rounded-lg whitespace-nowrap">
+                <Sparkles className="w-3 h-3" /> websocket live
+              </div>
+            </div>
+
           </div>
+
+
+
+          {!fatalError && (
+            <div className="pt-3 border-t border-black/10">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                Filter by lifecycle stage
+              </p>
+              <LifecycleStageFilter
+                value={stageFilter}
+                onChange={handleStageFilterChange}
+                counts={stageCounts}
+              />
+            </div>
+          )}
+
         </div>
+
       </motion.div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto max-w-[1600px] mx-auto w-full flex flex-col">
-        {/* Metric Cards */}
-        <div className="p-6 pb-0">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 shrink-0">
-            {isLoading ? (
-              <div className="col-span-full flex items-center justify-center py-12">
-                <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                <span className="ml-3 text-muted-foreground text-sm">Loading dashboard data...</span>
-              </div>
-            ) : (statsError || accountsError) ? (
-              <div className="col-span-full flex items-center justify-center py-12 text-destructive">
-                <AlertTriangle className="w-5 h-5 mr-3" />
-                <div className="flex flex-col">
-                  <span className="text-sm">Failed to load dashboard data.</span>
-                  <span className="text-xs mt-1 text-muted-foreground">
-                    {statsError?.message || accountsError?.message || 'Make sure the backend is running'}
-                  </span>
+
+
+      <div className="flex-1 overflow-auto">
+
+        <div className="max-w-[1600px] mx-auto w-full p-6 space-y-5">
+
+          {fatalError ? (
+            <div className="flex items-center justify-center py-24 text-destructive">
+              <AlertTriangle className="w-5 h-5 mr-3" />
+              <span className="text-sm">Failed to load data. Ensure the backend is running.</span>
+            </div>
+          ) : (
+            <>
+              {accountsLoading && accounts.length === 0 ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span className="ml-3 text-sm text-muted-foreground">Loading accounts…</span>
                 </div>
-              </div>
-            ) : (
-              metricCards.map((metric, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05, duration: 0.35 }}
-                  className="bg-card rounded-xl border-2 border-black p-5 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer group"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <p className="text-xs font-medium text-muted-foreground">{metric.label}</p>
-                    <div className={`w-9 h-9 rounded-lg border-2 border-black ${metric.iconBg} ${metric.iconColor} flex items-center justify-center shrink-0 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]`}>
-                      {metric.icon}
+              ) : (
+                <DashboardMetricCards
+                  accounts={filteredAccounts}
+                  opportunities={opportunities}
+                  stats={stats}
+                  revenueLabel={revenueLabel}
+                  displayRevenue={displayRevenue}
+                  stageFilter={stageFilter}
+                />
+              )}
+
+              {lifecycleSectionLoading ? (
+                <div className="flex items-center justify-center py-16 border-2 border-dashed border-black/20 rounded-xl">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span className="ml-3 text-sm text-muted-foreground">Loading lifecycle intelligence…</span>
+                </div>
+              ) : lifecycleError && !lifecycle ? (
+                <div className="flex items-center justify-center py-12 text-destructive text-sm">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Lifecycle data unavailable — KPI cards above are still current.
+                </div>
+              ) : lifecycle ? (
+                <>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-3">
+                      Customer Lifecycle Status — Prioritized Alerts
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                      {LIFECYCLE_STAGES.map((stage) => {
+                        const alert = stageAlertMap.get(stage.id);
+                        const dimmed = stageFilter !== "all" && stageFilter !== stage.id;
+                        return (
+                          <div key={stage.id} className={dimmed ? "opacity-40 pointer-events-none" : ""}>
+                            <LifecycleStageCard
+                              stageId={stage.id}
+                              alert={alert}
+                              accountCount={stageCounts[stage.id]}
+                              isSelected={stageFilter !== "all" && stageFilter === stage.id}
+                              onSelect={() => {
+                                setStageFilter(stage.id);
+                                if (alert && stageCounts[stage.id] > 0) {
+                                  setSelectedAccountId(alert.account.id);
+                                } else {
+                                  setSelectedAccountId(null);
+                                }
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                  <div className="text-2xl font-bold tracking-tight text-foreground">
-                    {metric.value}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <NBADigestPanel
+                      items={filteredNbaItems}
+                      selectedAccountId={selectedAlert?.account.id}
+                      onSelectAccount={(accountId) => {
+                        setSelectedAccountId(accountId);
+                      }}
+                    />
+                    <LifecycleAgentPanel
+                      alert={selectedAlert}
+                      recommendation={agentRecommendation}
+                      emptyMessage={
+                        stageFilter !== "all" && stageCounts[stageFilter] === 0
+                          ? `No accounts in ${LIFECYCLE_STAGES.find((s) => s.id === stageFilter)?.label ?? stageFilter} — select another stage or ALL.`
+                          : undefined
+                      }
+                    />
                   </div>
-                </motion.div>
-              ))
-            )}
-          </div>
+                </>
+              ) : null}
+            </>
+          )}
+
         </div>
 
-        {/* Chart */}
-        <div className="p-6 shrink-0 h-[450px]">
-          <div className="bg-card rounded-xl border-2 border-black overflow-hidden h-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col">
-            <RelationshipTrendChart />
-          </div>
-        </div>
       </div>
+
     </div>
+
   );
+
 }
+
+

@@ -8,7 +8,7 @@ export interface WorkflowStep {
     title: string;
     time_label?: string;
     days_offset: number;
-    action_type: "email" | "call" | "task";
+    action_type: "email" | "call" | "task" | "whatsapp";
     topic?: string;
     frequency?: StepFrequency;
     send_window_start?: string;  // "HH:MM" when to start sending

@@ -1,27 +1,57 @@
-import { fetchApi } from './client';
+import { fetchApi } from "./client";
+
+export interface PredictionRequest {
+  account_id: string;
+  features: Record<string, unknown>;
+}
+
+export interface BatchPredictionRequest {
+  account_ids: string[];
+  model_types?: string[];
+}
+
+export interface PredictionResult {
+  prediction_value?: number;
+  confidence?: number;
+  model_type?: string;
+}
+
+export interface PredictAllResponse {
+  account_id: string;
+  predictions: {
+    health_score?: PredictionResult;
+    churn?: PredictionResult;
+    relationship_score?: PredictionResult;
+    renewal?: PredictionResult;
+    sentiment?: PredictionResult;
+    upsell?: PredictionResult;
+  };
+  timestamp?: string;
+}
 
 export const predictionsApi = {
-    getAll: async (request?: any) => {
-        // There isn't a direct equivalent to getting all predictions for a list without an ID or payload, 
-        // keeping signature backward compatible but throwing error directly or returning empty 
-        return [];
-    },
-    getById: async (id: string) => {
-        return null;
-    },
-    create: async (data: any) => {
-        return null;
-    },
-    update: async (id: string, data: any) => {
-        return null;
-    },
-    delete: async (id: string) => {
-        return null;
-    },
-    predict: async (data: any) => {
-        return fetchApi('/predictions/predict', {
-            method: 'POST',
-            body: JSON.stringify(data),
-        });
-    },
+  predict: async (data: PredictionRequest) => {
+    return fetchApi("/predictions/predict", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  predictAll: async (data: PredictionRequest): Promise<PredictAllResponse> => {
+    return fetchApi("/predictions/predict/all", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  predictBatch: async (data: BatchPredictionRequest) => {
+    return fetchApi("/predictions/predict/batch", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  getHealth: async () => {
+    return fetchApi("/predictions/health");
+  },
 };

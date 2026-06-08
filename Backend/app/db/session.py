@@ -32,7 +32,10 @@ if not database_url and settings.SUPABASE_URL:
     except Exception as e:
         print(f"Warning: Could not build Supabase PostgreSQL URL: {e}")
 
-# Default to SQLite if no database URL is configured
+# Default to SQLite if no database URL is configured.
+# This is intentional — all real data (accounts, emails, campaigns) goes through
+# the supabase-py REST client. SQLAlchemy is only used for Base.metadata.create_all()
+# at startup and does not affect any application data.
 if not database_url:
     database_url = "sqlite:///./app.db"
 

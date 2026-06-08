@@ -12,7 +12,6 @@ from app.schemas.prediction import (
     ModelHealthResponse
 )
 from app.services.intelligence.predictor import UnifiedPredictor
-from app.services.ml.model_loader import model_loader
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -108,16 +107,23 @@ async def predict_batch(request: BatchPredictionRequest):
 
 @router.get("/health", response_model=List[ModelHealthResponse])
 async def get_models_health():
-    """Get health status of all ML models."""
-    models_info = model_loader.get_all_models_info()
-    
-    health_status = []
-    for model_type, info in models_info.items():
-        health_status.append(ModelHealthResponse(
-            model_type=model_type,
-            loaded=info.get("loaded", False),
-            version=None,  # Could be extracted from model metadata
-            error=None if info.get("loaded") else "Model not loaded"
-        ))
-    
-    return health_status
+    """Get health status of all scoring/prediction components."""
+    import os
+    components = {
+        "churn":              {"type": "formula",  "loaded": True},
+        "health_score":       {"type": "formula",  "loaded": True},
+        "relationship_score": {"type": "formula",  "loaded": True},
+        "renewal_score":      {"type": "formula",  "loaded": True},
+        "sentiment":          {"type": "llm",      "loaded": bool(os.getenv("AZURE_OPENAI_API_KEY"))},
+        "upsell":             {"type": "rule",     "loaded": True},
+    }
+
+    return [
+        ModelHealthResponse(
+            model_type=name,
+            loaded=info["loaded"],
+            version=info["type"],
+            error=None if info["loaded"] else "Azure OpenAI credentials not configured"
+        )
+        for name, info in components.items()
+    ]

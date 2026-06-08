@@ -7,7 +7,7 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional
 from app.services.email.scheduler import get_supabase_client
-from app.services.voice_agent.twilio_call_service import twilio_call_service
+from app.services.voice_agent.twilio_call_service import TwilioCallService
 from app.services.voice_agent.voice_conversation import voice_conversation_handler
 from app.services.voice_agent.sentiment_analyzer import sentiment_analyzer
 from app.core.logging import get_logger
@@ -243,9 +243,23 @@ def should_make_call(
         except Exception as e:
             logger.error(f"Error checking renewal date: {e}")
     
+    # [REMOVED] Churn / Win-back Follow-up Sequence logic (per user request)
+    # is_month_12_churned and periodic retention calls are now handled manually or disabled.
+        
     # Check if we're at a milestone
-    if current_milestone:
-        return True, f"Usage milestone reached: {current_milestone}%"
+    account_status = str(account.get('status', '')).lower()
+    
+    # ── Standard Milestone Filtering ─────────────────────────────────────
+    # If account is active, it ALWAYS gets milestone calls.
+    # If account is churned, it ONLY gets milestone calls if stopStandardCampaignsOnChurn is FALSE.
+    app_config = _get_app_config(client)
+    schedule_cfg = app_config.get("schedule") or {}
+    stop_on_churn = schedule_cfg.get("stopStandardCampaignsOnChurn", True)
+    
+    is_eligible_for_standard = (account_status == 'active') or (account_status == 'churned' and not stop_on_churn)
+
+    if is_eligible_for_standard and current_milestone:
+        return True, f"Usage milestone reached: {current_milestone}% ({account_status})"
     
     return False, "No call needed"
 
@@ -283,6 +297,9 @@ async def make_voice_call(
     # Calculate usage percentage
     usage_percentage = calculate_plan_completion_percentage(account)
     call_type = get_call_type_for_percentage(usage_percentage)
+    
+    if str(account.get('status', '')).lower() == 'churned':
+        call_type = 'retention_winback'
 
     # Check if we should make the call (skip for manual single-account trigger)
     if not skip_eligibility_check:
@@ -296,7 +313,9 @@ async def make_voice_call(
     # Get webhook URL from environment (.env first, then settings, then default)
     from app.core.config import settings as app_settings
     webhook_base_url = os.getenv("WEBHOOK_BASE_URL") or app_settings.WEBHOOK_BASE_URL or "http://localhost:8000"
+    
     webhook_url = f"{webhook_base_url}/api/v1/voice/handle-call"
+    
     status_callback = f"{webhook_base_url}/api/v1/voice/call-status"
     
     # Create call record in database first
@@ -326,7 +345,8 @@ async def make_voice_call(
         call_id = call_record.data[0]["id"] if call_record.data else None
         
         # Make the call via Twilio
-        call_sid = twilio_call_service.make_call(
+        twilio_client = TwilioCallService()
+        call_sid = twilio_client.make_call(
             to_phone=phone_number,
             webhook_url=f"{webhook_url}?call_id={call_id}",
             status_callback=status_callback
@@ -406,8 +426,8 @@ async def process_scheduled_calls():
         return
 
     try:
-        # Get all active accounts
-        accounts_result = client.table("accounts").select("*").eq("status", "active").execute()
+        # Get active AND churned accounts (for the end-of-term retention sequence)
+        accounts_result = client.table("accounts").select("*").in_("status", ["active", "churned"]).execute()
         accounts = accounts_result.data if accounts_result.data else []
         
         if not accounts:
@@ -549,7 +569,7 @@ async def trigger_voice_call_for_account(account_id: str, purpose: Optional[str]
         call_sid = await make_voice_call(account, client, skip_eligibility_check=True, purpose=purpose)
         if call_sid:
             return {"success": True, "message": f"Voice call initiated to {account.get('name')}.", "call_sid": call_sid}
-        return {"success": False, "error": "Failed to initiate call (Twilio or internal error)."}
+        return {"success": False, "error": "Failed to initiate call (Twilio API or internal error)."}
     except Exception as e:
         logger.error(f"Error in trigger_voice_call_for_account: {e}", exc_info=True)
         return {"success": False, "error": str(e)}

@@ -240,7 +240,7 @@ def _is_campaign_due(campaign: Dict[str, Any]) -> bool:
             return delta_days >= 1
         if freq == "weekly":
             return delta_days >= 7
-        if freq == "month":
+        if freq in ("month", "monthly"):
             return delta_days >= 28
         return True
     except Exception:
@@ -423,6 +423,44 @@ async def run_auto_campaigns() -> Dict[str, Any]:
                         ).execute()
                     except Exception as e2:
                         logger.warning("Campaign '%s' failed to write whatsapp_conversations: %s", name, e2)
+                elif action == "sms":
+                    # SMS campaign: generate short message and send via Twilio SMS
+                    to_phone = acc.get("primary_contact_phone") or ""
+                    if not to_phone:
+                        raise ValueError("primary_contact_phone missing")
+                    account_name = acc.get("name") or acc.get("primary_contact_name") or "Customer"
+                    system_msg = (
+                        "You are a professional customer success manager writing SMS messages "
+                        "to B2B customers. Keep messages extremely concise (1-2 short lines), friendly, and clear."
+                    )
+                    user_msg = (
+                        f"Account name: {account_name}\n"
+                        f"Campaign name: {name}\n"
+                        f"Purpose/description: {description or 'No extra description provided.'}\n\n"
+                        "Write an SMS message I can send as part of an automated campaign."
+                    )
+                    text = azure_openai.chat_completion(
+                        [
+                            {"role": "system", "content": system_msg},
+                            {"role": "user", "content": user_msg},
+                        ],
+                        temperature=0.7,
+                        max_tokens=100,
+                    )
+                    from app.services.voice_agent.twilio_call_service import twilio_call_service
+                    sid = twilio_call_service.send_sms(str(to_phone), text)
+                    if not sid:
+                        raise RuntimeError("SMS send failed")
+                    try:
+                        client.table("activity_logs").insert(
+                            {
+                                "account_id": str(aid),
+                                "action": "sms_sent",
+                                "details": {"campaign_id": str(cid), "message": text}
+                            }
+                        ).execute()
+                    except Exception as e2:
+                        logger.warning("Campaign '%s' failed to write activity log: %s", name, e2)
                 else:
                     await send_email_to_single_account(str(aid), purpose=description)
             except Exception as e:

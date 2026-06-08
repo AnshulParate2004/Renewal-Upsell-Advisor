@@ -70,56 +70,29 @@ def personalize_email_content(
         return base_subject, base_html_body, base_text_body
     
     try:
-        # Prepare account context for LLM
-        account_name = account.get("name", "Valued Customer")
+        account_name = str(account.get("name", "Valued Customer")).strip()
         industry = account.get("industry", "")
-        company_size = account.get("company_size", "")
-        health_score = account.get("health_score") or 0
-        risk_score = account.get("risk_score") or 0
-        relationship_score = account.get("relationship_score") or 0
-        churn_probability = account.get("churn_probability") or 0
-        sentiment_category = account.get("sentiment_category", "neutral")
-        arr = account.get("arr") or 0
-        mrr_raw = account.get("monthly_wise_instalment") or account.get("mrr")
-        if mrr_raw is not None and mrr_raw != "":
-            try:
-                mrr = float(mrr_raw)
-            except (TypeError, ValueError):
-                mrr = (arr / 12) if arr else 0
-        else:
-            mrr = (arr / 12) if arr else 0
-        renewal_date = account.get("renewal_date", "")
-        utilization_percentage = account.get("utilization_percentage") or 0
-        csm_name = account.get("csm_name", "Your Customer Success Manager")
+        sentiment_category = account.get("sentiment_category") or "neutral"
+        renewal_date = account.get("renewal_date") or ""
+        csm_name = account.get("csm_name") or "Your Customer Success Manager"
         csm_email = account.get("csm_email", "")
         
-        # Build context string
+        # ⚠️ We deliberately do NOT pass any financial figures (ARR, MRR, scores, percentages)
+        # to the LLM context. We want emails to sound like a human CSM, not a data report.
         context = f"""
 Account Information:
 - Company: {account_name}
 - Industry: {industry}
-- Company Size: {company_size}
-- Annual Recurring Revenue (ARR): ${arr:,.2f}
-- Monthly Recurring Revenue (MRR): ${mrr:,.2f}
-- Health Score: {health_score}/100
-- Risk Score: {risk_score}/100
-- Relationship Score: {relationship_score}/100
-- Churn Probability: {churn_probability:.2%}
-- Sentiment: {sentiment_category}
-- License Utilization: {utilization_percentage}%
+- Customer Sentiment: {sentiment_category}
 - Renewal Date: {renewal_date}
-- Customer Success Manager: {csm_name} ({csm_email})
+- CSM Name: {csm_name}
 """
         
         if opportunity:
             opportunity_type = opportunity.get("type", "upsell")
-            opportunity_value = opportunity.get("value", 0)
-            opportunity_probability = opportunity.get("probability", 0)
             context += f"""
 Opportunity Details:
 - Type: {opportunity_type}
-- Potential Value: ${opportunity_value:,.2f}
-- Probability: {opportunity_probability:.2%}
 """
         if user_purpose and str(user_purpose).strip():
             context += f"""
@@ -222,173 +195,113 @@ Renewal & Upsell Advisor Team"""
         
         # Create LangChain prompts based on email type
         if email_type == "renewal_reminder":
-            system_template = """You are a professional customer success manager writing a renewal reminder email.
-IMPORTANT RULES:
-1. DO NOT create fake names, email addresses, or contact information
-2. DO NOT replace the entire email - only enhance specific phrases
-3. Keep the same structure and format as the base template
-4. Use ONLY the account data provided - do not invent information
-5. Keep CSM names and emails exactly as provided in the account data
-
-Your goal is to:
-1. Personalize the subject line (keep it concise, under 60 characters)
-2. Enhance a few key phrases in the email body to make it more personal
-3. Keep the same professional structure and formatting
-4. Reference their industry or company size naturally if mentioned
+            system_template = """You are a warm, human Customer Success Manager (CSM) writing a short renewal reminder.
+RULES (follow strictly):
+1. Write naturally, like a person texting a colleague — not a formal letter.
+2. NEVER mention any numbers, dollar amounts, percentages, scores, ARR, MRR, or any financial metrics. Not even rounded ones.
+3. DO NOT start with a greeting like "Dear..." or "Hi..." — the template already has a greeting.
+4. Keep the enhancement to 1-2 sentences only.
+5. Use only the account info provided. Do not invent anything.
 
 Return ONLY:
-- Subject: [personalized subject line]
-- Enhancement: [2-3 sentences that can replace generic phrases in the email]
-- Do NOT return full email body"""
-            
-            human_template = """Personalize ONLY the subject line and provide 2-3 enhancement sentences for this renewal reminder email:
+Subject: [short, friendly subject under 60 chars]
+Enhancement: [1-2 natural sentences to add after the greeting]"""
 
-Account Context:
-{context}
+            human_template = """Write a brief enhancement for this renewal reminder:
 
-Base Email Subject: {base_subject}
-Base Email Body Preview: {base_text_body_preview}...
+Account: {context}
+Base subject: {base_subject}
 
-CRITICAL: 
-- Use the CSM name from account data: {csm_name}
-- Use the CSM email from account data: {csm_email}
-- DO NOT create fake names or emails
-- Return format:
-Subject: [your personalized subject]
-Enhancement: [2-3 sentences to personalize the greeting/opening paragraph]"""
+Format:
+Subject: [your subject]
+Enhancement: [1-2 sentences, no numbers, no financial figures]"""
         
         elif email_type == "upsell":
-            system_template = """You are a friendly customer success contact writing a short follow-up email.
-IMPORTANT RULES:
-1. DO NOT create fake names, email addresses, or contact information
-2. DO NOT replace the entire email - only enhance specific phrases
-3. Keep the same structure and tone: conversational, asking how the review went
-4. Use ONLY the account data provided - do not invent information
-5. Keep CSM names and emails exactly as provided in the account data
-
-Your goal is to:
-1. Personalize the subject line (conversational, under 60 characters)
-2. Add 1-2 short sentences that feel natural — e.g. reference their review, ask for feedback, or offer to chat
-3. Keep the tone warm and human, not salesy. Focus on "how was the review" and "we'd love to hear from you".
+            system_template = """You are a friendly Customer Success Manager writing a brief follow-up.
+RULES (follow strictly):
+1. Be casual and human. No business-speak.
+2. NEVER mention any numbers, dollar amounts, percentages, scores, ARR, MRR, or financial metrics.
+3. DO NOT add a greeting — the template already has one.
+4. Keep it to 1-2 sentences.
+5. Ask how things are going or invite them to share feedback.
 
 Return ONLY:
-- Subject: [personalized subject line]
-- Enhancement: [1-2 sentences to personalize the review follow-up]"""
-            
-            human_template = """Personalize ONLY the subject line and provide 1-2 enhancement sentences for this review follow-up email:
+Subject: [short friendly subject under 60 chars]
+Enhancement: [1-2 sentences]"""
 
-Account Context:
-{context}
+            human_template = """Write a brief enhancement for this follow-up email:
 
-Base Email Subject: {base_subject}
-Base Email Body Preview: {base_text_body_preview}...
+Account: {context}
+Base subject: {base_subject}
 
-CRITICAL: 
-- Use the CSM name from account data: {csm_name}
-- Use the CSM email from account data: {csm_email}
-- DO NOT create fake names or emails
-- Tone: ask how the review went, invite feedback, offer support. Do NOT mention "Potential Value", "Confidence Level", or "Recommended Products".
-- Return format:
-Subject: [your personalized subject]
-Enhancement: [1-2 sentences for a natural review follow-up]"""
+Format:
+Subject: [your subject]
+Enhancement: [1-2 sentences, no numbers]"""
         
         elif email_type == "churn_prevention":
-            system_template = """You are a customer success manager writing a churn prevention email.
-IMPORTANT RULES:
-1. DO NOT create fake names, email addresses, or contact information
-2. DO NOT replace the entire email - only enhance specific phrases
-3. Keep the same structure and format as the base template
-4. Use ONLY the account data provided - do not invent information
-5. Keep CSM names and emails exactly as provided in the account data
-
-Your goal is to:
-1. Personalize the subject line (caring and engaging, under 60 characters)
-2. Enhance a few key phrases to show empathy
-3. Keep the same professional structure
+            system_template = """You are a caring Customer Success Manager writing a check-in email.
+RULES (follow strictly):
+1. Be warm, empathetic, and human.
+2. NEVER mention any numbers, dollar amounts, percentages, scores, ARR, MRR, or financial metrics.
+3. DO NOT add a greeting — the template already has one.
+4. Keep it to 2-3 sentences.
+5. Focus on caring and understanding, not selling.
 
 Return ONLY:
-- Subject: [personalized subject line]
-- Enhancement: [2-3 empathetic sentences for opening]"""
-            
-            human_template = """Personalize ONLY the subject line and provide 2-3 enhancement sentences for this churn prevention email:
+Subject: [empathetic subject under 60 chars]
+Enhancement: [2-3 caring sentences]"""
 
-Account Context:
-{context}
+            human_template = """Write a brief enhancement for this churn prevention email:
 
-Base Email Subject: {base_subject}
-Base Email Body Preview: {base_text_body_preview}...
+Account: {context}
+Base subject: {base_subject}
 
-CRITICAL: 
-- Use the CSM name from account data: {csm_name}
-- Use the CSM email from account data: {csm_email}
-- DO NOT create fake names or emails
-- Return format:
-Subject: [your personalized subject]
-Enhancement: [2-3 empathetic, caring sentences]"""
-        
+Format:
+Subject: [your subject]
+Enhancement: [2-3 sentences, no numbers]"""
+
         elif email_type == "wellness_check":
-            system_template = """You are a friendly customer success manager writing a wellness check-in email.
-IMPORTANT RULES:
-1. DO NOT create fake names, email addresses, or contact information
-2. DO NOT replace the entire email - only enhance specific phrases
-3. Keep the same structure and format as the base template
-4. Use ONLY the account data provided - do not invent information
-5. Keep CSM names and emails exactly as provided in the account data
-
-Your goal is to:
-1. Personalize the subject line (friendly and casual, under 60 characters)
-2. Enhance a few key phrases to make it more personal
-3. Keep the same professional structure
-4. This is NOT about renewal - just checking in
+            system_template = """You are a friendly Customer Success Manager doing a casual check-in.
+RULES (follow strictly):
+1. Be warm and conversational, like checking in on a friend.
+2. NEVER mention any numbers, dollar amounts, percentages, scores, ARR, MRR, or financial metrics.
+3. DO NOT add a greeting — the template already has one.
+4. Keep it to 1-2 sentences.
+5. This is NOT about renewal or sales — just being friendly.
 
 Return ONLY:
-- Subject: [personalized subject line]
-- Enhancement: [2-3 sentences for friendly check-in opening]"""
-            
-            human_template = """Personalize ONLY the subject line and provide 2-3 enhancement sentences for this wellness check-in email:
+Subject: [casual friendly subject under 60 chars]
+Enhancement: [1-2 casual sentences]"""
 
-Account Context:
-{context}
+            human_template = """Write a brief enhancement for this wellness check-in:
 
-Base Email Subject: {base_subject}
-Base Email Body Preview: {base_text_body_preview}...
+Account: {context}
+Base subject: {base_subject}
 
-CRITICAL: 
-- Use the CSM name from account data: {csm_name}
-- Use the CSM email from account data: {csm_email}
-- DO NOT create fake names or emails
-- Return format:
-Subject: [your personalized subject]
-Enhancement: [2-3 friendly check-in sentences]"""
+Format:
+Subject: [your subject]
+Enhancement: [1-2 sentences, no numbers, no financial figures]"""
         
         else:
-            # Default personalization
-            system_template = """You are a professional customer success manager writing personalized emails.
-IMPORTANT RULES:
-1. DO NOT create fake names, email addresses, or contact information
-2. DO NOT replace the entire email - only enhance specific phrases
-3. Keep the same structure and format as the base template
-4. Use ONLY the account data provided - do not invent information
+            system_template = """You are a professional Customer Success Manager writing a short personalized email.
+RULES (follow strictly):
+1. Be warm, human, and concise.
+2. NEVER mention any numbers, dollar amounts, percentages, scores, ARR, MRR, or financial metrics.
+3. DO NOT add a greeting — the template already has one.
+4. Keep it to 2-3 sentences.
 
 Return ONLY:
-- Subject: [personalized subject line]
-- Enhancement: [2-3 personalized sentences]"""
-            
-            human_template = """Personalize ONLY the subject line and provide 2-3 enhancement sentences:
-
-Account Context:
-{context}
-
-Base Email Subject: {base_subject}
-Base Email Body Preview: {base_text_body_preview}...
-
-CRITICAL: 
-- Use the CSM name from account data: {csm_name}
-- Use the CSM email from account data: {csm_email}
-- DO NOT create fake names or emails
-- Return format:
-Subject: [your personalized subject]
+Subject: [personalized subject under 60 chars]
 Enhancement: [2-3 personalized sentences]"""
+
+            human_template = """Write a brief personalized enhancement:
+
+Account: {context}
+Base subject: {base_subject}
+
+Format:
+Subject: [your subject]
+Enhancement: [2-3 sentences, no numbers]"""
         
         # Create LangChain prompt template
         prompt = ChatPromptTemplate.from_messages([
@@ -449,22 +362,49 @@ Enhancement: [2-3 personalized sentences]"""
             enhancement_text = ' '.join(enhancement_lines).strip()
         
         # Use base templates but enhance with LLM personalization
-        # Replace generic greeting with personalized enhancement if available
         personalized_html = base_html_body
         personalized_text = base_text_body
         
-        if enhancement_text and len(enhancement_text) > 20:
-            # Replace generic opening in HTML (support "Hi ... team" or "Dear ... Team")
-            for html_greeting in [f"<p>Hi {account_name} team,</p>", f"<p>Dear {account_name} Team,</p>"]:
-                if html_greeting in personalized_html:
-                    enhanced_greeting = f"{html_greeting}\n            <p>{enhancement_text}</p>"
-                    personalized_html = personalized_html.replace(html_greeting, enhanced_greeting, 1)
+        if enhancement_text and len(enhancement_text) > 10:
+            # 💡 To avoid double greetings ("Hi Team, Dear Team"), we look for greetings in the enhancement.
+            # We strip any typical greetings if they are already present in the enhancement.
+            enh_lower = enhancement_text.lower().strip()
+            greetings = ["hi ", "hello ", "dear ", "hey ", "hi,"]
+            has_greeting = any(enh_lower.startswith(g) for g in greetings)
+            
+            # If the enhancement starts with a greeting, we'll replace the base greeting entirely.
+            # If it doesn't, we'll append it gracefully.
+            
+            # Replace generic opening in HTML
+            account_name_clean = str(account_name).strip()
+            for html_greeting in [f"Hi {account_name_clean} team,", f"Dear {account_name_clean} Team,"]:
+                html_snippet = f"<p>{html_greeting}</p>"
+                if html_snippet in personalized_html or html_greeting in personalized_html:
+                    if has_greeting:
+                        # Full replacement to avoid double greeting
+                        if html_snippet in personalized_html:
+                            personalized_html = personalized_html.replace(html_snippet, f"<p>{enhancement_text}</p>", 1)
+                        else:
+                            personalized_html = personalized_html.replace(html_greeting, enhancement_text, 1)
+                    else:
+                        # Append gracefully
+                        if html_snippet in personalized_html:
+                            enhanced_greeting = f"{html_snippet}\n            <p>{enhancement_text}</p>"
+                            personalized_html = personalized_html.replace(html_snippet, enhanced_greeting, 1)
+                        else:
+                            personalized_html = personalized_html.replace(html_greeting, f"{html_greeting}\n{enhancement_text}", 1)
                     break
+            
             # Replace generic opening in text
-            for text_greeting in [f"Hi {account_name} team,", f"Dear {account_name} Team,"]:
+            for text_greeting in [f"Hi {account_name_clean} team,", f"Dear {account_name_clean} Team,"]:
                 if text_greeting in personalized_text:
-                    enhanced_text_greeting = f"{text_greeting}\n\n{enhancement_text}"
-                    personalized_text = personalized_text.replace(text_greeting, enhanced_text_greeting, 1)
+                    if has_greeting:
+                        # Full replacement
+                        personalized_text = personalized_text.replace(text_greeting, enhancement_text, 1)
+                    else:
+                        # Append
+                        enhanced_text_greeting = f"{text_greeting}\n\n{enhancement_text}"
+                        personalized_text = personalized_text.replace(text_greeting, enhanced_text_greeting, 1)
                     break
         
         logger.info(f"Personalized email for {account_name} (type: {email_type}) using LangChain")

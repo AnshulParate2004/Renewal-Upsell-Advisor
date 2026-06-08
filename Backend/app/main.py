@@ -22,7 +22,6 @@ from app.middleware.error_handler import (
 )
 from app.middleware.request_logging import RequestLoggingMiddleware
 from app.api.v1.api import api_router
-from app.services.ml.model_loader import model_loader
 from app.db.base import Base
 from app.db.session import engine
 
@@ -41,36 +40,32 @@ async def lifespan(app: FastAPI):
     # - Renewal pipeline scheduler: runs campaigns when due per their plan (daily/weekly/monthly).
     # - Manual triggers: POST /email/trigger-campaign, /ml/trigger, /voice/trigger-calls, etc. still work.
     import asyncio
-    import aiohttp
-
-    async def keep_alive_ping():
-        """Ping the health endpoint every 3 minutes to keep the Render instance awake."""
-        url = "https://renewal-upsell-advisor.onrender.com/health"
-        while True:
-            try:
-                await asyncio.sleep(180)  # 3 minutes
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url, timeout=10) as response:
-                        print(f"✅ Keep-alive ping sent to {url}, status: {response.status}")
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"⚠️ Keep-alive ping failed: {e}")
-
-    # Start the keep-alive task
-    ping_task = asyncio.create_task(keep_alive_ping())
-
     try:
         from app.services.campaign_runner import run_campaign_scheduler
         asyncio.create_task(run_campaign_scheduler())
         print("✅ Renewal pipeline scheduler started (runs at scheduled time); manual triggers via API.")
     except Exception as e:
         print(f"Warning: Failed to start renewal pipeline scheduler: {e}")
+
+    # Resend inbound email poller — checks for new customer replies every 2 minutes
+    try:
+        from app.services.email.resend_inbound_poller import run_resend_inbound_poller
+        asyncio.create_task(run_resend_inbound_poller())
+        print("✅ Resend inbound poller started (checks for new email replies every 2 minutes).")
+    except Exception as e:
+        print(f"Warning: Failed to start Resend inbound poller: {e}")
+
+    # try:
+    #     from app.services.email.scheduler import run_email_scheduler
+    #     asyncio.create_task(run_email_scheduler())
+    #     print("✅ Email scheduler started (runs daily at configured IST time, default 12:00 PM).")
+    # except Exception as e:
+    #     print(f"Warning: Failed to start email scheduler: {e}")
     
     yield
     
-    # Shutdown
-    ping_task.cancel()
+    # Shutdown (if needed)
+    pass
 
 # Create FastAPI app
 app = FastAPI(
@@ -156,9 +151,15 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    models_info = model_loader.get_all_models_info()
-    models_loaded = {k: v.get("loaded", False) for k, v in models_info.items()}
-    
+    # All scoring components are formula-based or LLM-backed — no joblib files to load.
+    components = ["churn", "health_score", "relationship_score", "renewal_score", "sentiment", "upsell"]
+    models_loaded = {
+        c: True if c != "sentiment" else bool(
+            __import__('os').getenv("AZURE_OPENAI_API_KEY")
+        )
+        for c in components
+    }
+
     return {
         "status": "healthy",
         "version": settings.APP_VERSION,

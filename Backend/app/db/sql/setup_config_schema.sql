@@ -12,19 +12,20 @@
 CREATE TABLE IF NOT EXISTS setup_config (
   id                     BIGSERIAL PRIMARY KEY,
 
-  -- Email / SendGrid credentials
-  sendgrid_api_key       TEXT,
+  -- Email / Resend credentials
+  resend_api_key         TEXT,
   from_email             TEXT,
   from_name              TEXT NOT NULL DEFAULT 'Renewal & Upsell Advisor',
 
-  -- Twilio credentials
-  twilio_account_sid     TEXT,
-  twilio_auth_token      TEXT,
-  twilio_phone_number    TEXT,
-  twilio_whatsapp_number TEXT,
+  -- Voice Call / Cube Software credentials
+  cube_api_url           TEXT,
+  cube_api_key           TEXT,
 
   -- Automation control
   automation_paused      BOOLEAN NOT NULL DEFAULT FALSE,
+
+  -- Pipeline Focus
+  pipeline_type          TEXT NOT NULL DEFAULT 'cloudflare',
 
   -- Audit
   created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()

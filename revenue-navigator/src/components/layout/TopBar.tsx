@@ -1,18 +1,17 @@
-import { Bell, User, Sun, Moon } from "lucide-react";
-import { useTheme } from "@/hooks/useTheme";
+import { Bell, LogOut, Sun, Moon } from "lucide-react";
 import { useRevenue } from "@/contexts/RevenueContext";
-import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 import { SearchDropdown } from "@/components/SearchDropdown";
 
 export function TopBar() {
-  const { theme, toggle } = useTheme();
   const { revenueType, setRevenueType } = useRevenue();
+  const { logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-30 h-14 flex items-center justify-between border-b-2 border-black bg-card/90 backdrop-blur-sm px-5 shrink-0">
       <SearchDropdown />
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <div className="flex bg-muted rounded-lg p-0.5 border-[0.5px] border-black h-8 shrink-0 mx-1">
           <button
             onClick={() => setRevenueType('ARR')}
@@ -34,26 +33,13 @@ export function TopBar() {
         </button>
 
         <button
-          onClick={toggle}
-          className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground transition-colors border-[0.5px] border-black"
-          title={theme === "dark" ? "Switch to Light" : "Switch to Dark"}
+          onClick={logout}
+          className="h-8 flex items-center justify-center gap-2 px-3 rounded-lg bg-white text-red-600 hover:bg-red-50 transition-colors border-[0.5px] border-red-200 hover:border-red-600 hover:shadow-sm"
+          title="Logout"
         >
-          <AnimatePresence mode="wait">
-            {theme === "dark" ? (
-              <motion.div key="sun" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                <Sun className="h-4 w-4" />
-              </motion.div>
-            ) : (
-              <motion.div key="moon" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                <Moon className="h-4 w-4" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <LogOut className="h-4 w-4" />
+          <span className="text-[10px] font-black uppercase tracking-wider">LOGOUT</span>
         </button>
-
-        <div className="h-8 w-8 flex items-center justify-center bg-primary rounded-lg text-primary-foreground cursor-pointer ml-1 border-[0.5px] border-black">
-          <User className="h-3.5 w-3.5" />
-        </div>
       </div>
     </header>
   );

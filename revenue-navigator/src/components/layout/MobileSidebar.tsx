@@ -14,11 +14,12 @@ import {
   PlayCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getPipelineType } from '@/lib/pipelineConfig';
 
 const navItems = [
   { title: "Dashboard", path: "/app", icon: LayoutDashboard },
   { title: "Accounts", path: "/app/accounts", icon: Users },
-  { title: "Pipeline", path: "/app/pipeline", icon: Kanban },
+  { title: "Customer Lifecycle", path: "/app/pipeline", icon: Kanban },
   { title: "Calls", path: "/app/calls", icon: Phone },
   { title: "Opportunities", path: "/app/opportunities", icon: DollarSign },
   { title: "Analytics", path: "/app/analytics", icon: BarChart3 },
@@ -28,6 +29,7 @@ const navItems = [
 
 export function MobileSidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const vendor = getPipelineType();
 
   return (
     <>
@@ -57,13 +59,33 @@ export function MobileSidebar() {
               className="fixed left-0 top-0 h-full w-64 bg-card border-r-[0.5px] border-black z-50 lg:hidden flex flex-col shadow-xl"
             >
               <div className="h-16 flex items-center gap-3 px-4 border-b-[0.5px] border-black">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-primary rounded-xl">
-                  <Zap className="h-4.5 w-4.5 text-primary-foreground fill-primary-foreground" />
-                </div>
-                <div className="flex flex-col leading-none">
-                  <span className="text-base font-bold text-foreground tracking-tight">Revenue</span>
-                  <span className="text-[10px] font-semibold text-primary tracking-wider uppercase">Navigator</span>
-                </div>
+                {vendor === "adobe" ? (
+                  <>
+                    <img src="/Adobe.png" alt="Adobe" className="h-9 w-9 shrink-0 rounded-xl object-contain bg-white border border-black/10" />
+                    <div className="flex flex-col leading-none">
+                      <span className="text-base font-bold text-foreground tracking-tight">Adobe</span>
+                      <span className="text-[10px] font-semibold text-emerald-600 tracking-wider uppercase">Health</span>
+                    </div>
+                  </>
+                ) : vendor === "crowdstrike" ? (
+                  <>
+                    <img src="/crowdstrike.jpg" alt="Crowdstrike" className="h-9 w-9 shrink-0 rounded-xl object-contain bg-white border border-black/10" />
+                    <div className="flex flex-col leading-none">
+                      <span className="text-base font-bold text-foreground tracking-tight">Crowdstrike</span>
+                      <span className="text-[10px] font-semibold text-red-600 tracking-wider uppercase">Security</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center bg-primary rounded-xl">
+                      <Zap className="h-4.5 w-4.5 text-primary-foreground fill-primary-foreground" />
+                    </div>
+                    <div className="flex flex-col leading-none">
+                      <span className="text-base font-bold text-foreground tracking-tight">Cloudflare</span>
+                      <span className="text-[10px] font-semibold text-primary tracking-wider uppercase">Navigator</span>
+                    </div>
+                  </>
+                )}
                 <button
                   onClick={() => setIsOpen(false)}
                   className="ml-auto w-8 h-8 flex items-center justify-center rounded-xl hover:bg-muted text-muted-foreground"

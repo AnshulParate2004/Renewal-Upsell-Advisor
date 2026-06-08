@@ -1,9 +1,16 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, Download, Loader2, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency, getDaysUntil, getRenewalInDays } from '@/data/mockData';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useAccounts } from '@/hooks/useAccounts';
+import { useLifecycleStageMap } from '@/hooks/useLifecycleStageMap';
+import { useBulkTicketStats } from '@/hooks/useTicketStats';
+import { LifecycleStageBadge } from '@/components/lifecycle/LifecycleStageBadge';
+import {
+  LifecycleStageFilter,
+  type StageFilter,
+} from '@/components/lifecycle/LifecycleStageFilter';
 import { useRevenue } from '@/contexts/RevenueContext';
 import { emailApi } from '@/lib/api/email';
 import { accountCommentsApi, type AccountComment } from '@/lib/api/accountComments';
@@ -15,10 +22,13 @@ type SortKey = 'risk' | 'healthScore' | 'arr' | 'renewal' | 'utilization' | 'rel
 
 type RangeFilter = { min: string; max: string };
 
+const ACCOUNTS_PAGE_SIZE = 15;
+
 const defaultRange = (): RangeFilter => ({ min: '', max: '' });
 
 export default function Accounts() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [lifecycleFilter, setLifecycleFilter] = useState<StageFilter>('all');
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -39,10 +49,15 @@ export default function Accounts() {
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [newCommentBody, setNewCommentBody] = useState('');
   const [addCommentLoading, setAddCommentLoading] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(ACCOUNTS_PAGE_SIZE);
+  const loadMoreRef = useRef<HTMLTableRowElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { revenueType } = useRevenue();
   const { data: accountsRaw, isLoading, error, refetch } = useAccounts();
   const accounts = Array.isArray(accountsRaw) ? accountsRaw : [];
+  const { stageByAccountId, isLoading: lifecycleStagesLoading } = useLifecycleStageMap(accounts);
+  const { data: ticketStatsByAccount = {} } = useBulkTicketStats(accounts.length > 0);
   const revenueValue = (c: typeof accounts[0]) => (revenueType === 'MRR' ? (c?.mrr ?? 0) : (c?.arr ?? 0));
 
   /** Risk: High (≥70), Middle (40–69), Safe (<40). */
@@ -56,8 +71,30 @@ export default function Accounts() {
     );
   }, [accounts, searchTerm]);
 
+  const lifecycleStageCounts = useMemo(() => {
+    const counts: Record<StageFilter, number> = {
+      all: searchFilteredClients.length,
+      protect: 0,
+      renew: 0,
+      adopt: 0,
+      expand: 0,
+      activate: 0,
+    };
+    searchFilteredClients.forEach((client) => {
+      const stage = client?.id ? stageByAccountId.get(client.id)?.stage : undefined;
+      if (stage && stage in counts) {
+        counts[stage] += 1;
+      }
+    });
+    return counts;
+  }, [searchFilteredClients, stageByAccountId]);
+
   const filteredClients = useMemo(() => {
     return searchFilteredClients.filter((client) => {
+      if (lifecycleFilter !== 'all') {
+        const stage = client?.id ? stageByAccountId.get(client.id)?.stage : undefined;
+        if (stage !== lifecycleFilter) return false;
+      }
       const risk = client.riskScore ?? 0;
       const healthScore = client.healthScore ?? 0;
       const arr = revenueValue(client);
@@ -110,7 +147,7 @@ export default function Accounts() {
 
       return true;
     });
-  }, [searchFilteredClients, rangeFilters, locationKeyword, partnerNameKeyword]);
+  }, [searchFilteredClients, rangeFilters, locationKeyword, partnerNameKeyword, lifecycleFilter, stageByAccountId, revenueType]);
 
   const handleSort = (key: SortKey) => {
     if (sortBy === key) {
@@ -140,12 +177,15 @@ export default function Accounts() {
     });
     setLocationKeyword('');
     setPartnerNameKeyword('');
+    setLifecycleFilter('all');
   };
 
   const hasActiveFilters =
+    lifecycleFilter !== 'all' ||
     Object.values(rangeFilters).some((r) => r.min !== '' || r.max !== '') ||
     (locationKeyword || '').trim() !== '' ||
-    (partnerNameKeyword || '').trim() !== '';
+    (partnerNameKeyword || '').trim() !== '' ||
+    (searchTerm || '').trim() !== '';
 
   useEffect(() => {
     if (!commentAccountId) return;
@@ -212,6 +252,45 @@ export default function Accounts() {
     });
   }, [filteredClients, sortBy, sortDir]);
 
+  const visibleClients = useMemo(
+    () => sortedClients.slice(0, visibleCount),
+    [sortedClients, visibleCount]
+  );
+
+  const hasMore = visibleCount < sortedClients.length;
+
+  useEffect(() => {
+    setVisibleCount(ACCOUNTS_PAGE_SIZE);
+  }, [
+    searchTerm,
+    lifecycleFilter,
+    rangeFilters,
+    locationKeyword,
+    partnerNameKeyword,
+    sortBy,
+    sortDir,
+  ]);
+
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => Math.min(prev + ACCOUNTS_PAGE_SIZE, sortedClients.length));
+  }, [sortedClients.length]);
+
+  useEffect(() => {
+    if (!hasMore || isLoading) return;
+    const sentinel = loadMoreRef.current;
+    const root = scrollContainerRef.current;
+    if (!sentinel || !root) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { root, rootMargin: '120px', threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, isLoading, loadMore, visibleClients.length]);
+
   const handleExportCSV = () => {
     if (filteredClients.length === 0) return;
     const revLabel = revenueType === 'MRR' ? 'MRR' : 'ARR';
@@ -242,13 +321,34 @@ export default function Accounts() {
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col bg-background">
       {/* Page Header */}
-      <div className="bg-card border-b-2 border-black px-6 py-5 shrink-0">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
+      <div className="bg-card border-b-2 border-black px-6 py-5 shrink-0 space-y-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="shrink-0 min-w-[140px]">
             <h1 className="text-xl font-semibold text-foreground">Accounts</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">{filteredClients.length} accounts {hasActiveFilters ? '(filtered)' : 'under management'}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Showing {visibleClients.length} of {filteredClients.length} accounts
+              {filteredClients.length !== accounts.length ? ` (${accounts.length} total)` : ''}
+              {lifecycleFilter !== 'all' ? ` · ${lifecycleFilter} only` : hasActiveFilters ? ' (filtered)' : ' under management'}
+              {hasMore ? ' · scroll for more' : ''}
+            </p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+
+          <div className="flex-1 flex justify-center min-w-0 px-0 lg:px-4">
+            {lifecycleStagesLoading ? (
+              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading lifecycle filters…
+              </p>
+            ) : (
+              <LifecycleStageFilter
+                value={lifecycleFilter}
+                onChange={setLifecycleFilter}
+                counts={lifecycleStageCounts}
+              />
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap shrink-0 lg:ml-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <input
@@ -275,7 +375,7 @@ export default function Accounts() {
 
       {/* Range filters - only visible when Add Filter is toggled on */}
       {showFilterPanel ? (
-        <div className="px-6 pt-6 pb-6">
+        <div className="px-6 pt-6 pb-6 shrink-0">
           <div className="bg-card rounded-xl border-2 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <div className="flex items-center gap-2 mb-6">
               <Filter className="w-4 h-4 text-muted-foreground" />
@@ -351,12 +451,13 @@ export default function Accounts() {
       ) : null}
 
       {/* Table */}
-      <div className="p-6 pt-2">
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto p-6 pt-2">
         <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b-2 border-black">
               <tr className="text-[11px] uppercase text-muted-foreground font-medium tracking-wider text-left">
                 <th className="pl-5 py-3">Account</th>
+                <th className="text-center py-3">Lifecycle</th>
                 <th className="text-center py-3">
                   <button type="button" onClick={() => handleSort('risk')} className="inline-flex items-center gap-1 hover:text-foreground transition-colors">
                     Risk {sortBy === 'risk' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-50" />}
@@ -392,6 +493,8 @@ export default function Accounts() {
                     Churn probability {sortBy === 'churn' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3 opacity-50" />}
                   </button>
                 </th>
+                <th className="text-center py-3">Tickets raised</th>
+                <th className="text-center py-3">Tickets resolved</th>
                 <th className="text-center py-3">Sentiment</th>
                 <th className="text-center py-3">Location</th>
                 <th className="text-center py-3">Partner name</th>
@@ -400,25 +503,44 @@ export default function Accounts() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr className="border-b-2 border-black"><td colSpan={12} className="text-center py-12">
+                <tr className="border-b-2 border-black"><td colSpan={15} className="text-center py-12">
                   <Loader2 className="w-5 h-5 animate-spin text-primary mx-auto" />
                 </td></tr>
               ) : error ? (
-                <tr className="border-b-2 border-black"><td colSpan={12} className="p-0">
+                <tr className="border-b-2 border-black"><td colSpan={15} className="p-0">
                   <EmptyState variant="not-found" title="Failed to Load Accounts" message={error.message || "Failed to load accounts."} />
                 </td></tr>
               ) : filteredClients.length === 0 ? (
-                <tr className="border-b-2 border-black"><td colSpan={12} className="p-0">
-                  <EmptyState variant="no-results" title="No Accounts Found" message={hasActiveFilters ? "No accounts match the current filters (range or keyword). Try widening ranges, changing keywords, or clear filters." : "Try adjusting your search criteria."} />
+                <tr className="border-b-2 border-black"><td colSpan={15} className="p-0">
+                  <EmptyState
+                    variant="no-results"
+                    title="No Accounts Found"
+                    message={
+                      lifecycleFilter !== 'all'
+                        ? `No accounts in the ${lifecycleFilter} lifecycle stage. Try All or another stage.`
+                        : hasActiveFilters
+                          ? 'No accounts match the current filters. Try widening ranges, another lifecycle stage, or clear filters.'
+                          : 'Try adjusting your search criteria.'
+                    }
+                  />
                 </td></tr>
               ) : (
-                sortedClients.map((client, index) => {
+                <>
+                {visibleClients.map((client, index) => {
                   const riskTier = getRiskTier(client?.riskScore ?? 0);
                   const isMiddle = riskTier === 'middle';
                   const statusLower = (client?.status ?? '').toString().trim().toLowerCase();
                   const isNew = statusLower === 'new';
                   const isRenewed = statusLower === 'renewed' || statusLower === 'renewal';
-                  const hasYellowBg = !isNew && !isRenewed && (riskTier === 'middle' || riskTier === 'high');
+                  
+                  // Date-sensitive status logic
+                  const renewalDays = getRenewalInDays(client?.renewalDate, client?.contractEnd, client?.status);
+                  const isActuallyChurned = statusLower === 'churned' || (renewalDays !== null && renewalDays < 0 && !isRenewed);
+                  const isActuallyCritical = !isRenewed && !isActuallyChurned && (riskTier === 'high' || statusLower === 'at_risk');
+                  
+                  const hasYellowBg = isActuallyCritical;
+                  const hasGrayBg = isActuallyChurned;
+                  
                   const clientId = client?.id ?? String(index);
                   const u = Number(client?.utilization ?? 0);
                   const utilizationPct = u <= 1 && u >= 0 ? Math.round(u * 100) : Math.round(u);
@@ -427,7 +549,12 @@ export default function Accounts() {
                   <tr
                     key={clientId}
                     onClick={() => client?.id && navigate(`/app/accounts/${client.id}`)}
-                    className={`group cursor-pointer transition-colors border-b-2 border-black ${isRenewed ? 'bg-emerald-100/80 dark:bg-emerald-950/30 hover:bg-emerald-200/80 dark:hover:bg-emerald-900/40' : hasYellowBg ? 'bg-amber-100/80 dark:bg-amber-950/30 hover:bg-amber-200/80 dark:hover:bg-amber-900/40' : 'hover:bg-muted/20'}`}
+                    className={`group cursor-pointer transition-colors border-b-2 border-black ${
+                      isRenewed ? 'bg-emerald-100/80 dark:bg-emerald-950/30 hover:bg-emerald-200/80 dark:hover:bg-emerald-900/40' : 
+                      hasGrayBg ? 'bg-slate-200/50 dark:bg-slate-900/30 opacity-70 hover:bg-slate-300/50' :
+                      hasYellowBg ? 'bg-amber-100/80 dark:bg-amber-950/30 hover:bg-amber-200/80 dark:hover:bg-amber-900/40' : 
+                      'hover:bg-muted/20'
+                    }`}
                   >
                     <td className="pl-5 py-3.5">
                       <div>
@@ -435,14 +562,27 @@ export default function Accounts() {
                         <div className="text-[11px] text-muted-foreground">{(client?.id ?? '').toString().slice(0, 8)}</div>
                       </div>
                     </td>
+                    <td className="text-center py-3.5" onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const lifecycle = client?.id ? stageByAccountId.get(client.id) : undefined;
+                        if (lifecycleStagesLoading && !lifecycle) {
+                          return <span className="text-[10px] text-muted-foreground">…</span>;
+                        }
+                        if (!lifecycle) {
+                          return <span className="text-[10px] text-muted-foreground">—</span>;
+                        }
+                        return <LifecycleStageBadge stage={lifecycle.stage} label={lifecycle.stageLabel} />;
+                      })()}
+                    </td>
                     <td className="text-center py-3.5">
                       <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full border-2 border-black ${
                         isRenewed ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' :
-                        riskTier === 'high' ? 'bg-destructive/10 text-destructive' :
+                        isActuallyChurned ? 'bg-slate-500/10 text-slate-600 dark:text-slate-400' :
+                        isActuallyCritical ? 'bg-destructive/10 text-destructive' :
                         riskTier === 'middle' ? 'bg-amber-400/90 text-amber-950 dark:bg-amber-500/90 dark:text-amber-50' :
                         'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                       }`}>
-                        {isRenewed ? 'Renewed' : riskTier === 'high' ? 'Critical' : riskTier === 'middle' ? 'Middle' : 'Healthy'}
+                        {isRenewed ? 'Renewed' : isActuallyChurned ? 'Churned' : isActuallyCritical ? 'Critical' : riskTier === 'middle' ? 'Middle' : 'Healthy'}
                       </span>
                     </td>
                     <td className="text-center py-3.5">
@@ -476,6 +616,16 @@ export default function Accounts() {
                     <td className="text-center py-3.5">
                       <span className={`text-sm font-medium ${client.churnProbability >= 0.7 ? 'text-destructive' : client.churnProbability >= 0.4 ? 'text-amber-500' : 'text-emerald-600'}`}>
                         {Math.round(client.churnProbability * 100)}%
+                      </span>
+                    </td>
+                    <td className="text-center py-3.5">
+                      <span className="text-sm font-medium text-foreground">
+                        {ticketStatsByAccount[clientId]?.raised ?? 0}
+                      </span>
+                    </td>
+                    <td className="text-center py-3.5">
+                      <span className="text-sm font-medium text-emerald-700">
+                        {ticketStatsByAccount[clientId]?.resolved ?? 0}
                       </span>
                     </td>
                     <td className="text-center py-3.5 text-base">
@@ -513,7 +663,21 @@ export default function Accounts() {
                     </td>
                   </tr>
                   );
-                })
+                })}
+                {hasMore && (
+                  <tr ref={loadMoreRef} className="border-b-2 border-black">
+                    <td colSpan={15} className="text-center py-6">
+                      <button
+                        type="button"
+                        onClick={loadMore}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium border-2 border-black rounded-lg bg-card hover:bg-muted shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                      >
+                        Load more ({sortedClients.length - visibleClients.length} remaining)
+                      </button>
+                    </td>
+                  </tr>
+                )}
+                </>
               )}
             </tbody>
           </table>

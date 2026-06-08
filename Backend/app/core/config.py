@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         "https://*.vercel.app",
     ]
     FRONTEND_URL: Optional[str] = None  # Set to your Vercel URL in Render env vars
-    
+
     # Database
     DATABASE_URL: Optional[str] = None  # PostgreSQL connection string (takes priority)
     SUPABASE_URL: Optional[str] = None  # Supabase project URL
@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     TWILIO_ACCOUNT_SID: Optional[str] = None
     TWILIO_AUTH_TOKEN: Optional[str] = None
     TWILIO_PHONE_NUMBER: Optional[str] = None  # Twilio phone number for outbound calls
+    TWILIO_WHATSAPP_NUMBER: Optional[str] = None  # Dedicated WhatsApp number
     WEBHOOK_BASE_URL: Optional[str] = None  # Base URL for Twilio webhooks (must be publicly accessible)
     
     # Email Configuration
@@ -58,7 +59,8 @@ class Settings(BaseSettings):
     FROM_EMAIL: Optional[str] = None  # From email address
     FROM_NAME: Optional[str] = None  # From name
     SENDGRID_API_KEY: Optional[str] = None  # SendGrid API key (alternative to SMTP)
-    EMAIL_SCHEDULE_INTERVAL_DAYS: int = 7  # Days between email sends
+    EMAIL_SCHEDULE_INTERVAL_DAYS: int = 7  # Days between email sends.
+    INBOUND_REPLY_EMAIL: Optional[str] = None
     
     # Azure Configurations
     AZURE_SPEECH_KEY: Optional[str] = None

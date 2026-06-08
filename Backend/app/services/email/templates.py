@@ -8,16 +8,10 @@ from datetime import datetime
 def get_renewal_reminder_template(account: Dict[str, Any]) -> tuple[str, str, str]:
     """
     Generate renewal reminder email template.
-    
-    Args:
-        account: Account data dictionary
-        
-    Returns:
-        Tuple of (subject, html_body)
+    Tone: Short, conversational, directly asking about the renewal without unnecessary stats.
     """
-    account_name = account.get("name", "Valued Customer")
+    account_name = str(account.get("name", "Valued Customer")).strip()
     renewal_date = account.get("renewal_date")
-    arr = account.get("arr", 0)
     csm_name = account.get("csm_name", "Your Customer Success Manager")
     csm_email = account.get("csm_email", "")
     
@@ -28,16 +22,13 @@ def get_renewal_reminder_template(account: Dict[str, Any]) -> tuple[str, str, st
                 renewal_dt = datetime.fromisoformat(renewal_date.replace('Z', '+00:00'))
             else:
                 renewal_dt = renewal_date
-            renewal_date_str = renewal_dt.strftime("%B %d, %Y")
+            renewal_date_str = " on " + renewal_dt.strftime("%B %d")
         except:
-            renewal_date_str = str(renewal_date)
+            renewal_date_str = ""
     else:
-        renewal_date_str = "soon"
-    
-    # Format ARR
-    arr_formatted = f"${arr:,.2f}" if arr else "$0"
-    
-    subject = f"Renewal Reminder: {account_name} - Action Required"
+        renewal_date_str = " soon"
+        
+    subject = f"Checking in on your upcoming renewal — {account_name}"
     
     html_body = f"""
     <!DOCTYPE html>
@@ -46,118 +37,67 @@ def get_renewal_reminder_template(account: Dict[str, Any]) -> tuple[str, str, st
         <meta charset="UTF-8">
         <style>
             body {{
-                font-family: Arial, sans-serif;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 line-height: 1.6;
                 color: #333;
                 max-width: 600px;
                 margin: 0 auto;
-                padding: 20px;
+                padding: 24px;
             }}
-            .header {{
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 30px;
-                text-align: center;
-                border-radius: 10px 10px 0 0;
-            }}
-            .content {{
-                background: #f9f9f9;
-                padding: 30px;
-                border-radius: 0 0 10px 10px;
-            }}
-            .highlight {{
-                background: #fff3cd;
-                padding: 15px;
-                border-left: 4px solid #ffc107;
-                margin: 20px 0;
-            }}
-            .button {{
-                display: inline-block;
-                padding: 12px 30px;
-                background: #667eea;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                margin: 20px 0;
+            .csm-block {{
+                margin-top: 32px;
+                padding-top: 16px;
+                border-top: 1px solid #eee;
             }}
             .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #ddd;
-                font-size: 12px;
-                color: #666;
+                margin-top: 40px;
+                font-size: 11px;
+                color: #999;
             }}
         </style>
     </head>
     <body>
-        <div class="header">
-            <h1>Renewal Reminder</h1>
-        </div>
-        <div class="content">
-            <p>Dear {account_name} Team,</p>
-            
-            <p>We hope this message finds you well. This is a friendly reminder that your subscription is set to renew on <strong>{renewal_date_str}</strong>.</p>
-            
-            <div class="highlight">
-                <strong>Current Annual Recurring Revenue:</strong> {arr_formatted}
-            </div>
-            
-            <p>To ensure uninterrupted service, please take a moment to review your renewal options:</p>
-            
-            <ul>
-                <li>Review your current plan and usage</li>
-                <li>Explore potential upgrades or add-ons</li>
-                <li>Confirm your renewal preferences</li>
-            </ul>
-            
-            <p style="text-align: center;">
-                <a href="#" class="button">Review Renewal Options</a>
+        <p>Hi {account_name} team,</p>
+        
+        <p>I hope you're having a great week.</p>
+        
+        <p>I'm reaching out because your subscription is coming up for renewal{renewal_date_str}. We've really enjoyed partnering with you, and I want to make sure the transition to your next term is as smooth as possible.</p>
+        
+        <p>Do you have a few minutes next week for a quick sync? I'd love to hear how things are going and answer any questions you might have.</p>
+        
+        <p>Looking forward to hearing from you!</p>
+        
+        <div class="csm-block">
+            <p>Best,<br>
+            <strong>{csm_name}</strong><br>
+            {f'<a href="mailto:{csm_email}" style="color: #666; text-decoration: none;">{csm_email}</a>' if csm_email else ''}
             </p>
-            
-            <p>If you have any questions or need assistance, please don't hesitate to reach out to your Customer Success Manager:</p>
-            
-            <p>
-                <strong>{csm_name}</strong><br>
-                {f'Email: <a href="mailto:{csm_email}">{csm_email}</a>' if csm_email else ''}
-            </p>
-            
-            <p>Thank you for being a valued customer!</p>
-            
-            <p>Best regards,<br>
-            Renewal & Upsell Advisor Team</p>
         </div>
+        
         <div class="footer">
-            <p>This is an automated email. Please do not reply directly to this message.</p>
+            <p>Sent via Renewal & Upsell Advisor. Reply directly to this email to reach your CSM.</p>
         </div>
     </body>
     </html>
     """
     
     text_body = f"""
-Renewal Reminder: {account_name}
+Hi {account_name} team,
 
-Dear {account_name} Team,
+I hope you're having a great week.
 
-We hope this message finds you well. This is a friendly reminder that your subscription is set to renew on {renewal_date_str}.
+I'm reaching out because your subscription is coming up for renewal{renewal_date_str}. We've really enjoyed partnering with you, and I want to make sure the transition to your next term is as smooth as possible.
 
-Current Annual Recurring Revenue: {arr_formatted}
+Do you have a few minutes next week for a quick sync? I'd love to hear how things are going and answer any questions you might have.
 
-To ensure uninterrupted service, please take a moment to review your renewal options:
-- Review your current plan and usage
-- Explore potential upgrades or add-ons
-- Confirm your renewal preferences
+Looking forward to hearing from you!
 
-If you have any questions or need assistance, please contact your Customer Success Manager:
+Best,
 {csm_name}
-{f'Email: {csm_email}' if csm_email else ''}
-
-Thank you for being a valued customer!
-
-Best regards,
-Renewal & Upsell Advisor Team
+{f'{csm_email}' if csm_email else ''}
 
 ---
-This is an automated email. Please do not reply directly to this message.
+Sent via Renewal & Upsell Advisor. Reply directly to this email to reach your CSM.
     """
     
     return subject, html_body, text_body
@@ -168,7 +108,7 @@ def get_upsell_opportunity_template(account: Dict[str, Any], opportunity: Dict[s
     Generate upsell opportunity email template.
     Tone: conversational, review-focused — ask how the review went and invite feedback.
     """
-    account_name = account.get("name", "Valued Customer")
+    account_name = str(account.get("name", "Valued Customer")).strip()
     csm_name = account.get("csm_name") or account.get("csm") or "Your Customer Success Manager"
     csm_email = account.get("csm_email", "")
 
@@ -317,7 +257,7 @@ def get_churn_prevention_template(account: Dict[str, Any]) -> tuple[str, str, st
     Returns:
         Tuple of (subject, html_body, text_body)
     """
-    account_name = account.get("name", "Valued Customer")
+    account_name = str(account.get("name", "Valued Customer")).strip()
     risk_score = account.get("risk_score", 0)
     health_score = account.get("health_score", 0)
     csm_name = account.get("csm_name", "Your Customer Success Manager")
@@ -455,7 +395,7 @@ def get_wellness_check_template(account: Dict[str, Any]) -> tuple[str, str, str]
     Returns:
         Tuple of (subject, html_body, text_body)
     """
-    account_name = account.get("name", "Valued Customer")
+    account_name = str(account.get("name", "Valued Customer")).strip()
     arr = account.get("arr", 0) or 0
     mrr_raw = account.get("monthly_wise_instalment") or account.get("mrr")
     if mrr_raw is not None and mrr_raw != "":
@@ -483,166 +423,72 @@ def get_wellness_check_template(account: Dict[str, Any]) -> tuple[str, str, str]
         <meta charset="UTF-8">
         <style>
             body {{
-                font-family: Arial, sans-serif;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                 line-height: 1.6;
                 color: #333;
                 max-width: 600px;
                 margin: 0 auto;
-                padding: 20px;
-            }}
-            .header {{
-                background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-                color: white;
-                padding: 30px;
-                text-align: center;
-                border-radius: 10px 10px 0 0;
+                padding: 24px;
             }}
             .content {{
-                background: #f9f9f9;
-                padding: 30px;
-                border-radius: 0 0 10px 10px;
+                background: #ffffff;
             }}
-            .highlight {{
-                background: #e7f3ff;
-                padding: 15px;
-                border-left: 4px solid #4facfe;
-                margin: 20px 0;
-            }}
-            .stats {{
-                display: flex;
-                justify-content: space-around;
-                margin: 20px 0;
-                flex-wrap: wrap;
-            }}
-            .stat-item {{
-                text-align: center;
-                padding: 15px;
-                background: white;
-                border-radius: 8px;
-                margin: 5px;
-                flex: 1;
-                min-width: 120px;
-            }}
-            .stat-value {{
-                font-size: 24px;
-                font-weight: bold;
-                color: #4facfe;
-            }}
-            .stat-label {{
-                font-size: 12px;
-                color: #666;
-                margin-top: 5px;
-            }}
-            .button {{
-                display: inline-block;
-                padding: 12px 30px;
-                background: #4facfe;
-                color: white;
-                text-decoration: none;
-                border-radius: 5px;
-                margin: 20px 0;
+            .csm-block {{
+                margin-top: 32px;
+                padding-top: 16px;
+                border-top: 1px solid #eee;
             }}
             .footer {{
-                margin-top: 30px;
-                padding-top: 20px;
-                border-top: 1px solid #ddd;
-                font-size: 12px;
-                color: #666;
+                margin-top: 40px;
+                font-size: 11px;
+                color: #999;
             }}
         </style>
     </head>
     <body>
-        <div class="header">
-            <h1>Just Checking In!</h1>
-        </div>
         <div class="content">
-            <p>Dear {account_name} Team,</p>
+            <p>Hi {account_name} team,</p>
             
-            <p>We hope this message finds you well! We wanted to reach out and see how everything is going with your subscription.</p>
+            <p>I hope you're doing well!</p>
             
-            <div class="highlight">
-                <p><strong>We're here to ensure you're getting the most value from our platform.</strong></p>
-            </div>
+            <p>I wanted to personally reach out and see how everything is going with your subscription. We're committed to your success, and I'd love to hear how the platform is working for you so far.</p>
             
-            <p>Here's a quick snapshot of your account:</p>
+            <p>Are you finding everything you need? If there's anything I can help with—or if you have any feedback on how we can better support you—please don't hesitate to give me a shout.</p>
             
-            <div class="stats">
-                <div class="stat-item">
-                    <div class="stat-value">{arr_formatted}</div>
-                    <div class="stat-label">Annual Revenue</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">{mrr_formatted}</div>
-                    <div class="stat-label">Monthly Revenue</div>
-                </div>
-                {f'<div class="stat-item"><div class="stat-value">{utilization_percentage:.0f}%</div><div class="stat-label">Utilization</div></div>' if utilization_percentage else ''}
-                {f'<div class="stat-item"><div class="stat-value">{health_score}/100</div><div class="stat-label">Health Score</div></div>' if health_score is not None else ''}
-            </div>
+            <p>Always happy to chat!</p>
             
-            <p>We'd love to hear from you:</p>
-            <ul>
-                <li>How are things going with the platform?</li>
-                <li>Are you finding everything you need?</li>
-                <li>Is there anything we can help you with?</li>
-                <li>Any feedback or suggestions?</li>
-            </ul>
-            
-            <p style="text-align: center;">
-                <a href="#" class="button">Share Your Feedback</a>
-            </p>
-            
-            <p>If you have any questions, concerns, or just want to chat about how we can better support your business, please don't hesitate to reach out to your Customer Success Manager:</p>
-            
-            <p>
+            <div class="csm-block">
+                <p>Best regards,<br>
                 <strong>{csm_name}</strong><br>
-                {f'Email: <a href="mailto:{csm_email}">{csm_email}</a>' if csm_email else ''}
-            </p>
+                {f'<a href="mailto:{csm_email}" style="color: #666; text-decoration: none;">{csm_email}</a>' if csm_email else ''}
+                </p>
+            </div>
             
-            <p>Thank you for being a valued customer. We're here to help you succeed!</p>
-            
-            <p>Best regards,<br>
-            Renewal & Upsell Advisor Team</p>
-        </div>
-        <div class="footer">
-            <p>This is an automated email. Please do not reply directly to this message.</p>
+            <div class="footer">
+                <p>Sent via Renewal & Upsell Advisor. Reply directly to this email to reach your CSM.</p>
+            </div>
         </div>
     </body>
     </html>
     """
     
     text_body = f"""
-Checking In: How's Everything Going, {account_name}?
+Hi {account_name} team,
 
-Dear {account_name} Team,
+I hope you're doing well!
 
-We hope this message finds you well! We wanted to reach out and see how everything is going with your subscription.
+I wanted to personally reach out and see how everything is going with your subscription. We're committed to your success, and I'd love to hear how the platform is working for you so far.
 
-We're here to ensure you're getting the most value from our platform.
+Are you finding everything you need? If there's anything I can help with—or if you have any feedback on how we can better support you—please don't hesitate to give me a shout.
 
-Here's a quick snapshot of your account:
-- Annual Revenue: {arr_formatted}
-- Monthly Revenue: {mrr_formatted}
-{f'- Utilization: {utilization_percentage:.0f}%' if utilization_percentage else ''}
-{f'- Health Score: {health_score}/100' if health_score is not None else ''}
-
-We'd love to hear from you:
-- How are things going with the platform?
-- Are you finding everything you need?
-- Is there anything we can help you with?
-- Any feedback or suggestions?
-
-If you have any questions, concerns, or just want to chat about how we can better support your business, please don't hesitate to reach out to your Customer Success Manager:
-
-{csm_name}
-{f'Email: {csm_email}' if csm_email else ''}
-
-Thank you for being a valued customer. We're here to help you succeed!
+Always happy to chat!
 
 Best regards,
-Renewal & Upsell Advisor Team
+{csm_name}
+{f'{csm_email}' if csm_email else ''}
 
 ---
-This is an automated email. Please do not reply directly to this message.
+Sent via Renewal & Upsell Advisor. Reply directly to this email to reach your CSM.
     """
     
     return subject, html_body, text_body

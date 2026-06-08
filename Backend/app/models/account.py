@@ -24,7 +24,7 @@ class Account(Base):
     contract_start_date = Column(DateTime)
     contract_end_date = Column(DateTime)
     renewal_date = Column(DateTime, index=True)
-    status = Column(String, default='active')  # active, churned, at_risk, renewed
+    status = Column(String, default='active')  # active, churned (contract ended), at_risk (includes intent), renewed
     
     health_score = Column(Integer)
     relationship_score = Column(Integer)
@@ -49,6 +49,8 @@ class Account(Base):
     primary_contact_phone = Column(String)
     primary_contact_city = Column(String)
     primary_contact_state = Column(String)
+    
+    automation_enabled = Column(Boolean, default=True)
     
     # Timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now())

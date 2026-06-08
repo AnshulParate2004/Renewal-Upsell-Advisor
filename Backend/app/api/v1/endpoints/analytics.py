@@ -7,6 +7,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.schemas.analytics import AnalyticsTrendsResponse, PortfolioAnalyticsResponse
+from app.services.analytics.portfolio_analytics import (
+    build_portfolio_summary,
+    build_portfolio_trends,
+    filter_accounts_by_billing,
+)
+from app.services.lifecycle.bucket_config import load_lifecycle_buckets_config
 from supabase import create_client, Client
 import os
 
@@ -25,16 +32,16 @@ def get_supabase_client() -> Optional[Client]:
     """Get or create Supabase client."""
     supabase_url = os.getenv("SUPABASE_URL") or settings.SUPABASE_URL
     supabase_key = (
-        os.getenv("SUPABASE_SERVICE_ROLE_SECRET") or 
-        os.getenv("SUPABASE_SERVICE_ROLE_KEY") or 
-        os.getenv("SUPABASE_KEY") or
-        os.getenv("SUPABASE_ANON_KEY") or
-        settings.SUPABASE_KEY
+        os.getenv("SUPABASE_SERVICE_ROLE_SECRET")
+        or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+        or os.getenv("SUPABASE_KEY")
+        or os.getenv("SUPABASE_ANON_KEY")
+        or settings.SUPABASE_KEY
     )
-    
+
     if not supabase_url or not supabase_key:
         return None
-    
+
     try:
         return create_client(supabase_url, supabase_key)
     except Exception as e:
@@ -42,18 +49,53 @@ def get_supabase_client() -> Optional[Client]:
         return None
 
 
+def _fetch_accounts(client: Client, billing_interval: Optional[str]) -> list:
+    accounts_result = client.table("accounts").select(
+        "id, name, arr, mrr, monthly_wise_instalment, status, renewal_stage, "
+        "health_score, relationship_score, sentiment_score, churn_probability, risk_score, "
+        "utilization_percentage, contract_start_date, contract_end_date, renewal_date"
+    ).execute()
+    accounts = accounts_result.data if accounts_result.data else []
+    return filter_accounts_by_billing(accounts, billing_interval)
+
+
+def _fetch_opportunities(client: Client) -> list:
+    try:
+        result = client.table("upsell_opportunities").select(
+            "id, account_id, predicted_value, status, probability"
+        ).execute()
+        return result.data if result.data else []
+    except Exception as e:
+        logger.warning(f"Could not fetch upsell opportunities: {e}")
+        return []
+
+
+def _load_goals(client: Client) -> dict:
+    try:
+        from app.api.v1.endpoints.settings import _load_settings_from_db
+
+        app_settings = _load_settings_from_db()
+        metrics = app_settings.metrics
+        return {
+            "upsell_pipeline_target": float(metrics.upsellPipelineTarget),
+            "renewal_target_percent": float(metrics.renewalTarget),
+            "high_risk_threshold_percent": float(metrics.highRiskScoreThresholdPercent),
+        }
+    except Exception as e:
+        logger.warning(f"Could not load settings goals: {e}")
+        return {}
+
+
 @router.get("/dashboard")
-async def get_dashboard_stats():
-    """Get dashboard analytics from Supabase."""
+async def get_dashboard_stats(billing_interval: Optional[str] = None):
+    """Get dashboard analytics from Supabase, optionally scoped to monthly/annual accounts."""
     client = get_supabase_client()
     if not client:
         raise HTTPException(status_code=503, detail="Supabase not configured")
-    
+
     try:
-        # Get all accounts
-        accounts_result = client.table("accounts").select("*").execute()
-        accounts = accounts_result.data if accounts_result.data else []
-        
+        accounts = _fetch_accounts(client, billing_interval)
+
         if not accounts:
             return {
                 "total_accounts": 0,
@@ -62,67 +104,87 @@ async def get_dashboard_stats():
                 "avg_relationship_score": 0.0,
                 "avg_sentiment_score": 0.0,
                 "total_arr": 0.0,
-                "upsell_pipeline": 0.0
+                "upsell_pipeline": 0.0,
             }
-        
-        # Calculate metrics
-        total_accounts = len(accounts)
 
-        def _is_renewed(acc: dict) -> bool:
-            s = (acc.get("status") or "").strip().lower()
-            r = (acc.get("renewal_stage") or "").strip().lower()
-            return s in ("renewed", "renewal") or r == "renewed"
-
-        # Churn risk count: high risk/churn but exclude renewed (renewed accounts are not at risk)
-        churn_risk_count = sum(
-            1 for acc in accounts
-            if not _is_renewed(acc)
-            and (
-                (acc.get("churn_probability") and float(acc.get("churn_probability", 0)) >= 0.7)
-                or (acc.get("risk_score") and float(acc.get("risk_score", 0)) >= 70)
-            )
+        bucket_cfg = load_lifecycle_buckets_config()
+        goals = _load_goals(client)
+        summary = build_portfolio_summary(
+            accounts,
+            _fetch_opportunities(client),
+            bucket_cfg,
+            billing_interval,
+            goals,
         )
-        
-        # Total ARR
-        total_arr = sum(float(acc.get("arr", 0)) for acc in accounts)
-        
-        # Average health score
-        health_scores = [float(acc.get("health_score", 0)) for acc in accounts if acc.get("health_score") is not None]
-        avg_health_score = sum(health_scores) / len(health_scores) if health_scores else 0.0
-        
-        # Average relationship score
-        relationship_scores = [float(acc.get("relationship_score", 0)) for acc in accounts if acc.get("relationship_score") is not None]
-        avg_relationship_score = sum(relationship_scores) / len(relationship_scores) if relationship_scores else 0.0
-        
-        # Average sentiment score
-        sentiment_scores = [float(acc.get("sentiment_score", 0)) for acc in accounts if acc.get("sentiment_score") is not None]
-        avg_sentiment_score = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 0.0
-        
-        # Upsell pipeline - get from upsell_opportunities table
-        try:
-            opportunities_result = client.table("upsell_opportunities").select("predicted_value, status").execute()
-            opportunities = opportunities_result.data if opportunities_result.data else []
-            # Sum predicted_value for opportunities that are not lost/closed
-            upsell_pipeline = sum(
-                float(opp.get("predicted_value", 0)) 
-                for opp in opportunities 
-                if opp.get("status") not in ["lost", "closed"]
-            )
-        except Exception as e:
-            logger.warning(f"Could not fetch upsell opportunities: {e}")
-            upsell_pipeline = 0.0
-        
+        kpis = summary["kpis"]
         return {
-            "total_accounts": total_accounts,
-            "churn_risk_count": churn_risk_count,
-            "avg_health_score": round(avg_health_score, 2),
-            "avg_relationship_score": round(avg_relationship_score, 2),
-            "avg_sentiment_score": round(avg_sentiment_score, 2),
-            "total_arr": round(total_arr, 2),
-            "upsell_pipeline": round(upsell_pipeline, 2)
+            "total_accounts": kpis["total_accounts"],
+            "churn_risk_count": kpis["churn_risk_count"],
+            "avg_health_score": kpis["avg_health_score"],
+            "avg_relationship_score": kpis["avg_relationship_score"],
+            "avg_sentiment_score": kpis["avg_sentiment_score"],
+            "total_arr": kpis["total_revenue"],
+            "upsell_pipeline": kpis["upsell_pipeline"],
         }
     except Exception as e:
         logger.error(f"Error fetching dashboard stats: {e}")
         import traceback
+
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to fetch dashboard stats: {str(e)}")
+
+
+@router.get("/portfolio", response_model=PortfolioAnalyticsResponse)
+async def get_portfolio_analytics(billing_interval: Optional[str] = None):
+    """Full portfolio analytics summary for the Analytics page."""
+    client = get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+
+    try:
+        accounts = _fetch_accounts(client, billing_interval)
+        opportunities = _fetch_opportunities(client)
+        bucket_cfg = load_lifecycle_buckets_config()
+        goals = _load_goals(client)
+        payload = build_portfolio_summary(
+            accounts,
+            opportunities,
+            bucket_cfg,
+            billing_interval,
+            goals,
+        )
+        return payload
+    except Exception as e:
+        logger.error(f"Error fetching portfolio analytics: {e}")
+        import traceback
+
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch portfolio analytics: {str(e)}"
+        )
+
+
+@router.get("/trends", response_model=AnalyticsTrendsResponse)
+async def get_analytics_trends(
+    billing_interval: Optional[str] = None,
+    months: int = 12,
+):
+    """Monthly portfolio trend series for charts."""
+    client = get_supabase_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Supabase not configured")
+
+    months = max(3, min(months, 24))
+
+    try:
+        accounts = _fetch_accounts(client, billing_interval)
+        payload = build_portfolio_trends(client, accounts, billing_interval, months)
+        return payload
+    except Exception as e:
+        logger.error(f"Error fetching analytics trends: {e}")
+        import traceback
+
+        logger.error(traceback.format_exc())
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch analytics trends: {str(e)}"
+        )

@@ -226,33 +226,198 @@ Your response:"""
             # Fallback response
             return "I understand. Is there anything else I can help you with today?"
     
+    async def generate_dynamic_response_stream(
+        self,
+        account: Dict[str, Any],
+        user_input: str,
+        conversation_context: List[Dict[str, str]],
+        usage_percentage: float,
+        call_type: str
+    ):
+        """
+        Generate dynamic response using LangChain based on user input, streamed token by token.
+        Yields text chunks.
+        """
+        llm = get_langchain_llm()
+        if not llm:
+            yield "I understand. Is there anything else I can help you with today?"
+            return
+        
+        try:
+            account_name = account.get('name', 'Customer')
+            csm_name = account.get('csm_name', 'our team')
+            industry = account.get('industry', '')
+            health_score = account.get('health_score') or 0
+            
+            # Build system prompt based on call type and usage percentage
+            if usage_percentage >= 95:
+                goal = "urgently discuss renewal options and ensure contract continuation"
+            elif usage_percentage >= 90:
+                goal = "discuss renewal options and secure contract continuation"
+            elif usage_percentage >= 80:
+                goal = "check for issues, address concerns, and introduce renewal discussion"
+            else:
+                goal = "check for issues and ensure customer satisfaction"
+            
+            # Build conversation history string
+            conversation_history_str = ""
+            if conversation_context:
+                for msg in conversation_context[-3:]:  # Last 3 messages for context
+                    role = msg.get('role', 'user')
+                    content = msg.get('content', '')
+                    conversation_history_str += f"{role.capitalize()}: {content}\n"
+            
+            system_template = """You are a professional customer success representative named {csm_name} calling from Renewal & Upsell Advisor.
+
+Account: {account_name}
+Industry: {industry}
+Health Score: {health_score}/100
+Usage: {usage_percentage:.1f}% of contract completed
+Call Goal: {goal}
+
+Guidelines:
+- Be friendly, professional, and empathetic
+- Keep responses concise (10-20 seconds when spoken)
+- Address customer concerns immediately
+- If discussing renewal, be helpful but not pushy
+- If customer mentions issues, offer solutions
+- If the customer says they are busy or cannot talk right now, ALWAYS ask: "I completely understand. When would be a better time to call you back today or tomorrow?"
+- Sound natural and conversational
+
+Previous conversation:
+{conversation_history}
+
+Respond naturally to what the customer says."""
+            
+            human_template = "Customer said: {user_input}\n\nYour response:"
+            
+            prompt = ChatPromptTemplate.from_messages([
+                SystemMessagePromptTemplate.from_template(system_template),
+                HumanMessagePromptTemplate.from_template(human_template)
+            ])
+            
+            # Create chain
+            chain = prompt | llm | StrOutputParser()
+            
+            # Stream response
+            async for chunk in chain.astream({
+                "csm_name": csm_name,
+                "account_name": account_name,
+                "industry": industry,
+                "health_score": health_score,
+                "usage_percentage": usage_percentage,
+                "goal": goal,
+                "conversation_history": conversation_history_str or "This is the start of the conversation.",
+                "user_input": user_input
+            }):
+                yield chunk
+                
+        except Exception as e:
+            logger.error(f"Failed to generate streaming response with LangChain: {e}", exc_info=True)
+            yield "I understand. Is there anything else I can help you with today?"
+    
     def get_call_outcome(
         self,
         conversation_summary: str,
-        usage_percentage: float
+        usage_percentage: float,
+        is_last_month: bool = False
     ) -> str:
         """
-        Determine call outcome based on conversation summary.
+        Determine call outcome based on conversation summary using LangChain.
         
         Args:
             conversation_summary: Summary of the conversation
             usage_percentage: Current usage percentage
+            is_last_month: True if customer is in the last 30 days of their contract
             
         Returns:
-            Outcome category (interested, not_interested, callback_requested, voicemail, etc.)
+            Outcome category
         """
         summary_lower = conversation_summary.lower()
         
-        # Check for keywords to determine outcome
+        # Keep crisp heuristics for voicemail and explicit callbacks to ensure basic mechanics work
         if 'voicemail' in summary_lower or 'no answer' in summary_lower:
             return 'voicemail'
         
-        if 'callback' in summary_lower or 'call back' in summary_lower:
+        if any(word in summary_lower for word in ['callback', 'call back', 'busy', 'later']):
             return 'callback_requested'
+            
+        llm = get_langchain_llm()
+        if not llm:
+            return self._fallback_get_call_outcome(conversation_summary, usage_percentage, is_last_month)
+            
+        try:
+            system_template = """You are an expert intent classification AI. Your task is to analyze a conversation summary and determine the customer's renewal intent.
+You MUST output EXACTLY ONE of the following precise status strings, and nothing else (no punctuation, no explanation):
+
+- 'interested': Customer wants to renew or is leaning towards renewing.
+- 'renewed': Customer states they have already renewed or paid.
+- 'renew_afterwards': Customer wants to renew at a later date, next month, etc.
+- 'not_interested_churn': Customer explicitly refuses to renew, is canceling, says it's too expensive, or mentions a competitor.
+- 'not_interested': Customer is generally not interested.
+- 'needs_followup': Customer focuses on an issue, problem, or needs help before proceeding.
+- 'completed': The call was successfully completed but no specific intent above was clear.
+
+Is Last Month of Contract: {is_last_month}. (If True, you MUST evaluate strictly for renewal intent vs churn).
+
+Output ONLY the exact status string from the list above."""
+
+            human_template = "Conversation Summary: {summary}"
+            
+            prompt = ChatPromptTemplate.from_messages([
+                SystemMessagePromptTemplate.from_template(system_template),
+                HumanMessagePromptTemplate.from_template(human_template)
+            ])
+            
+            chain = prompt | StrOutputParser() # Use direct invocation if llm requires differently, wait no prompt | llm | parser
+            chain = prompt | llm | StrOutputParser()
+            
+            result = chain.invoke({
+                "summary": conversation_summary,
+                "is_last_month": str(is_last_month)
+            }).strip().lower()
+            
+            valid_outcomes = [
+                'interested', 'renewed', 'renew_afterwards', 
+                'not_interested_churn', 'not_interested', 'needs_followup', 'completed'
+            ]
+            
+            if result in valid_outcomes:
+                logger.info(f"LLM determined call outcome: {result}")
+                return result
+            else:
+                logger.warning(f"LLM returned invalid outcome: {result}. Using fallback.")
+                return self._fallback_get_call_outcome(conversation_summary, usage_percentage)
+                
+        except Exception as e:
+            logger.error(f"Failed to analyze outcome with LLM: {e}")
+            return self._fallback_get_call_outcome(conversation_summary, usage_percentage)
+
+    def _fallback_get_call_outcome(
+        self,
+        conversation_summary: str,
+        usage_percentage: float,
+        is_last_month: bool = False
+    ) -> str:
+        """Original keyword-based fallback if LLM is unavailable."""
+        summary_lower = conversation_summary.lower()
         
-        if usage_percentage >= 90:
+        if is_last_month:
             if any(word in summary_lower for word in ['yes', 'interested', 'renew', 'continue', 'agree']):
                 return 'interested'
+            
+            renewed_keywords = ['already renewed', 'have renewed', 'is cured', 'was cured', 'already paid', 'renewed already', 'cured']
+            if any(word in summary_lower for word in renewed_keywords):
+                return 'renewed'
+
+            renew_later_keywords = ['renew afterwards', 'renew later', 'will renew next', 'call me back later to renew', 'renew next month', 'renew in a few days']
+            if any(word in summary_lower for word in renew_later_keywords):
+                return 'renew_afterwards'
+            
+            churn_keywords = ['too expensive', 'afford', 'won\'t renew', 'do not want to renew', 'will not renew', 'canceling', 'competitor']
+            if any(word in summary_lower for word in churn_keywords):
+                return 'not_interested_churn'
+                
             elif any(word in summary_lower for word in ['no', 'not interested', 'decline', 'cancel']):
                 return 'not_interested'
         

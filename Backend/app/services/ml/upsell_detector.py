@@ -1,38 +1,25 @@
 """
 Upsell Detection Service.
-Identifies accounts with high expansion potential based on usage, health, and contract data.
+Identifies accounts with high expansion potential based on usage, health, and contract data via fixed rules.
 """
 from typing import Dict, Any, List
-import random
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
+
 class UpsellDetector:
-    """ML-based detector for account expansion opportunities."""
-    
-    def __init__(self):
-        # In a real scenario, this would load a trained model
-        pass
+    """Rule-based detector for account expansion opportunities."""
     
     def predict(self, account_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Predict upsell probability for a given account.
-        
-        Args:
-            account_data: Features including health_score, utilization, arr, mrr, etc.
-            
-        Returns:
-            Dict containing probability, reasoning, and recommended products.
+        Calculate upsell probability for a given account using heuristics.
         """
         try:
             health_score = float(account_data.get("health_score") or 0)
             utilization = float(account_data.get("calculated_utilization") or account_data.get("utilization_percentage") or 0)
             arr = float(account_data.get("arr") or 0)
             company_size = str(account_data.get("company_size") or "Medium").lower()
-            
-            # Simple heuristic model for upsell potential
-            # High health + High utilization = High potential
             
             # Probability base
             probability = 0.0
@@ -47,7 +34,7 @@ class UpsellDetector:
             elif utilization > 70:
                 probability += 0.2
                 
-            # Adjusted by company size (rough heuristics)
+            # Adjusted by company size
             if "large" in company_size or "enterprise" in company_size:
                 probability += 0.1
             
@@ -86,7 +73,7 @@ class UpsellDetector:
             }
             
         except Exception as e:
-            logger.error(f"Error in upsell prediction: {e}")
+            logger.error(f"Error in upsell calculation: {e}")
             return {
                 "probability": 0.0,
                 "is_opportunity": False,

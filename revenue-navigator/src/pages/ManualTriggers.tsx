@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { Cpu, Mail, Send, Sparkles, Phone, RefreshCw, MessageCircle } from "lucide-react";
-import { triggerMlPipeline } from "@/lib/api/ml";
+import { Mail, Send, Sparkles, Phone, RefreshCw, MessageCircle } from "lucide-react";
 import { emailApi } from "@/lib/api/email";
 import { voiceApi } from "@/lib/api/voice";
 import { whatsappApi } from "@/lib/api/whatsapp";
@@ -45,8 +44,7 @@ export default function ManualTriggersPage() {
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignSaving, setCampaignSaving] = useState(false);
 
-  const [mlLoading, setMlLoading] = useState(false);
-  const [mlMessage, setMlMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
 
   const [emailMode, setEmailMode] = useState<EmailMode>("single");
   const [accountSearch, setAccountSearch] = useState("");
@@ -72,11 +70,14 @@ export default function ManualTriggersPage() {
   const [voiceMessage, setVoiceMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Manual WhatsApp
+  type WhatsappMode = "all" | "single";
+  const [whatsappMode, setWhatsappMode] = useState<WhatsappMode>("single");
   const [whatsappAccountSearch, setWhatsappAccountSearch] = useState("");
   const [whatsappSelectedAccount, setWhatsappSelectedAccount] = useState<{ id: string; name: string } | null>(null);
-  const [whatsappPurpose, setWhatsappPurpose] = useState("");
-  const [whatsappDetails, setWhatsappDetails] = useState("");
+  const [whatsappTopic, setWhatsappTopic] = useState("");
   const [whatsappLoading, setWhatsappLoading] = useState(false);
+  const [whatsappGenerateLoading, setWhatsappGenerateLoading] = useState(false);
+  const [whatsappAllLoading, setWhatsappAllLoading] = useState(false);
   const [whatsappMessage, setWhatsappMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [whatsappPreview, setWhatsappPreview] = useState<string | null>(null);
 
@@ -218,48 +219,54 @@ export default function ManualTriggersPage() {
     }
   }
 
-  async function handleWhatsappSendSingle() {
+  async function handleWhatsappGenerate() {
     if (!whatsappSelectedAccount) return;
     setWhatsappMessage(null);
     setWhatsappPreview(null);
+    setWhatsappGenerateLoading(true);
+    try {
+      const res = await whatsappApi.generatePreview(whatsappSelectedAccount.id, whatsappTopic.trim() || "general update");
+      setWhatsappPreview(res.preview);
+      setWhatsappMessage({ type: "success", text: `Preview generated for ${res.account_name}. Review and click Send.` });
+    } catch (e) {
+      setWhatsappMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to generate preview." });
+    } finally {
+      setWhatsappGenerateLoading(false);
+    }
+  }
+
+  async function handleWhatsappSendSingle() {
+    if (!whatsappSelectedAccount) return;
+    setWhatsappMessage(null);
     setWhatsappLoading(true);
     try {
       const res = await whatsappApi.sendToAccount(whatsappSelectedAccount.id, {
-        purpose: whatsappPurpose.trim() || undefined,
-        details: whatsappDetails.trim() || undefined,
+        purpose: whatsappTopic.trim() || undefined,
+        custom_text: whatsappPreview || undefined,
       });
-      setWhatsappPreview(res?.preview || null);
-      setWhatsappMessage({
-        type: "success",
-        text: `WhatsApp message sent to ${whatsappSelectedAccount.name}.`,
-      });
+      setWhatsappPreview(res?.preview || whatsappPreview);
+      setWhatsappMessage({ type: "success", text: `WhatsApp message sent to ${whatsappSelectedAccount.name}.` });
     } catch (e) {
-      setWhatsappMessage({
-        type: "error",
-        text: e instanceof Error ? e.message : "Failed to send WhatsApp message.",
-      });
+      setWhatsappMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to send WhatsApp message." });
     } finally {
       setWhatsappLoading(false);
     }
   }
 
-  const handleRunMlPipeline = async () => {
-    setMlMessage(null);
-    setMlLoading(true);
+  async function handleWhatsappTriggerAll() {
+    setWhatsappMessage(null);
+    setWhatsappAllLoading(true);
     try {
-      const res = await triggerMlPipeline();
-      setMlMessage({
-        type: res.success ? "success" : "error",
-        text: res.success
-          ? `Updated ${res.accounts_updated} accounts, ${res.churn_inserted} churn, ${res.upsell_inserted} upsell.`
-          : (res.errors?.[0]?.message || "Pipeline had errors."),
-      });
+      const res = await whatsappApi.triggerAll(whatsappTopic.trim() || undefined);
+      setWhatsappMessage({ type: "success", text: `WhatsApp blast sent to ${res.sent} customers${res.failed ? ` (${res.failed} failed)` : ""}.` });
     } catch (e) {
-      setMlMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to run ML pipeline." });
+      setWhatsappMessage({ type: "error", text: e instanceof Error ? e.message : "Failed to send WhatsApp blast." });
     } finally {
-      setMlLoading(false);
+      setWhatsappAllLoading(false);
     }
-  };
+  }
+
+
 
   useEffect(() => {
     if (campaignMode === "auto") {
@@ -812,8 +819,8 @@ export default function ManualTriggersPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div className="lg:col-span-8 space-y-5">
+          <div className="max-w-3xl mx-auto grid grid-cols-1 gap-5">
+            <div className="space-y-5">
               {/* Manual Email */}
               <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                 <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
@@ -1083,154 +1090,138 @@ export default function ManualTriggersPage() {
               {/* Manual WhatsApp */}
               <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
                 <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
-                  <MessageCircle size={15} className="text-primary" />
+                  <MessageCircle size={15} className="text-green-600" />
                   <h3 className="text-sm font-semibold text-foreground">Manual WhatsApp</h3>
                 </div>
                 <div className="p-4 space-y-4">
-                  <p className="text-xs text-muted-foreground">
-                    Send a one-off WhatsApp update to a single customer. You write the{" "}
-                    <span className="font-medium text-foreground">purpose</span> and{" "}
-                    <span className="font-medium text-foreground">details</span>, and the AI will generate the message and send it.
-                  </p>
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-xs font-medium text-foreground">Purpose</Label>
-                      <input
-                        type="text"
-                        placeholder="e.g. renewal reminder, feature launch update"
-                        value={whatsappPurpose}
-                        onChange={(e) => setWhatsappPurpose(e.target.value)}
-                        className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-foreground">Details for the bot</Label>
-                      <textarea
-                        placeholder="Explain what changed or what you want to say. The bot will turn this into a WhatsApp message."
-                        rows={4}
-                        value={whatsappDetails}
-                        onChange={(e) => setWhatsappDetails(e.target.value)}
-                        className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background resize-y"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs font-medium text-foreground">Select customer</Label>
-                      <div className="mt-1">
-                        <input
-                          type="text"
-                          placeholder="Type name to search..."
-                          value={whatsappSelectedAccount ? whatsappSelectedAccount.name : whatsappAccountSearch}
-                          onChange={(e) => {
-                            setWhatsappAccountSearch(e.target.value);
-                            if (whatsappSelectedAccount) setWhatsappSelectedAccount(null);
-                          }}
-                          onFocus={() => setWhatsappSelectedAccount(null)}
-                          className="w-full px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
-                          autoComplete="off"
-                        />
-                        {!whatsappSelectedAccount && whatsappAccountSearch.trim() && (
-                          <div className="mt-1 w-full bg-card border-2 border-black rounded-lg shadow-lg max-h-48 overflow-auto">
-                            {accountsLoading ? (
-                              <p className="px-3 py-2 text-xs text-muted-foreground">Loading customers…</p>
-                            ) : whatsappAccountSuggestions.length > 0 ? (
-                              <ul className="py-0.5">
-                                {whatsappAccountSuggestions.map((acc) => (
-                                  <li
-                                    key={acc.id}
-                                    onClick={() => {
-                                      setWhatsappSelectedAccount({ id: acc.id, name: acc.name });
-                                      setWhatsappAccountSearch("");
-                                    }}
-                                    className="px-3 py-2 text-xs cursor-pointer hover:bg-muted border-b border-black/10 last:border-0 first:rounded-t-md"
-                                  >
-                                    {acc.name}
-                                    {acc.industry && (
-                                      <span className="text-muted-foreground ml-1">({acc.industry})</span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="px-3 py-2 text-xs text-muted-foreground">
-                                No customers match &quot;{whatsappAccountSearch.trim()}&quot;
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {whatsappSelectedAccount && (
-                      <div className="pt-2 border-t-2 border-black/10 space-y-2">
-                        <p className="text-[11px] text-muted-foreground">
-                          Sending WhatsApp to:{" "}
-                          <strong className="text-foreground">{whatsappSelectedAccount.name}</strong>
-                        </p>
-                        <button
-                          onClick={handleWhatsappSendSingle}
-                          disabled={whatsappLoading}
-                          className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-primary/90 flex items-center justify-center gap-1.5 disabled:opacity-60"
-                        >
-                          {whatsappLoading ? (
-                            "Sending…"
-                          ) : (
-                            <>
-                              <MessageCircle size={12} /> Send WhatsApp
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
-
-                    {whatsappPreview && (
-                      <div className="mt-2 border-2 border-dashed border-black/40 rounded-lg p-2 bg-muted/40">
-                        <p className="text-[11px] font-semibold mb-1 text-foreground">Message preview</p>
-                        <p className="text-[11px] whitespace-pre-wrap text-muted-foreground">{whatsappPreview}</p>
-                      </div>
-                    )}
-
-                    {whatsappMessage && (
-                      <p
-                        className={`text-xs ${
-                          whatsappMessage.type === "success" ? "text-emerald-600" : "text-destructive"
-                        }`}
-                      >
-                        {whatsappMessage.text}
-                      </p>
-                    )}
+                  {/* Mode toggle — mirrors email */}
+                  <div className="flex gap-3 border-b-2 border-black pb-3">
+                    <button
+                      onClick={() => { setWhatsappMode("all"); setWhatsappPreview(null); setWhatsappMessage(null); }}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium border-2 border-black transition-all ${whatsappMode === "all" ? "bg-primary text-primary-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" : "bg-muted hover:bg-muted/80"}`}
+                    >
+                      Send to all
+                    </button>
+                    <button
+                      onClick={() => { setWhatsappMode("single"); setWhatsappPreview(null); setWhatsappMessage(null); }}
+                      className={`flex-1 py-2 rounded-lg text-xs font-medium border-2 border-black transition-all ${whatsappMode === "single" ? "bg-primary text-primary-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" : "bg-muted hover:bg-muted/80"}`}
+                    >
+                      Send to single
+                    </button>
                   </div>
-                </div>
-              </div>
-            </div>
-            {/* End of Manual email/voice */}
 
-            <div className="lg:col-span-4 space-y-5">
-              {/* ML Pipeline – manual trigger */}
-              <div className="bg-card rounded-xl border-2 border-black overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                <div className="px-5 py-3.5 border-b-2 border-black flex items-center gap-2">
-                  <Cpu size={15} className="text-primary" />
-                  <h3 className="text-sm font-semibold text-foreground">ML Predictions</h3>
-                </div>
-                <div className="p-4 space-y-3">
-                  <p className="text-xs text-muted-foreground">
-                    Run Relationship → Health → Churn → Upsell for all accounts and save to the database. Runs automatically at 12:00 AM daily.
-                  </p>
-                  <button
-                    onClick={handleRunMlPipeline}
-                    disabled={mlLoading}
-                    className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {mlLoading ? (
-                      <>Running…</>
-                    ) : (
-                      <>
-                        <RefreshCw size={12} /> Run ML pipeline now
-                      </>
-                    )}
-                  </button>
-                  {mlMessage && (
-                    <p className={`text-xs ${mlMessage.type === "success" ? "text-emerald-600" : "text-destructive"}`}>
-                      {mlMessage.text}
+                  {/* Topic — shared between both modes */}
+                  <div>
+                    <Label className="text-xs font-medium text-foreground">Topic (what do you want to say?)</Label>
+                    <input
+                      type="text"
+                      placeholder="e.g. renewal reminder, feature launch, discount offer"
+                      value={whatsappTopic}
+                      onChange={(e) => { setWhatsappTopic(e.target.value); setWhatsappPreview(null); }}
+                      className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
+                    />
+                    <p className="text-[10px] text-muted-foreground mt-0.5">The AI will write the WhatsApp message based on this topic.</p>
+                  </div>
+
+                  {/* SEND TO ALL mode */}
+                  {whatsappMode === "all" && (
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground">Send a personalised WhatsApp to all customers with a phone number.</p>
+                      <button
+                        onClick={handleWhatsappTriggerAll}
+                        disabled={whatsappAllLoading}
+                        className="w-full py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-60"
+                      >
+                        {whatsappAllLoading ? "Sending…" : <><MessageCircle size={12} /> Send WhatsApp to all</>}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* SEND TO SINGLE mode */}
+                  {whatsappMode === "single" && (
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs font-medium text-foreground">Select customer</Label>
+                        <div className="mt-1">
+                          <input
+                            type="text"
+                            placeholder="Type name to search..."
+                            value={whatsappSelectedAccount ? whatsappSelectedAccount.name : whatsappAccountSearch}
+                            onChange={(e) => { setWhatsappAccountSearch(e.target.value); if (whatsappSelectedAccount) setWhatsappSelectedAccount(null); }}
+                            onFocus={() => setWhatsappSelectedAccount(null)}
+                            className="w-full px-3 py-2 text-sm border-2 border-black rounded-lg bg-background"
+                            autoComplete="off"
+                          />
+                          {!whatsappSelectedAccount && whatsappAccountSearch.trim() && (
+                            <div className="mt-1 w-full bg-card border-2 border-black rounded-lg shadow-lg max-h-48 overflow-auto">
+                              {accountsLoading ? (
+                                <p className="px-3 py-2 text-xs text-muted-foreground">Loading customers…</p>
+                              ) : whatsappAccountSuggestions.length > 0 ? (
+                                <ul className="py-0.5">
+                                  {whatsappAccountSuggestions.map((acc) => (
+                                    <li
+                                      key={acc.id}
+                                      onClick={() => { setWhatsappSelectedAccount({ id: acc.id, name: acc.name }); setWhatsappAccountSearch(""); }}
+                                      className="px-3 py-2 text-xs cursor-pointer hover:bg-muted border-b border-black/10 last:border-0 first:rounded-t-md"
+                                    >
+                                      {acc.name}
+                                      {acc.industry && <span className="text-muted-foreground ml-1">({acc.industry})</span>}
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <p className="px-3 py-2 text-xs text-muted-foreground">No customers match &quot;{whatsappAccountSearch.trim()}&quot;</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Generate button — appears once topic is typed */}
+                      {whatsappSelectedAccount && whatsappTopic.trim() && !whatsappPreview && (
+                        <button
+                          onClick={handleWhatsappGenerate}
+                          disabled={whatsappGenerateLoading}
+                          className="w-full py-2 bg-muted text-foreground rounded-lg text-xs font-medium border-2 border-black hover:bg-muted/80 flex items-center justify-center gap-1.5 disabled:opacity-60"
+                        >
+                          {whatsappGenerateLoading ? "Generating…" : <><Sparkles size={12} /> Generate message</>}
+                        </button>
+                      )}
+
+                      {/* Preview — editable textarea */}
+                      {whatsappPreview && (
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-foreground">Message preview</Label>
+                          <textarea
+                            value={whatsappPreview}
+                            onChange={(e) => setWhatsappPreview(e.target.value)}
+                            rows={5}
+                            className="w-full mt-0.5 px-3 py-2 text-sm border-2 border-green-500 rounded-lg bg-background resize-y focus:outline-none focus:ring-1 focus:ring-green-400"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleWhatsappGenerate}
+                              disabled={whatsappGenerateLoading}
+                              className="flex-1 py-2 bg-muted text-foreground rounded-lg text-xs font-medium border-2 border-black hover:bg-muted/80 flex items-center justify-center gap-1.5 disabled:opacity-60"
+                            >
+                              {whatsappGenerateLoading ? "Regenerating…" : <><Sparkles size={12} /> Regenerate</>}
+                            </button>
+                            <button
+                              onClick={handleWhatsappSendSingle}
+                              disabled={whatsappLoading}
+                              className="flex-1 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:bg-primary/90 flex items-center justify-center gap-1.5 disabled:opacity-60"
+                            >
+                              {whatsappLoading ? "Sending…" : <><MessageCircle size={12} /> Send WhatsApp</>}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {whatsappMessage && (
+                    <p className={`text-xs ${whatsappMessage.type === "success" ? "text-emerald-600" : "text-destructive"}`}>
+                      {whatsappMessage.text}
                     </p>
                   )}
                 </div>

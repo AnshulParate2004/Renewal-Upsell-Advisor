@@ -31,6 +31,26 @@ if env_path.exists():
 logger = get_logger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Helper: resolve the best reply_to address for outgoing emails.
+#
+# Priority:
+#   1. INBOUND_REPLY_EMAIL env var  (e.g. reply@yourdomain.com)
+#      → Set this to the address whose MX record points to mx.sendgrid.net
+#        so that SendGrid Inbound Parse intercepts the reply and POSTs it to
+#        /api/v1/email/webhook → Sentiment tab shows the customer reply.
+#   2. from_email (fallback – replies land in a regular inbox, NOT captured)
+# ---------------------------------------------------------------------------
+def _get_reply_to() -> Optional[str]:
+    inbound = (
+        os.getenv("INBOUND_REPLY_EMAIL")
+        or getattr(app_settings, "INBOUND_REPLY_EMAIL", None)
+    )
+    if inbound:
+        return inbound
+    return email_service.from_email or None
+
+
 def get_supabase_client():
     """Get Supabase client or None if not configured."""
     from supabase import create_client
@@ -57,10 +77,6 @@ def get_supabase_client():
 
 
 def _get_app_settings_config(client: Any) -> Dict[str, Any]:
-    """
-    Internal helper to read the app-wide settings config from Supabase.
-    Safe to call even if the table does not exist; returns {} on failure.
-    """
     try:
         result = (
             client.table("app_settings")
@@ -80,7 +96,6 @@ def _get_app_settings_config(client: Any) -> Dict[str, Any]:
 
 
 def _get_metrics_config(client: Any | None) -> Dict[str, Any]:
-    """Read metrics (including percentage thresholds) from app_settings. Returns {} if unavailable."""
     if client is None:
         return {}
     cfg = _get_app_settings_config(client)
@@ -88,16 +103,6 @@ def _get_metrics_config(client: Any | None) -> Dict[str, Any]:
 
 
 def get_email_interval_days(client: Any | None = None) -> int:
-    """
-    Determine how many days must pass between automated emails.
-
-    Priority:
-    1) Supabase app_settings.schedule.followUpDays (UI-driven)
-    2) EMAIL_SCHEDULE_INTERVAL_DAYS env var
-    3) Settings.EMAIL_SCHEDULE_INTERVAL_DAYS (backend config)
-    4) Fallback default of 7 days
-    """
-    # 1) From Supabase settings (if available)
     if client is not None:
         cfg = _get_app_settings_config(client)
         schedule_cfg = cfg.get("schedule") or {}
@@ -105,7 +110,6 @@ def get_email_interval_days(client: Any | None = None) -> int:
         if isinstance(follow_up_days, int) and follow_up_days > 0:
             return follow_up_days
 
-    # 2) From environment variable
     env_val = os.getenv("EMAIL_SCHEDULE_INTERVAL_DAYS")
     if env_val:
         try:
@@ -115,7 +119,6 @@ def get_email_interval_days(client: Any | None = None) -> int:
         except ValueError:
             logger.warning(f"Invalid EMAIL_SCHEDULE_INTERVAL_DAYS value: {env_val}")
 
-    # 3) From typed settings
     try:
         settings_days = int(getattr(app_settings, "EMAIL_SCHEDULE_INTERVAL_DAYS", 7))
         if settings_days > 0:
@@ -123,54 +126,100 @@ def get_email_interval_days(client: Any | None = None) -> int:
     except Exception:
         pass
 
-    # 4) Hard fallback
     return 7
-    
+
+
+def _process_contract_expirations(client: Any):
+    """
+    Check for accounts whose contract has ended and they haven't renewed.
+    Mark them as 'churned'.
+    """
     try:
-        return create_client(supabase_url, supabase_key)
+        # Use timezone-aware UTC now
+        now_iso = datetime.now(timezone.utc).isoformat()
+        
+        # Scenario A: Churn (Not Renewed)
+        # Find active or at_risk accounts whose contract has expired
+        result = client.table("accounts").select("id, name, contract_end_date, status").not_.in_("status", ["churned", "renewed"]).lte("contract_end_date", now_iso).execute()
+        
+        expired_accounts = result.data or []
+        for acc in expired_accounts:
+            acc_id = acc["id"]
+            acc_name = acc["name"]
+            logger.info(f"[EXPIRY-CHECK] 🚨 Account {acc_name} ({acc_id}) has expired contract. Transitioning to CHURNED.")
+            client.table("accounts").update({"status": "churned"}).eq("id", acc_id).execute()
+
+        # Scenario B: Renewal Loop Reset (Already Renewed)
+        # Find 'renewed' accounts whose old contract has officially ended
+        res_renewed = client.table("accounts").select("id, name, contract_start_date, contract_end_date, status").eq("status", "renewed").lte("contract_end_date", now_iso).execute()
+        
+        turnover_accounts = res_renewed.data or []
+        for acc in turnover_accounts:
+            acc_id = acc["id"]
+            acc_name = acc["name"]
+            logger.info(f"[EXPIRY-CHECK] ♻️ Account {acc_name} ({acc_id}) reached end of term and already renewed. Resetting for NEXT year.")
+            
+            # Simple date advancement: add 1 year (365 days)
+            old_start = datetime.fromisoformat(acc["contract_start_date"].replace('Z', '+00:00'))
+            old_end = datetime.fromisoformat(acc["contract_end_date"].replace('Z', '+00:00'))
+            new_start = (old_start + timedelta(days=365)).isoformat()
+            new_end = (old_end + timedelta(days=365)).isoformat()
+            
+            client.table("accounts").update({
+                "status": "active",
+                "contract_start_date": new_start,
+                "contract_end_date": new_end,
+                "health_score": 100,
+                "risk_score": 0,
+                "relationship_score": 100,
+                "renewal_date": None,
+                "renewal_stage": None
+            }).eq("id", acc_id).execute()
+            
     except Exception as e:
-        logger.error(f"Failed to initialize Supabase client: {e}")
-        return None
+        logger.error(f"[EXPIRY-CHECK] Failed to process contract expirations: {e}")
 
 
 async def send_scheduled_emails(purpose: Optional[str] = None):
     """
     Send scheduled emails to accounts.
-    Optional purpose: when set, all emails are tailored to this intent (e.g. "10% discount", "renewal reminder").
+    Optional purpose: when set, all emails are tailored to this intent.
     """
     client = get_supabase_client()
     if not client:
         logger.error("Supabase not configured. Cannot send scheduled emails.")
         return
-    
+
+    # 🚨 CRITICAL: Automated Status Management
+    # 1. Check for contract expirations and mark as 'churned' if passed.
+    _process_contract_expirations(client)
+
     try:
-        # Get all active and churned accounts
-        accounts_result = client.table("accounts").select("*").in_("status", ["active", "churned"]).execute()
+        accounts_result = client.table("accounts").select("*").in_("status", ["active", "churned", "at_risk"]).execute()
         accounts = accounts_result.data if accounts_result.data else []
-        
+
         if not accounts:
             logger.info("No active accounts found for email campaign")
             return
-        
+
         logger.info(f"Processing {len(accounts)} accounts for email campaign")
         try:
             from app.services.activity_log import log_activity
             log_activity("email_scheduler_run", details={"accounts_count": len(accounts)})
         except Exception:
             pass
-        
+
         sent_count = 0
         skipped_count = 0
         error_count = 0
-        
-        # Current time in UTC
-        current_time = datetime.now(timezone.utc)
 
-        # Determine dynamic throttle interval (in days) for follow-ups
+        current_time = datetime.now(timezone.utc)
         interval_days = get_email_interval_days(client)
         logger.info(f"Email scheduler using interval of {interval_days} day(s) between emails.")
         metrics_cfg = _get_metrics_config(client)
         schedule_cfg = _get_app_settings_config(client).get("schedule") or {}
+        stop_on_churn = schedule_cfg.get("stopStandardCampaignsOnChurn", True)
+        stop_on_critical = schedule_cfg.get("stopWorkflowsOnCritical", True)
         reminder_days_before_renewal = int(schedule_cfg.get("reminderDaysBeforeRenewal", 1))
         reminder_days_before_renewal = max(0, min(365, reminder_days_before_renewal))
         email_milestones = metrics_cfg.get("emailMilestonePercents")
@@ -181,57 +230,65 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
         risk_threshold_pct = int(metrics_cfg.get("highRiskScoreThresholdPercent", 70))
         churn_threshold_pct = int(metrics_cfg.get("churnProbabilityThresholdPercent", 70))
         churn_prob_threshold = churn_threshold_pct / 100.0
-        
+
         for account in accounts:
             try:
                 account_id = account.get("id")
                 account_name = account.get("name", "Unknown")
+                account_status = account.get("status", "active")
+
+                # Skip standard campaigns if account is churned and toggle is ON
+                if account_status == "churned" and stop_on_churn:
+                    logger.debug(f"Account {account_name} is churned. Skipping standard email campaign.")
+                    continue
                 
-                # Check last email sent for this account from Supabase email_campaigns table
-                # We do not filter by "sent" anymore so we can see if the last attempt was a "failed" attempt
+                # Skip if account is at_risk and stopWorkflowsOnCritical toggle is ON
+                if account_status == "at_risk" and stop_on_critical:
+                    logger.debug(f"Account {account_name} is critical. Skipping per global 'stopWorkflowsOnCritical' setting.")
+                    continue
+                
+                # Skip if account-level automation is disabled
+                if not account.get("automation_enabled", True):
+                    logger.debug(f"Automation manually disabled for {account_name}. Skipping.")
+                    continue
+
                 email_campaigns_result = client.table("email_campaigns").select(
                     "sent_at, campaign_type, status"
                 ).eq("account_id", account_id).order("sent_at", desc=True).limit(1).execute()
-                
+
                 last_email_sent = None
                 should_send = False
-                
+
                 if email_campaigns_result.data and len(email_campaigns_result.data) > 0:
                     last_email_data = email_campaigns_result.data[0]
                     last_email_sent_str = last_email_data.get("sent_at")
                     last_email_status = last_email_data.get("status", "").lower()
-                    
+
                     if last_email_sent_str:
                         try:
-                            # Parse the sent_at timestamp
                             if isinstance(last_email_sent_str, str):
-                                # Handle ISO format with or without timezone
                                 if last_email_sent_str.endswith('Z'):
                                     last_email_sent = datetime.fromisoformat(last_email_sent_str.replace('Z', '+00:00'))
                                 elif '+' in last_email_sent_str or last_email_sent_str.count('-') > 2:
                                     last_email_sent = datetime.fromisoformat(last_email_sent_str)
                                 else:
-                                    # Try parsing as naive datetime and assume UTC
                                     last_email_sent = datetime.fromisoformat(last_email_sent_str).replace(tzinfo=timezone.utc)
                             else:
                                 last_email_sent = last_email_sent_str
-                            
-                            # Calculate days since last email
+
                             if last_email_sent.tzinfo is None:
                                 last_email_sent = last_email_sent.replace(tzinfo=timezone.utc)
-                            
+
                             days_since_email = (current_time - last_email_sent).days
-                            
-                            # Determine allowed interval
+
                             full_config = _get_app_settings_config(client)
                             notifications = full_config.get("notifications") or {}
                             failed_calls_enabled = notifications.get("failedCalls", True)
-                            
+
                             allowed_interval = interval_days
                             if last_email_status == "failed" and failed_calls_enabled:
-                                allowed_interval = 1 # Allow retry after 1 day if it failed
-                                
-                            # Only send if enough days have passed
+                                allowed_interval = 1
+
                             if days_since_email >= allowed_interval:
                                 should_send = True
                                 logger.info(
@@ -249,96 +306,68 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                             logger.warning(f"Error parsing last email date for account {account_name}: {e}. Will send email.")
                             should_send = True
                     else:
-                        # No sent_at date, send email (first time)
                         should_send = True
                         logger.info(f"Account {account_name}: No previous email found. Will send email.")
                 else:
-                    # No email campaigns found, send email (first time)
                     should_send = True
                     logger.info(f"Account {account_name}: No email history found. Will send email.")
-                
+
                 if not should_send:
                     continue
-                
-                # Determine email type based on plan completion percentage
+
                 contract_start_date = account.get("contract_start_date")
                 contract_end_date = account.get("contract_end_date")
                 renewal_date = account.get("renewal_date")
-                risk_score = account.get("risk_score")
-                churn_probability = account.get("churn_probability")
-                
-                # Handle None values - default to 0 for comparison
-                risk_score = risk_score if risk_score is not None else 0
-                churn_probability = churn_probability if churn_probability is not None else 0
-                
-                # Check for upsell opportunities
+                risk_score = account.get("risk_score") if account.get("risk_score") is not None else 0
+                churn_probability = account.get("churn_probability") if account.get("churn_probability") is not None else 0
+
                 opportunities_result = client.table("upsell_opportunities").select(
                     "*"
                 ).eq("account_id", account_id).eq("status", "identified").limit(1).execute()
-                
+
                 has_upsell_opportunity = opportunities_result.data and len(opportunities_result.data) > 0
-                
-                # Determine email type based on priority:
-                # 1. Upsell opportunities (highest priority)
-                # 2. Churn prevention (high risk accounts)
-                # 3. Plan completion percentage:
-                #    - 0-90%: Wellness check emails
-                #    - 90-100%: Renewal reminder emails
-                
-                email_type = "wellness_check"  # Default: wellness check-in
+
+                email_type = "wellness_check"
                 plan_completion_percentage = None
-                
+
                 if has_upsell_opportunity:
                     email_type = "upsell"
                 elif risk_score >= risk_threshold_pct or churn_probability >= churn_prob_threshold:
                     email_type = "churn_prevention"
                 elif contract_start_date and contract_end_date:
-                    # Calculate plan completion percentage
                     try:
-                        # Parse dates
                         if isinstance(contract_start_date, str):
                             start_dt = datetime.fromisoformat(contract_start_date.replace('Z', '+00:00'))
                         else:
                             start_dt = contract_start_date
-                        
+
                         if isinstance(contract_end_date, str):
                             end_dt = datetime.fromisoformat(contract_end_date.replace('Z', '+00:00'))
                         else:
                             end_dt = contract_end_date
-                        
-                        # Remove timezone for calculation
+
                         start_dt = start_dt.replace(tzinfo=None) if start_dt.tzinfo else start_dt
                         end_dt = end_dt.replace(tzinfo=None) if end_dt.tzinfo else end_dt
                         current_dt = datetime.now()
-                        
-                        # Calculate total contract duration and days elapsed
+
                         total_days = (end_dt - start_dt).days
                         days_elapsed = (current_dt - start_dt).days
-                        
+
                         if total_days > 0:
-                            # Calculate percentage of plan completed
                             plan_completion_percentage = (days_elapsed / total_days) * 100
-                            
-                            # Clamp percentage between 0 and 100
                             plan_completion_percentage = max(0, min(100, plan_completion_percentage))
-                            
                             logger.info(f"Account {account_name}: Plan {plan_completion_percentage:.1f}% completed ({days_elapsed}/{total_days} days)")
-                            
-                            # If configured % or more of plan is completed, send renewal reminder
                             if plan_completion_percentage >= renewal_pct:
                                 email_type = "renewal_reminder"
                             else:
-                                # Less than 90% completed - send wellness check
                                 email_type = "wellness_check"
                         else:
                             logger.warning(f"Invalid contract dates for {account_name}: start={contract_start_date}, end={contract_end_date}")
                             email_type = "wellness_check"
                     except Exception as e:
                         logger.warning(f"Error calculating plan completion for {account_name}: {e}")
-                        # Default to wellness check if we can't calculate
                         email_type = "wellness_check"
                 elif renewal_date:
-                    # Fallback: Use renewal date if contract dates not available
                     try:
                         if isinstance(renewal_date, str):
                             renewal_dt = datetime.fromisoformat(renewal_date.replace('Z', '+00:00'))
@@ -346,7 +375,6 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                             renewal_dt = renewal_date
                         days_until_renewal = (renewal_dt.replace(tzinfo=None) - datetime.now()).days
 
-                        # If within configured days before renewal (e.g. 1 day before), send renewal reminder
                         if 0 <= days_until_renewal <= reminder_days_before_renewal:
                             email_type = "renewal_reminder"
                         else:
@@ -355,21 +383,18 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                         logger.warning(f"Error calculating days until renewal for {account_name}: {e}")
                         email_type = "wellness_check"
                 else:
-                    # No contract dates or renewal date - send wellness check
                     email_type = "wellness_check"
-                
-                # Get recipient email
+
                 recipient_email = (
-                    account.get("primary_contact_email") or 
+                    account.get("primary_contact_email") or
                     account.get("contact_email") or
                     account.get("csm_email")
                 )
-                
+
                 if not recipient_email:
                     logger.warning(f"No email address found for account {account.get('name')}")
                     continue
-                
-                # Generate base email content from templates
+
                 opportunity = None
                 if email_type == "churn_discount":
                     discount_percentage = app_settings.metrics.get("churnDiscountPercentage", 20)
@@ -384,10 +409,8 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                 elif email_type == "wellness_check":
                     base_subject, base_html_body, base_text_body = get_wellness_check_template(account)
                 else:
-                    # Fallback to wellness check
                     base_subject, base_html_body, base_text_body = get_wellness_check_template(account)
-                
-                # Personalize email content using LLM (optional purpose from "Send to all" with purpose bar)
+
                 try:
                     subject, html_body, text_body = personalize_email_content(
                         account=account,
@@ -401,24 +424,25 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                 except Exception as e:
                     logger.warning(f"LLM personalization failed, using base templates: {e}")
                     subject, html_body, text_body = base_subject, base_html_body, base_text_body
-                
-                # Send email
+
                 recipient_name = account.get("primary_contact_name") or account.get("contact_name")
+
+                # ✅ FIX: Use INBOUND_REPLY_EMAIL as reply_to so real user replies are
+                # intercepted by SendGrid Inbound Parse → /api/v1/email/webhook → Sentiment tab.
                 success = email_service.send_email(
                     to_email=recipient_email,
                     subject=subject,
                     html_body=html_body,
                     text_body=text_body,
-                    to_name=recipient_name
+                    to_name=recipient_name,
+                    reply_to=_get_reply_to(),
                 )
-                
+
                 if success:
-                    # Record email in email_campaigns table in Supabase
                     try:
                         sent_at_iso = current_time.isoformat()
                         sent_at_formatted = current_time.strftime("%Y-%m-%d %H:%M:%S UTC")
-                        
-                        # Calculate plan completion percentage if available
+
                         plan_completion_info = {}
                         if contract_start_date and contract_end_date:
                             try:
@@ -426,19 +450,19 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                                     start_dt = datetime.fromisoformat(contract_start_date.replace('Z', '+00:00'))
                                 else:
                                     start_dt = contract_start_date
-                                
+
                                 if isinstance(contract_end_date, str):
                                     end_dt = datetime.fromisoformat(contract_end_date.replace('Z', '+00:00'))
                                 else:
                                     end_dt = contract_end_date
-                                
+
                                 start_dt = start_dt.replace(tzinfo=None) if start_dt.tzinfo else start_dt
                                 end_dt = end_dt.replace(tzinfo=None) if end_dt.tzinfo else end_dt
                                 current_dt = datetime.now()
-                                
+
                                 total_days = (end_dt - start_dt).days
                                 days_elapsed = (current_dt - start_dt).days
-                                
+
                                 if total_days > 0:
                                     plan_completion_percentage = (days_elapsed / total_days) * 100
                                     plan_completion_percentage = max(0, min(100, plan_completion_percentage))
@@ -451,87 +475,60 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                                     }
                             except:
                                 pass
-                        
-                        # Store complete email information including HTML body and detailed metadata
+
                         email_metadata = {
-                            # Email sending details
                             "sent_at": sent_at_iso,
                             "sent_at_formatted": sent_at_formatted,
                             "sent_timestamp": current_time.timestamp(),
                             "email_type": email_type,
-                            
-                            # Recipient information
                             "recipient_email": recipient_email,
                             "recipient_name": recipient_name,
-                            
-                            # Email content
                             "subject": subject,
-                            "html_body": html_body,  # Full HTML version
+                            "html_body": html_body,
                             "text_body_length": len(text_body),
                             "html_body_length": len(html_body),
                             "llm_personalized": True,
-                            
-                            # Account information
                             "account_id": str(account_id),
                             "account_name": account_name,
                             "account_domain": account.get("domain"),
                             "account_industry": account.get("industry"),
                             "account_company_size": account.get("company_size"),
-                            
-                            # Financial metrics
                             "arr": float(account.get("arr", 0)) if account.get("arr") else 0,
                             "mrr": float(account.get("mrr", 0)) if account.get("mrr") else 0,
-                            
-                            # Account health metrics
                             "health_score": account.get("health_score"),
                             "risk_score": account.get("risk_score"),
                             "relationship_score": account.get("relationship_score"),
                             "churn_probability": float(account.get("churn_probability", 0)) if account.get("churn_probability") else 0,
                             "sentiment_category": account.get("sentiment_category"),
-                            
-                            # Contract and renewal information
                             "renewal_date": account.get("renewal_date"),
                             "contract_start_date": account.get("contract_start_date"),
                             "contract_end_date": account.get("contract_end_date"),
-                            **plan_completion_info,  # Include plan completion percentage if calculated
-                            
-                            # CSM information
+                            **plan_completion_info,
                             "csm_name": account.get("csm_name"),
                             "csm_email": account.get("csm_email"),
-                            
-                            # System information
                             "scheduler_version": "1.0",
                             "scheduled_at": "12:00 PM IST (daily)"
                         }
-                        
-                        # Store HTML body and recipient info in metadata (schema only has body TEXT field)
-                        email_metadata["html_body"] = html_body
-                        email_metadata["recipient_email"] = recipient_email
-                        email_metadata["recipient_name"] = recipient_name
-                        
-                        # Insert email campaign record (matching original schema)
+
                         email_campaign_result = client.table("email_campaigns").insert({
                             "account_id": account_id,
                             "campaign_type": email_type,
                             "subject": subject,
-                            "body": text_body,  # Store text version in body field (TEXT)
+                            "body": text_body,
                             "sent_at": sent_at_iso,
                             "status": "sent",
-                            "metadata": email_metadata  # Store HTML body, recipient info, and all other details in metadata JSONB
+                            "metadata": email_metadata
                         }).execute()
-                        
+
                         email_campaign_id = email_campaign_result.data[0]["id"] if email_campaign_result.data else None
-                        
-                        # Update last_contact_date in accounts table
+
                         client.table("accounts").update({
                             "last_contact_date": sent_at_iso
                         }).eq("id", account_id).execute()
-                        
-                        # Log activity to activity_logs table for audit trail
+
                         try:
-                            # Initialize plan_completion_info if not already set
                             plan_completion_info = plan_completion_info if 'plan_completion_info' in locals() else {}
-                            
+
                             client.table("activity_logs").insert({
                                 "account_id": account_id,
                                 "action": "send_email",
@@ -548,25 +545,24 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
                             }).execute()
                         except Exception as log_error:
                             logger.warning(f"Failed to log activity for email campaign: {log_error}")
-                            # Don't fail the email send if activity logging fails
-                        
+
                         sent_count += 1
                         logger.info(f"Email sent and logged to database: {recipient_email} for account {account_name} (Type: {email_type})")
                     except Exception as e:
                         logger.error(f"Failed to record email campaign in Supabase: {e}")
                         import traceback
                         logger.error(traceback.format_exc())
-                        sent_count += 1  # Email was sent, just failed to record
+                        sent_count += 1
                 else:
                     error_count += 1
                     logger.error(f"Failed to send email to {recipient_email} for account {account_name}")
-                
+
             except Exception as e:
                 error_count += 1
                 logger.error(f"Error processing account {account.get('name', 'unknown')}: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
-        
+
         logger.info(f"Email campaign completed: {sent_count} sent, {skipped_count} skipped (within 7 days), {error_count} errors")
         try:
             from app.services.activity_log import log_activity
@@ -583,10 +579,6 @@ async def send_scheduled_emails(purpose: Optional[str] = None):
 
 
 def _get_email_content_for_account(client: Any, account_id: str, purpose: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Build personalized email content for an account. Returns dict with subject, html_body, text_body,
-    email_type, recipient_email, account_name, account_id_val, account, or error key on failure.
-    """
     result = client.table("accounts").select("*").eq("id", account_id).execute()
     if not result.data or len(result.data) == 0:
         return {"error": "Account not found."}
@@ -622,7 +614,6 @@ def _get_email_content_for_account(client: Any, account_id: str, purpose: Option
     email_type = "wellness_check"
     plan_completion_percentage = None
 
-    # When user provides a purpose, pick template from it (renewal / upsell / churn); else keep auto-selection
     purpose_lower = (purpose or "").strip().lower()
     if purpose_lower:
         if "renewal" in purpose_lower:
@@ -683,11 +674,6 @@ def _get_email_content_for_account(client: Any, account_id: str, purpose: Option
 
 
 async def generate_email_preview_for_account(account_id: str, purpose: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Generate personalized email content for an account (for UI preview/edit before sending).
-    Optional purpose: tailor the message to this intent (e.g. "review follow-up", "renewal reminder").
-    Returns subject, html_body, text_body, email_type, recipient_email, account_name.
-    """
     client = get_supabase_client()
     if not client:
         return {"error": "Supabase not configured."}
@@ -717,20 +703,19 @@ async def send_email_to_single_account(
 ) -> Dict[str, Any]:
     """
     Send a single email to the selected account (manual trigger).
-    If subject/html_body/text_body are provided, send that content; otherwise generate personalized content.
     Does not apply the 7-day throttle.
     """
     client = get_supabase_client()
     if not client:
         return {"success": False, "error": "Supabase not configured."}
+    email_service.reload_config()
     if not email_service.is_configured:
         return {
             "success": False,
-            "error": "Email service not configured. Please configure SMTP in Settings → Email & SMTP first.",
+            "error": "Email service not configured. Please save your SendGrid API key and From Email in Settings → Email & SendGrid.",
         }
     try:
         if subject is not None and html_body is not None and text_body is not None:
-            # Custom content: fetch account for recipient only (schema has primary_contact_*, csm_email; no contact_email/contact_name)
             result = client.table("accounts").select(
                 "id, name, primary_contact_email, csm_email, primary_contact_name"
             ).eq("id", account_id).limit(1).execute()
@@ -745,7 +730,6 @@ async def send_email_to_single_account(
             recipient_name = account.get("primary_contact_name")
             email_type = "manual_custom"
         else:
-            # Generate personalized content
             content = _get_email_content_for_account(client, account_id, purpose=purpose)
             if "error" in content:
                 return {"success": False, "error": content["error"]}
@@ -758,11 +742,15 @@ async def send_email_to_single_account(
             account_id_val = content["account_id_val"]
             recipient_name = content["account"].get("primary_contact_name") or content["account"].get("contact_name")
 
+        # ✅ FIX: Use INBOUND_REPLY_EMAIL as reply_to so real user replies are
+        # intercepted by SendGrid Inbound Parse → /api/v1/email/webhook → Sentiment tab.
         success = email_service.send_email(
-            to_email=recipient_email, subject=subject, html_body=html_body, text_body=text_body, to_name=recipient_name
+            to_email=recipient_email, subject=subject, html_body=html_body, text_body=text_body,
+            to_name=recipient_name, reply_to=_get_reply_to(),
         )
         if not success:
-            return {"success": False, "error": f"Failed to send email to {recipient_email}."}
+            err_detail = getattr(email_service, "last_error", None) or f"Failed to send email to {recipient_email}."
+            return {"success": False, "error": err_detail}
         current_time = datetime.now(timezone.utc)
         sent_at_iso = current_time.isoformat()
         client.table("email_campaigns").insert({
@@ -786,7 +774,6 @@ async def send_email_to_single_account(
 
 
 def _parse_schedule_time(value: Any) -> tuple[int, int]:
-    """Parse 'HH:MM' string to (hour, minute). Default (12, 0) on error."""
     if not value or not isinstance(value, str):
         return (12, 0)
     parts = value.strip().split(":")
@@ -799,7 +786,6 @@ def _parse_schedule_time(value: Any) -> tuple[int, int]:
 
 
 def get_auto_email_schedule_hm(client: Any | None) -> tuple[int, int]:
-    """Get (hour, minute) for daily email run from app_settings. Default (12, 0) IST."""
     if client is None:
         return (12, 0)
     cfg = _get_app_settings_config(client)
@@ -808,10 +794,6 @@ def get_auto_email_schedule_hm(client: Any | None) -> tuple[int, int]:
 
 
 def get_next_scheduled_ist(hour: int, minute: int):
-    """
-    Next occurrence of given hour:minute in IST (UTC+5:30).
-    Returns datetime in UTC timezone.
-    """
     ist_offset = timedelta(hours=5, minutes=30)
     ist_timezone = timezone(ist_offset)
     current_utc = datetime.now(timezone.utc)
@@ -823,18 +805,10 @@ def get_next_scheduled_ist(hour: int, minute: int):
 
 
 def get_next_12pm_ist():
-    """
-    Calculate the next 12:00 PM IST (UTC+5:30) time.
-    Returns datetime in UTC timezone.
-    """
     return get_next_scheduled_ist(12, 0)
 
 
 async def run_email_scheduler():
-    """
-    Run email scheduler - checks daily at configured time (app_settings.autoEmailScheduleTime, default 12:00 IST).
-    Sends emails only if N days have passed since last email (followUpDays from settings).
-    """
     client = get_supabase_client()
     hour, minute = get_auto_email_schedule_hm(client)
     logger.info("Email scheduler started - will run daily at %02d:%02d IST", hour, minute)
@@ -853,7 +827,6 @@ async def run_email_scheduler():
                 continue
 
             logger.info("Running scheduled email check at %02d:%02d IST", hour, minute)
-            # Run auto-campaigns first (daily/weekly/monthly by recurring_frequency and filter_config)
             try:
                 from app.services.campaign_runner import run_auto_campaigns
                 result = await run_auto_campaigns()
@@ -863,14 +836,11 @@ async def run_email_scheduler():
                 logger.warning("Auto campaigns run failed: %s", camp_err)
             await send_scheduled_emails()
 
-            # Re-read schedule time so user changes take effect next run
             client = get_supabase_client()
             hour, minute = get_auto_email_schedule_hm(client)
-            # The loop will recalculate and wait automatically
-            
+
         except Exception as e:
             logger.error(f"Error in email scheduler: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            # Wait 1 hour before retrying on error
-            await asyncio.sleep(60 * 60)  # 1 hour
+            await asyncio.sleep(60 * 60)

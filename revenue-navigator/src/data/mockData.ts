@@ -13,6 +13,9 @@ export interface AccountActivity {
   title: string;
   description: string;
   sentiment?: 'positive' | 'neutral' | 'negative';
+  transcript?: string;
+  sentiment_score?: number;
+  emails?: { id: string, sender: 'agent'|'user', subject: string, body: string, date: string }[];
 }
 
 export interface MetricsHistory {
@@ -43,7 +46,7 @@ export interface Account {
   licensesUsed: number;
   licensesTotal: number;
   renewalDate: string;
-  renewalStage: "q1" | "q2" | "q3" | "q4" | "m1" | "no_renewed" | "renewed" | "lost";
+  renewalStage: string;
   industry: string;
   company_size?: string; // Added to match Supabase schema
   csm: string;
@@ -54,12 +57,15 @@ export interface Account {
   contractEnd?: string;
   /** Account status: active, churned, at_risk, renewed */
   status?: string;
+  automation_enabled?: boolean;
   // Contact information
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
   contactCity?: string;
   contactState?: string;
+  primary_contact_phone?: string;
+  phone?: string;
   // Historical data
   sentimentHistory?: SentimentHistory[];
   activityTimeline?: AccountActivity[];
@@ -146,8 +152,8 @@ export function getDaysSinceStart(date: string): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-/** Pipeline stage: Q1–Q4 by days to renewal; days < 0 and not renewed → no_renewed. Renewed accounts go to Q1–Q4 by days to apply renewal (no separate column). */
-export type RenewalStage = "q1" | "q2" | "q3" | "q4" | "no_renewed";
+/** Pipeline stage varies by pipeline_type. We return string. */
+export type RenewalStage = string;
 
 export interface RenewalStageOptions {
   milestonePercents?: number[];

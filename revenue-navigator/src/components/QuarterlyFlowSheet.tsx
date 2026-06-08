@@ -16,23 +16,38 @@ const FREQUENCY_OPTIONS: { value: StepFrequency; label: string }[] = [
 ];
 
 /** Q1 = months 1,2,3; Q2 = 4,5,6; Q3 = 7,8,9; Q4 = 10,11,12; renewed = 1,2,3 */
-function getMonthOptionsForStage(stage: string | null): { value: string; label: string }[] {
+function getMonthOptionsForStage(stage: string | null, isMonthly?: boolean): { value: string; label: string }[] {
     if (!stage) return [{ value: "Month 1", label: "Month 1" }];
-    const s = stage.toLowerCase();
+    const s = stage.toLowerCase().replace("cf_", "").replace("ab_", "");
+    
+    if (isMonthly) {
+        // In monthly mode, each column is one month.
+        // Map q4->Month 1, q3->Month 2, q2->Month 3, q1->Month 4
+        let m = 1;
+        if (s === "q4") m = 1;
+        else if (s === "q3") m = 2;
+        else if (s === "q2") m = 3;
+        else if (s === "q1") m = 4;
+        return [{ value: `Month ${m}`, label: `Month ${m}` }];
+    }
+
     let months: number[];
     if (s === "q1") months = [1, 2, 3];
     else if (s === "q2") months = [4, 5, 6];
     else if (s === "q3") months = [7, 8, 9];
     else if (s === "q4") months = [10, 11, 12];
-    else months = [1, 2, 3]; // renewed, no_renewed, or other
+    else if (s === "risk_critical") months = [1, 2, 3];
+    else months = [1, 2, 3]; 
     return months.map((m) => ({ value: `Month ${m}`, label: `Month ${m}` }));
 }
 
+
 /** Default time_label for new step in this stage (first month of quarter). */
-function getDefaultMonthLabelForStage(stage: string | null): string {
-    const opts = getMonthOptionsForStage(stage);
+function getDefaultMonthLabelForStage(stage: string | null, isMonthly?: boolean): string {
+    const opts = getMonthOptionsForStage(stage, isMonthly);
     return opts[0]?.value ?? "Month 1";
 }
+
 
 type TimingType = "month" | "after_days" | "last_days";
 
@@ -54,11 +69,14 @@ interface QuarterlyFlowSheetProps {
     stage: string | null;
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
+    isMonthly?: boolean;
 }
+
 
 type ActionType = "email" | "call" | "task" | "whatsapp";
 
-export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlowSheetProps) {
+export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange, isMonthly }: QuarterlyFlowSheetProps) {
+
     const [viewMode, setViewMode] = useState<"day" | "month">("month");
     const [editingStep, setEditingStep] = useState<number | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -153,10 +171,15 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
 
     if (!stage) return null;
 
-    const stageTitle = stage === "no_renewed" ? "No Renewed" : (stage === "renewed" ? "Renewed" : stage.toUpperCase());
+    const stageTitle = stage === "no_renewed" ? "No Renewed" : 
+        (stage === "renewed" ? "Renewed" : 
+        stage === "risk_critical" ? "Critical Risk" : 
+        (isMonthly ? (stage.toLowerCase().includes("q4") ? "M1" : stage.toLowerCase().includes("q3") ? "M2" : stage.toLowerCase().includes("q2") ? "M3" : "M4") : stage.toUpperCase()));
+
 
     const handleAddStep = () => {
-        const monthLabel = getDefaultMonthLabelForStage(stage);
+        const monthLabel = getDefaultMonthLabelForStage(stage, isMonthly);
+
         const newStep: WorkflowStep = {
             title: "New Action",
             time_label: monthLabel,
@@ -174,7 +197,8 @@ export function QuarterlyFlowSheet({ stage, isOpen, onOpenChange }: QuarterlyFlo
         setEditingStep(currentSteps.length);
     };
 
-    const monthOptions = getMonthOptionsForStage(stage);
+    const monthOptions = getMonthOptionsForStage(stage, isMonthly);
+
 
     const actionIcons: Record<ActionType, JSX.Element> = {
         email: <Mail className="w-4 h-4" />,

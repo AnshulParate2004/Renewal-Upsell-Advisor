@@ -50,7 +50,7 @@ def process_audio_conversation(
         # Speech-to-Text using Azure Speech
         transcribed_text = azure_speech.speech_to_text(
             audio_bytes, 
-            language="en-US",
+            language="en-IN",
             audio_format=audio_format
         )
         
@@ -76,7 +76,7 @@ def process_audio_conversation(
         # Text-to-Speech using Azure Speech
         audio_response_bytes = azure_speech.text_to_speech(
             response_text,
-            voice_name="en-US-AriaNeural"  # Natural female voice
+            voice_name="hi-IN-AartiNeural"  # Natural female voice
         )
         
         # Encode audio response to base64
@@ -112,7 +112,7 @@ def process_audio_conversation_streaming(
                 logger.error(f"Failed to convert WebM to WAV: {e}", exc_info=True)
 
         transcribed_text = azure_speech.speech_to_text(
-            audio_bytes, language="en-US", audio_format=audio_format
+            audio_bytes, language="en-IN", audio_format=audio_format
         )
         if not transcribed_text or not transcribed_text.strip():
             logger.warning("No speech detected in audio")
@@ -131,7 +131,7 @@ def process_audio_conversation_streaming(
             if not sentence.strip():
                 continue
             try:
-                audio_bytes = azure_speech.text_to_speech(sentence, voice_name="en-US-AriaNeural")
+                audio_bytes = azure_speech.text_to_speech(sentence, voice_name="hi-IN-AartiNeural")
                 chunk_b64 = base64.b64encode(audio_bytes).decode("utf-8")
                 yield (chunk_b64, chunk_index, False, "", sentence.strip())
                 chunk_index += 1

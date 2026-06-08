@@ -1,65 +1,42 @@
 """
-Churn Prediction Service.
+Churn Prediction Calculation Service.
 """
-import pandas as pd
-import numpy as np
 from typing import Dict, Any
-from app.services.ml.model_loader import model_loader
-from app.core.exceptions import PredictionError, ModelLoadError
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 class ChurnPredictor:
-    """Service for predicting customer churn."""
-    
-    def __init__(self):
-        self.model = None
-        self.preprocessing = None
-        self._load_model()
-    
-    def _load_model(self):
-        """Load churn model and preprocessing."""
-        try:
-            self.model, self.preprocessing = model_loader.load_model("churn")
-        except Exception as e:
-            logger.error(f"Failed to load churn model: {e}")
-            raise ModelLoadError("churn", str(e))
+    """Service for calculating customer churn risk based on fixed formulas."""
     
     def predict(self, features: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Predict churn probability for given features.
+        Calculate churn probability for given features.
         
-        Args:
-            features: Dictionary of input features
-            
-        Returns:
-            Dictionary with churn_probability and risk_level
+        Formula:
+        - Base: 1.0 - (Health Score / 100)
+        - Urgency Penalty: +0.2 if renewal is within 30 days and health is low (<50)
+        - Critical Override: If account status is at_risk, min 0.80
         """
         try:
-            # Prepare features
-            processed_features = self._preprocess_features(features)
+            health_score = float(features.get("health_score", 50.0))
+            days_until_renewal = float(features.get("days_until_renewal", 90.0))
+            account_status = features.get("account_status", "")
             
-            # Make prediction
-            prediction = self.model.predict_proba(processed_features)[0]
-            churn_probability = float(prediction[1])  # Probability of churn (class 1)
+            # Base probability is inverse of health
+            churn_probability = 1.0 - (health_score / 100.0)
             
-            # --- Demo adjustments to ensure we have high risk accounts ---
-            health_score = features.get("health_score", 50)
-            days_until_renewal = features.get("days_until_renewal", 90)
+            # Add urgency penalty for near renewal with low health
+            if days_until_renewal < 30 and health_score < 50:
+                churn_probability += 0.2
+                
+            # Critical Override
+            if account_status == "at_risk":
+                churn_probability = max(churn_probability, 0.80)
             
-            # If health is very low or renewal is past due / extremely close, boost churn probability
-            if days_until_renewal < 0:
-                # Past due renewal = high churn risk
-                churn_probability = max(churn_probability, 0.85)
-            elif health_score < 40:
-                # Low health = significant churn risk
-                churn_probability = max(churn_probability, 0.65 + (40 - health_score) / 100.0)
-            elif days_until_renewal < 30 and health_score < 50:
-                # Close renewal with mediocre health
-                churn_probability = max(churn_probability, 0.75)
-            # -------------------------------------------------------------
+            # Clamp to 0-1 range
+            churn_probability = max(0.0, min(1.0, churn_probability))
             
             # Determine risk level
             if churn_probability >= 0.7:
@@ -72,38 +49,12 @@ class ChurnPredictor:
             return {
                 "churn_probability": churn_probability,
                 "risk_level": risk_level,
-                "confidence": float(max(prediction))
+                "confidence": 1.0  # Formula is 100% deterministic
             }
         except Exception as e:
-            logger.error(f"Churn prediction failed: {e}")
-            raise PredictionError("churn", str(e))
-    
-    def _preprocess_features(self, features: Dict[str, Any]) -> np.ndarray:
-        """Apply preprocessing to input features."""
-        if not self.preprocessing:
-            raise ValueError("Preprocessing pipeline not loaded")
-        
-        # Convert to DataFrame
-        feature_df = pd.DataFrame([features])
-        
-        # Apply label encoders for categorical features
-        if 'label_encoders' in self.preprocessing:
-            for col, encoder in self.preprocessing['label_encoders'].items():
-                if col in feature_df.columns:
-                    # Handle unseen categories
-                    try:
-                        feature_df[col] = encoder.transform(feature_df[col].astype(str))
-                    except ValueError:
-                        # Use most common class for unseen categories
-                        feature_df[col] = 0
-        
-        # Select and order features
-        feature_names = self.preprocessing.get('feature_names', feature_df.columns.tolist())
-        feature_df = feature_df.reindex(columns=feature_names, fill_value=0)
-        
-        # Apply scaler
-        if 'scaler' in self.preprocessing:
-            scaled_features = self.preprocessing['scaler'].transform(feature_df)
-            return pd.DataFrame(scaled_features, columns=feature_names)
-        
-        return feature_df
+            logger.error(f"Churn calculation failed: {e}")
+            return {
+                "churn_probability": 0.5,
+                "risk_level": "medium",
+                "confidence": 0.5
+            }

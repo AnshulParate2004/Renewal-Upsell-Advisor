@@ -1,0 +1,23 @@
+\contentsline {section}{\numberline {1}Executive Summary}{3}{section.1}%
+\contentsline {section}{\numberline {2}About Revenue Navigator}{3}{section.2}%
+\contentsline {section}{\numberline {3}Business Challenge}{3}{section.3}%
+\contentsline {section}{\numberline {4}Proposed Solution Overview}{4}{section.4}%
+\contentsline {section}{\numberline {5}Architecture Overview}{4}{section.5}%
+\contentsline {section}{\numberline {6}Platform \& AI Technology}{6}{section.6}%
+\contentsline {subsection}{\numberline {6.1}ML Scoring Engine}{6}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}LLM AI Assistant \& Sentiment}{6}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Lifecycle Engine \& Next Best Action}{7}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Multi-Channel Outreach Layer}{7}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Integration \& Data Foundation}{7}{subsection.6.5}%
+\contentsline {section}{\numberline {7}Customer Lifecycle Classification}{7}{section.7}%
+\contentsline {subsection}{\numberline {7.1}End-to-End Account Journey}{7}{subsection.7.1}%
+\contentsline {section}{\numberline {8}Revenue Operations Ecosystem}{9}{section.8}%
+\contentsline {section}{\numberline {9}Capability Modules}{9}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Predictive Pipeline \& Account Scoring}{9}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}AI Voice Renewal Agent}{9}{subsection.9.2}%
+\contentsline {subsection}{\numberline {9.3}Automated Campaign Manager}{10}{subsection.9.3}%
+\contentsline {subsection}{\numberline {9.4}Upsell Opportunity Discovery}{10}{subsection.9.4}%
+\contentsline {subsection}{\numberline {9.5}Lifecycle Engine \& Next Best Action}{11}{subsection.9.5}%
+\contentsline {subsection}{\numberline {9.6}Analytics \& Revenue Intelligence}{11}{subsection.9.6}%
+\contentsline {section}{\numberline {10}Strategic Benefits}{12}{section.10}%
+\contentsline {section}{\numberline {11}Conclusion}{13}{section.11}%

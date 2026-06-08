@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -13,12 +12,14 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { getPipelineType } from "@/lib/pipelineConfig";
 
 const navItems = [
   { title: "Dashboard", path: "/app", icon: LayoutDashboard },
   { title: "Accounts", path: "/app/accounts", icon: Users },
-  { title: "Renewal Pipeline", path: "/app/pipeline", icon: Kanban },
-  { title: "Voice Calls", path: "/app/calls", icon: Phone },
+  { title: "Customer Lifecycle", path: "/app/pipeline", icon: Kanban },
+  { title: "Sentiment", path: "/app/sentiment", icon: Phone },
   { title: "Opportunities", path: "/app/opportunities", icon: DollarSign },
   { title: "Analytics", path: "/app/analytics", icon: BarChart3 },
   { title: "Campaigns", path: "/app/triggers", icon: PlayCircle },
@@ -26,8 +27,9 @@ const navItems = [
 ];
 
 export function AppSidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, setCollapsed } = useSidebar();
   const location = useLocation();
+  const vendor = getPipelineType();
 
   return (
     <aside
@@ -37,29 +39,51 @@ export function AppSidebar() {
         collapsed ? "w-[68px]" : "w-60"
       )}
     >
-      {/* Logo */}
-      <div className={cn(
-        "h-14 flex items-center border-b-2 border-black shrink-0",
-        collapsed ? "justify-center px-0" : "gap-2.5 px-4"
-      )}>
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-primary rounded-lg">
-          <Zap className="h-4 w-4 text-primary-foreground fill-primary-foreground" />
-        </div>
-        {!collapsed && (
-          <div className="flex flex-col leading-none">
-            <span className="text-sm font-bold text-foreground tracking-tight">Revenue</span>
-            <span className="text-[10px] font-semibold text-primary tracking-wider uppercase">Navigator</span>
-          </div>
+      {/* Logo – click anywhere to expand/collapse */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className={cn(
+          "h-14 flex items-center border-b-2 border-black shrink-0 w-full text-left hover:bg-muted/40 transition-colors",
+          collapsed ? "justify-center px-0" : "gap-2.5 px-4"
+        )}
+      >
+        {vendor === "adobe" ? (
+          <>
+            <img src="/Adobe.png" alt="Adobe" className="w-8 h-8 rounded-lg object-contain bg-white shrink-0 border border-black/10" />
+            {!collapsed && (
+              <div className="flex flex-col leading-none">
+                <span className="text-sm font-bold text-foreground tracking-tight line-clamp-1">Adobe</span>
+                <span className="text-[10px] font-semibold text-emerald-600 tracking-wider uppercase">Health</span>
+              </div>
+            )}
+          </>
+        ) : vendor === "crowdstrike" ? (
+          <>
+            <img src="/crowdstrike.jpg" alt="Crowdstrike" className="w-8 h-8 rounded-lg object-contain bg-white shrink-0 border border-black/10" />
+            {!collapsed && (
+              <div className="flex flex-col leading-none">
+                <span className="text-sm font-bold text-foreground tracking-tight line-clamp-1">Crowdstrike</span>
+                <span className="text-[10px] font-semibold text-red-600 tracking-wider uppercase">Security</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-[#FF6B00] rounded-lg border border-black/10">
+              <Zap className="h-4 w-4 text-white fill-white" />
+            </div>
+            {!collapsed && (
+              <div className="flex flex-col leading-none">
+                <span className="text-sm font-bold text-foreground tracking-tight line-clamp-1">Zscaler</span>
+                <span className="text-[10px] font-semibold text-primary tracking-wider uppercase">Zero Trust</span>
+              </div>
+            )}
+          </>
         )}
         {!collapsed && (
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="ml-auto w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted text-muted-foreground transition-all"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </button>
+          <ChevronLeft className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
         )}
-      </div>
+      </button>
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1">

@@ -32,5 +32,25 @@ export const emailApi = {
         });
     },
 
+    getCampaigns: async (skip: number = 0, limit: number = 100) => {
+        const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+        return fetchApi(`/email/campaigns?${params.toString()}`);
+    },
+
+    manualReply: async (accountId: string, replyText: string, subject?: string) => {
+        return fetchApi('/email/manual-reply', {
+            method: 'POST',
+            body: JSON.stringify({
+                account_id: accountId,
+                reply_text: replyText,
+                subject: subject
+            })
+        });
+    },
+
+    reanalyze: async (accountId: string) => fetchApi(`/email/reanalyze/${accountId}`, { method: 'POST' }),
+
+    getSentiment: async (accountId: string) => fetchApi(`/email/sentiment/${accountId}`, { method: 'GET' }),
+
     getStatus: async () => fetchApi('/email/status', { method: 'GET' })
 };

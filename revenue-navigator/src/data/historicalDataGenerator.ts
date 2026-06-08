@@ -63,11 +63,37 @@ export const generateHistoricalData = (account: Account) => {
     }
 
     // Generate activity timeline
-    const activities: { type: AccountActivity['type'], title: string, desc: string, sent?: 'positive' | 'neutral' | 'negative' }[] = [
-        { type: 'call', title: 'Quarterly Business Review', desc: 'Discussed Q4 performance and renewal terms', sent: 'positive' },
-        { type: 'email', title: 'Product Update Announcement', desc: 'Sent information about new features', sent: 'neutral' },
+    const activities: { type: AccountActivity['type'], title: string, desc: string, sent?: 'positive' | 'neutral' | 'negative', transcript?: string, sentiment_score?: number, emails?: AccountActivity['emails'] }[] = [
+        { 
+            type: 'call', 
+            title: 'Quarterly Business Review', 
+            desc: 'Discussed Q4 performance and renewal terms', 
+            sent: 'positive',
+            sentiment_score: 0.85,
+            transcript: "Agent: Hello, this is Emily calling regarding InnovateHub Inc. The reason for our call today is: renewal reminder. I'd love to hear from you. Do you have a few minutes to talk?\n\nUser: Hi Emily! Yes, we've been very happy with the platform.\n\nAgent: That's great to hear. Any specific features you'd like to see added?\n\nUser: We've been looking into more advanced reporting features.\n\nAgent: I can certainly look into that for you. Let's schedule a deep dive next week."
+        },
+        { 
+            type: 'email', 
+            title: 'Product Update Announcement', 
+            desc: 'Sent information about new features', 
+            sent: 'neutral',
+            emails: [
+                { id: '1', sender: 'agent', subject: 'New Feature Announcement', body: 'Hello Team,\n\nWe are excited to announce our latest product updates, including several new features requested by you, such as enhanced analytics and more integrations with third-party tools.\n\nBest,\nThe Product Team', date: '2026-03-01T10:00:00Z' },
+                { id: '2', sender: 'user', subject: 'Re: New Feature Announcement', body: 'Thanks, we will look into this.', date: '2026-03-01T11:45:00Z' }
+            ]
+        },
         { type: 'meeting', title: 'Executive Stakeholder Meeting', desc: 'Met with CTO to discuss strategic alignment', sent: 'positive' },
-        { type: 'support_ticket', title: 'Technical Issue Resolved', desc: 'Integration bug fixed within SLA', sent: 'neutral' },
+        { 
+            type: 'support_ticket', 
+            title: 'Technical Issue Resolved', 
+            desc: 'Integration bug fixed within SLA', 
+            sent: 'neutral',
+            emails: [
+                { id: '3', sender: 'user', subject: 'API Authentication Failing', body: 'Hi support,\n\nWe are getting 401 Unauthorized errors on the new SDK version. Please assist.', date: '2026-02-15T09:00:00Z' },
+                { id: '4', sender: 'agent', subject: 'Re: API Authentication Failing', body: 'We have identified a misconfigured header in the latest update. A patch has been applied.', date: '2026-02-15T11:30:00Z' },
+                { id: '5', sender: 'user', subject: 'Re: API Authentication Failing', body: 'Confirmed fixed. Thank you!', date: '2026-02-15T14:15:00Z' }
+            ]
+        },
         { type: 'usage_spike', title: 'Usage Increased 40%', desc: 'Significant increase in platform adoption', sent: 'positive' },
         { type: 'usage_drop', title: 'Usage Declined', desc: 'Notable decrease in active users', sent: 'negative' },
         { type: 'contract_change', title: 'Contract Amendment', desc: 'Added 10 additional licenses', sent: 'positive' },
@@ -87,7 +113,10 @@ export const generateHistoricalData = (account: Account) => {
             type: activity.type,
             title: activity.title,
             description: activity.desc,
-            sentiment: activity.sent
+            sentiment: activity.sent,
+            transcript: activity.transcript,
+            sentiment_score: activity.sentiment_score,
+            emails: activity.emails
         });
     }
 

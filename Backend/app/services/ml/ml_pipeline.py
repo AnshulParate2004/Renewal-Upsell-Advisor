@@ -1,12 +1,12 @@
 """
-ML Pipeline: runs models in strict dependency order (graph priority).
-Downstream models always use predictions from upstream—never DB-stored values.
+Calculation Pipeline: runs scoring formulas in strict dependency order.
+Downstream scores always use values from upstream steps to ensure consistency.
 
 Order (priority):
-  1. Relationship (M_Rel) — uses only raw + engineered: F_Days_Contact, sentiment, utilization, licenses
-  2. Health (M_Health)   — uses F_Utilization + output of (1) relationship_score
-  3. Churn (C_Churn)     — uses output of (2) health_score + F_Days_Renewal + industry
-  4. Upsell (C_Upsell)   — uses output of (2) health_score + F_Utilization + arr, mrr, company_size
+  1. Relationship (Rel) — uses: contact recency, sentiment
+  2. Health (Health)     — uses: utilization + relationship_score output
+  3. Churn (Churn)       — uses: health_score output + renewal urgency
+  4. Upsell (Upsell)     — uses: health_score output + utilization + account size
 """
 from datetime import datetime, timezone, date
 from typing import Any, Dict, Optional

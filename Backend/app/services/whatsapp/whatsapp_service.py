@@ -13,13 +13,9 @@ logger = get_logger(__name__)
 
 
 def _get_twilio_credentials_from_db() -> dict:
-    """
-    Load Twilio credentials from Supabase setup_config (latest row).
-    Returns a dict; missing/blank values are None so callers can fall back to env.
-    """
+    """Load Twilio credentials from Supabase setup_config."""
     try:
-        from app.services.email.scheduler import get_supabase_client  # avoid circular import
-
+        from app.services.email.scheduler import get_supabase_client
         client = get_supabase_client()
         if not client:
             return {}
@@ -36,10 +32,10 @@ def _get_twilio_credentials_from_db() -> dict:
         
         row = rows[0]
         return {
-            "account_sid": row.get("twilio_account_sid") or None,
-            "auth_token": row.get("twilio_auth_token") or None,
-            "phone_number": row.get("twilio_phone_number") or None,
-            "whatsapp_number": row.get("twilio_whatsapp_number") or None,
+            "account_sid": row.get("twilio_account_sid"),
+            "auth_token": row.get("twilio_auth_token"),
+            "phone_number": row.get("twilio_phone_number"),
+            "whatsapp_number": row.get("twilio_whatsapp_number"),
         }
     except Exception as e:
         logger.warning(f"Could not load Twilio credentials from DB for WhatsApp: {e}")
@@ -66,9 +62,11 @@ class WhatsAppService:
         # Prefer dedicated WhatsApp number; fall back to voice number
         self.phone_number = (
             db.get("whatsapp_number")
-            or os.getenv("TWILIO_WHASTASPP_PHONE_NUMBER")   # user-requested env var name
-            or os.getenv("TWILIO_WHATSAPP_PHONE_NUMBER")    # common spelling fallback
+            or os.getenv("TWILIO_WHATSAPP_NUMBER")
+            or db.get("phone_number")
+            or os.getenv("TWILIO_WHATSAPP_PHONE_NUMBER")
             or os.getenv("TWILIO_PHONE_NUMBER")
+            or settings.TWILIO_WHATSAPP_NUMBER
             or settings.TWILIO_PHONE_NUMBER
         )
 

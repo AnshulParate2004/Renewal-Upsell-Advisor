@@ -128,4 +128,30 @@ export const accountsApi = {
       body: JSON.stringify(data),
     });
   },
+
+  getTicketStats: async (accountId: string): Promise<TicketStats> => {
+    const data = await fetchApi(`/accounts/${accountId}/ticket-stats`);
+    return {
+      raised: Number(data?.raised ?? 0),
+      resolved: Number(data?.resolved ?? 0),
+    };
+  },
+
+  getBulkTicketStats: async (): Promise<Record<string, TicketStats>> => {
+    const data = await fetchApi('/accounts/ticket-stats');
+    const stats = (data?.stats ?? {}) as Record<string, { raised?: number; resolved?: number }>;
+    const out: Record<string, TicketStats> = {};
+    for (const [id, row] of Object.entries(stats)) {
+      out[id] = {
+        raised: Number(row?.raised ?? 0),
+        resolved: Number(row?.resolved ?? 0),
+      };
+    }
+    return out;
+  },
 };
+
+export interface TicketStats {
+  raised: number;
+  resolved: number;
+}

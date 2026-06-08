@@ -1,222 +1,361 @@
 import { useMemo, useState } from "react";
-import { GripVertical, Clock, ShieldAlert, CheckCircle2, Loader2, Settings } from "lucide-react";
-import { formatCurrency, getDaysUntil, getRenewalInDays, getRenewalStageFromPlan, getRenewalStageForMonthly } from "@/data/mockData";
+import { Link } from "react-router-dom";
+import { CheckCircle2, Clock, ShieldAlert, Loader2, Settings } from "lucide-react";
 import { useAccounts } from "@/hooks/useAccounts";
-import { useUpdateAccount } from "@/hooks/useAccounts";
 import { useRevenue } from "@/contexts/RevenueContext";
+import { useLifecycleDashboard } from "@/hooks/useLifecycleDashboard";
+import { LIFECYCLE_STAGES } from "@/lib/lifecycleStages";
+import type { LifecycleStageConfig } from "@/types/lifecycle";
+import {
+  LifecycleStageFilter,
+  type StageFilter,
+} from "@/components/lifecycle/LifecycleStageFilter";
 import { QuarterlyFlowSheet } from "@/components/QuarterlyFlowSheet";
+import { getPipelineType, workflowStageForQuarter } from "@/lib/pipelineConfig";
+import { cn } from "@/lib/utils";
+import {
+  QUARTERS,
+  RISK_COLUMNS,
+  buildQuarterLifecycleBuckets,
+  buildRiskColumnLifecycleBuckets,
+  sumBucketsAcrossQuarters,
+  sumBucketsAcrossRiskColumns,
+  type BucketStats,
+  type QuarterId,
+  type RiskColumnId,
+} from "@/lib/quarterLifecycleBuckets";
+import { formatCurrency } from "@/data/mockData";
+import type { LifecycleStageId } from "@/types/lifecycle";
 
-type AnnualStage = "q1" | "q2" | "q3" | "q4" | "no_renewed";
-type MonthlyStage = "m1" | "no_renewed";
-type Stage = AnnualStage | MonthlyStage;
-
-const annualStages: AnnualStage[] = ["q1", "q2", "q3", "q4", "no_renewed"];
-const monthlyStages: MonthlyStage[] = ["m1", "no_renewed"];
-
-const stageConfig: Record<Stage, { title: string; color: string; icon: React.ReactNode }> = {
-  q1: { title: "Q1", color: "text-emerald-500", icon: <CheckCircle2 size={14} /> },
-  q2: { title: "Q2", color: "text-blue-500", icon: <Clock size={14} /> },
-  q3: { title: "Q3", color: "text-amber-500", icon: <Clock size={14} /> },
-  q4: { title: "Q4", color: "text-destructive", icon: <ShieldAlert size={14} /> },
-  m1: { title: "M1", color: "text-emerald-500", icon: <CheckCircle2 size={14} /> },
-  no_renewed: { title: "Not Renewed", color: "text-destructive", icon: <ShieldAlert size={14} /> },
+const QUARTER_ICONS: Record<QuarterId, typeof CheckCircle2> = {
+  q1: CheckCircle2,
+  q2: Clock,
+  q3: Clock,
+  q4: Clock,
 };
+
+function LifecycleBucketCards({
+  buckets,
+  columnTotal,
+  columnLabel,
+  stageFilter,
+  onStageFilter,
+  revenueLabel,
+  visibleStages,
+}: {
+  buckets: Record<LifecycleStageId, BucketStats>;
+  columnTotal: { count: number; revenue: number };
+  columnLabel: string;
+  stageFilter: StageFilter;
+  onStageFilter: (stage: StageFilter) => void;
+  revenueLabel: string;
+  visibleStages: LifecycleStageConfig[];
+}) {
+  return (
+    <>
+      {visibleStages.map((stage) => {
+        const bucket = buckets[stage.id as LifecycleStageId];
+        const count = bucket.count;
+        const revenue = bucket.revenue;
+        const sharePct = columnTotal.count ? Math.round((count / columnTotal.count) * 100) : 0;
+        const dimmed = stageFilter !== "all" && stageFilter !== stage.id;
+
+        return (
+          <button
+            key={stage.id}
+            type="button"
+            onClick={() => onStageFilter(stage.id)}
+            className={cn(
+              "w-full rounded-lg border border-black/15 bg-card p-3 text-left transition-all hover:shadow-sm",
+              dimmed && "opacity-35",
+              stageFilter === stage.id && "ring-2 ring-black ring-offset-1",
+              stage.borderClass
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span
+                className={cn(
+                  "text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border",
+                  stage.badgeClass
+                )}
+              >
+                {stage.label}
+              </span>
+              <span className="text-lg font-bold tabular-nums">{count}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {count === 1 ? "account" : "accounts"} · {formatCurrency(revenue)}
+            </p>
+            {columnTotal.count > 0 && (
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {sharePct}% of {columnLabel} · {revenueLabel}
+              </p>
+            )}
+          </button>
+        );
+      })}
+    </>
+  );
+}
 
 export default function Pipeline() {
   const { revenueType } = useRevenue();
-  const { data: accounts = [], isLoading } = useAccounts();
-  const updateAccount = useUpdateAccount();
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [flowModalOpen, setFlowModalOpen] = useState(false);
-  const [selectedQuarter, setSelectedQuarter] = useState<Stage | null>(null);
+  const { data: accounts = [], isLoading: accountsLoading } = useAccounts();
+  const { data: lifecycle, isLoading: lifecycleLoading } = useLifecycleDashboard(accounts);
 
+  const [viewType, setViewType] = useState<"quarterly" | "risk">("quarterly");
+  const [stageFilter, setStageFilter] = useState<StageFilter>("all");
+  const [flowSheetStage, setFlowSheetStage] = useState<string | null>(null);
+
+  const pipelineVendor = getPipelineType();
   const isMonthly = revenueType === "MRR";
-  const stages = isMonthly ? monthlyStages : annualStages;
 
-  const getStage = (a: { contractStart?: string; renewalDate?: string; status?: string | null; contractEnd?: string; renewalStage?: string }) =>
-    isMonthly
-      ? getRenewalStageForMonthly(a.contractStart, a.renewalDate, a.status, a.contractEnd, a.renewalStage)
-      : getRenewalStageFromPlan(a.contractStart, a.renewalDate, a.status, undefined, a.contractEnd, undefined);
+  const isRiskView = viewType === "risk";
+  const isLoading = accountsLoading || (lifecycleLoading && !lifecycle);
 
-  const byStage = (stage: Stage) => accounts.filter((a) => getStage(a) === stage);
-  const stageRevenue = (stage: Stage) =>
-    byStage(stage).reduce((s, a) => s + (revenueType === "MRR" ? (a.mrr ?? 0) : (a.arr ?? 0)), 0);
+  const { byQuarter, quarterTotals } = useMemo(
+    () => buildQuarterLifecycleBuckets(lifecycle?.accountAlerts, revenueType),
+    [lifecycle?.accountAlerts, revenueType]
+  );
 
-  const handleDragStart = (id: string) => setDraggedId(id);
+  const { byColumn, columnTotals } = useMemo(
+    () => buildRiskColumnLifecycleBuckets(lifecycle?.accountAlerts, revenueType),
+    [lifecycle?.accountAlerts, revenueType]
+  );
 
-  const handleDrop = (stage: Stage) => {
-    if (!draggedId) return;
-    updateAccount.mutate({ id: draggedId, data: { renewalStage: stage } });
-    setDraggedId(null);
-  };
+  const stageCounts = useMemo(() => {
+    if (isRiskView) {
+      const perStage = sumBucketsAcrossRiskColumns(byColumn);
+      const total = RISK_COLUMNS.reduce((sum, col) => sum + columnTotals[col.id].count, 0);
+      return {
+        all: total,
+        protect: perStage.protect,
+        renew: perStage.renew,
+        adopt: perStage.adopt,
+        expand: perStage.expand,
+        activate: perStage.activate,
+      };
+    }
+    const perStage = sumBucketsAcrossQuarters(byQuarter);
+    const quarterTotal = QUARTERS.reduce((sum, q) => sum + quarterTotals[q.id].count, 0);
+    const fromLifecycle = lifecycle?.stageCounts;
+    return {
+      all: quarterTotal,
+      protect: fromLifecycle?.protect ?? perStage.protect,
+      renew: fromLifecycle?.renew ?? perStage.renew,
+      adopt: fromLifecycle?.adopt ?? perStage.adopt,
+      expand: fromLifecycle?.expand ?? perStage.expand,
+      activate: fromLifecycle?.activate ?? perStage.activate,
+    };
+  }, [isRiskView, byQuarter, quarterTotals, byColumn, columnTotals, lifecycle?.stageCounts, lifecycle?.accountAlerts?.length]);
+
+  const visibleLifecycleStages = useMemo(() => {
+    if (stageFilter === "all") return LIFECYCLE_STAGES;
+    return LIFECYCLE_STAGES.filter((s) => s.id === stageFilter);
+  }, [stageFilter]);
+
+  const totalAccounts = stageCounts.all;
+  const revenueLabel = revenueType === "MRR" ? "MRR" : "ARR";
 
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col bg-background">
-      {/* Page Header */}
-      <div className="bg-card border-b-2 border-black px-6 py-5 shrink-0">
+      <div className="bg-card border-b-2 border-black px-6 py-5 shrink-0 space-y-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Renewal Pipeline</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Drag accounts between stages to update status</p>
+            <h1 className="text-xl font-semibold text-foreground">Customer Lifecycle</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {isRiskView
+                ? `Risk pipeline — Critical & Not Renewed · ${totalAccounts} at-risk accounts`
+                : `Quarterly pipeline — Q1–Q4 · ${totalAccounts} accounts`}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center p-1 bg-muted rounded-xl border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+              <button
+                type="button"
+                onClick={() => {
+                  setViewType("quarterly");
+                  setStageFilter("all");
+                }}
+                className={cn(
+                  "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
+                  viewType === "quarterly"
+                    ? "bg-white text-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Quarterly pipeline
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setViewType("risk");
+                  setStageFilter("all");
+                }}
+                className={cn(
+                  "px-4 py-1.5 text-xs font-bold rounded-lg transition-all",
+                  viewType === "risk"
+                    ? "bg-white text-destructive shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] border-2 border-black"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Risk pipeline
+              </button>
+            </div>
             <span className="text-xs font-medium text-primary flex items-center gap-2 px-3 py-1.5 bg-background border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
               Live sync
             </span>
+            <Link
+              to="/app/settings"
+              className="p-2 bg-white text-muted-foreground hover:text-foreground border-2 border-black rounded-lg shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all"
+              title="Settings"
+            >
+              <Settings size={16} />
+            </Link>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-6 max-w-[1600px] mx-auto w-full">
-
-        {isLoading ? (
-          <div className="flex items-center justify-center h-96">
-            <Loader2 className="w-5 h-5 animate-spin text-primary" />
-            <span className="ml-3 text-muted-foreground text-sm">Loading pipeline...</span>
-          </div>
-        ) : (
-          <div className="flex gap-4 overflow-x-auto pb-8 snap-x">
-            {stages.map((stage) => (
-              <div
-                key={stage}
-                className="min-w-[300px] w-full max-w-[350px] shrink-0 xl:shrink xl:max-w-none flex-1 basis-0 snap-start flex flex-col gap-3"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={() => handleDrop(stage)}
-              >
-                {/* Column Header */}
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2">
-                    <span className={stageConfig[stage].color}>{stageConfig[stage].icon}</span>
-                    <div>
-                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                        {stageConfig[stage].title}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedQuarter(stage);
-                            setFlowModalOpen(true);
-                          }}
-                          className="px-1.5 py-1 hover:bg-black/5 rounded-md transition-colors text-muted-foreground hover:text-foreground flex items-center justify-center shrink-0"
-                          title={`Configure ${stageConfig[stage].title} Flow`}
-                        >
-                          <Settings className="w-3.5 h-3.5" />
-                        </button>
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground">{byStage(stage).length} accounts</p>
-                    </div>
-                  </div>
-                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded-md border-2 border-black">
-                    {formatCurrency(stageRevenue(stage))}
-                  </span>
-                </div>
-
-                {/* Column Body */}
-                <div className="flex-1 bg-muted/30 border-2 border-black rounded-xl p-3 space-y-3 min-h-[500px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                  {byStage(stage).map((account) => {
-                    const renewalDays = getRenewalInDays(account.renewalDate, account.contractEnd, account.status);
-                    const days = renewalDays ?? getDaysUntil(account.renewalDate ?? "");
-                    const statusLower = (account.status ?? "").toString().trim().toLowerCase();
-                    const renewalStageLower = (account.renewalStage ?? "").toString().trim().toLowerCase();
-                    const isRenewed = statusLower === "renewed" || statusLower === "renewal" || renewalStageLower === "renewed";
-                    const risk = account.riskScore ?? 0;
-                    const isHighRisk = risk >= 70;
-                    const isMiddleRisk = risk >= 40 && risk < 70;
-                    // Renewed: show "Renewed" + "Xd to apply renewal" (green); else "Xd to renewal"
-                    const renewalLabel = isRenewed
-                      ? (renewalDays != null ? `${renewalDays}d to apply renewal` : "Renewed")
-                      : (renewalDays != null ? `${renewalDays}d to renewal` : `${days}d to renewal`);
-                    const remaining = renewalDays ?? days;
-                    const urgentThreshold = isMonthly ? 10 : 30;
-                    const renewalBadgeStyle = isRenewed
-                      ? "text-emerald-600 bg-emerald-500/10"
-                      : remaining <= urgentThreshold
-                        ? "text-destructive bg-destructive/10"
-                        : "text-muted-foreground bg-muted/50";
-                    return (
-                      <div
-                        key={account.id}
-                        draggable
-                        onDragStart={() => handleDragStart(account.id)}
-                        className={`cursor-grab bg-card border-2 border-black rounded-xl p-4 group transition-all active:cursor-grabbing relative overflow-hidden ${
-                          isRenewed ? "border-l-4 border-l-emerald-500" : ""
-                        }`}
-                      >
-                        {!isRenewed && (isHighRisk || isMiddleRisk) && (
-                          <div
-                            className={`absolute top-0 left-0 w-1 h-full rounded-l-xl ${
-                              isHighRisk ? "bg-destructive" : "bg-amber-400"
-                            }`}
-                          />
-                        )}
-
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{account.name}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {revenueType === "MRR"
-                                ? `$${(account.mrr ?? 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}`
-                                : formatCurrency(account.arr ?? 0)}
-                            </p>
-                          </div>
-                          <GripVertical className="h-4 w-4 text-muted-foreground/30 group-hover:text-muted-foreground transition-opacity" />
-                        </div>
-
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          {isRenewed && (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black bg-emerald-500/10 text-emerald-600">
-                              Renewed
-                            </span>
-                          )}
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium border-2 border-black ${
-                              isHighRisk && !isRenewed
-                                ? "bg-destructive/10 text-destructive"
-                                : isMiddleRisk && !isRenewed
-                                  ? "bg-amber-400/90 text-amber-950"
-                                  : "bg-emerald-500/10 text-emerald-600"
-                            }`}
-                          >
-                            {isHighRisk && !isRenewed
-                              ? "Critical"
-                              : isMiddleRisk && !isRenewed
-                                ? "Middle"
-                                : "Healthy"}
-                          </span>
-                          <span className={`text-xs font-medium border-2 border-black px-2 py-0.5 rounded ${renewalBadgeStyle}`}>
-                            {renewalLabel}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {byStage(stage).length === 0 && (
-                    <div className="h-full flex flex-col items-center justify-center text-center py-16">
-                      <div className="w-10 h-10 border-2 border-dashed border-black rounded-xl flex items-center justify-center text-muted-foreground shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                        <Plus className="w-4 h-4" />
-                      </div>
-                      <p className="mt-3 text-xs text-muted-foreground">No accounts</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+        {!isLoading && (
+          <div className="pt-1 border-t border-black/10">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+              Filter by lifecycle bucket
+            </p>
+            <LifecycleStageFilter
+              value={stageFilter}
+              onChange={setStageFilter}
+              counts={stageCounts}
+            />
           </div>
         )}
       </div>
 
-      {/* Quarterly Flow Modal */}
+      <div className="flex-1 overflow-auto p-6 max-w-[1600px] mx-auto w-full">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-96">
+            <Loader2 className="w-5 h-5 animate-spin text-primary" />
+            <span className="ml-3 text-muted-foreground text-sm">Loading pipeline…</span>
+          </div>
+        ) : isRiskView ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto pb-8">
+            {RISK_COLUMNS.map((column) => {
+              const totals = columnTotals[column.id];
+              return (
+                <div key={column.id} className="flex flex-col gap-3">
+                  <div
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 rounded-lg border border-black/15",
+                      column.headerBg
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className={cn("w-4 h-4 shrink-0", column.accentClass)} />
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground">{column.label}</h3>
+                        <p className="text-[10px] text-muted-foreground">{column.subtitle}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold text-foreground">{totals.count} accounts</p>
+                      <p className="text-[11px] text-muted-foreground">{formatCurrency(totals.revenue)}</p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex-1 bg-muted/30 border-2 border-black rounded-xl p-3 space-y-2 min-h-[420px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
+                      column.borderClass
+                    )}
+                  >
+                    <LifecycleBucketCards
+                      buckets={byColumn[column.id as RiskColumnId]}
+                      columnTotal={totals}
+                      columnLabel={column.label}
+                      stageFilter={stageFilter}
+                      onStageFilter={setStageFilter}
+                      revenueLabel={revenueLabel}
+                      visibleStages={visibleLifecycleStages}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex gap-4 overflow-x-auto pb-8 snap-x">
+            {QUARTERS.map((quarter) => {
+              const totals = quarterTotals[quarter.id];
+              const QuarterIcon = QUARTER_ICONS[quarter.id];
+
+              return (
+                <div
+                  key={quarter.id}
+                  className="min-w-[280px] w-full max-w-[320px] shrink-0 xl:shrink xl:max-w-none flex-1 basis-0 snap-start flex flex-col gap-3"
+                >
+                  <div
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 rounded-lg border border-black/15",
+                      quarter.headerBg
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={quarter.accentClass}>
+                        <QuarterIcon size={16} />
+                      </span>
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                          {quarter.label}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setFlowSheetStage(workflowStageForQuarter(pipelineVendor, quarter.id))
+                            }
+                            className="p-1 rounded hover:bg-black/5 text-muted-foreground hover:text-foreground transition-colors"
+                            title={`Configure ${quarter.label} pipeline workflow`}
+                          >
+                            <Settings size={12} />
+                          </button>
+                        </h3>
+                        <p className="text-[10px] text-muted-foreground">{quarter.subtitle}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold text-foreground">{totals.count} accounts</p>
+                      <p className="text-[11px] text-muted-foreground">{formatCurrency(totals.revenue)}</p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex-1 bg-muted/30 border-2 border-black rounded-xl p-3 space-y-2 min-h-[420px] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]",
+                      quarter.borderClass
+                    )}
+                  >
+                    <LifecycleBucketCards
+                      buckets={byQuarter[quarter.id]}
+                      columnTotal={totals}
+                      columnLabel={quarter.label}
+                      stageFilter={stageFilter}
+                      onStageFilter={setStageFilter}
+                      revenueLabel={revenueLabel}
+                      visibleStages={visibleLifecycleStages}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <QuarterlyFlowSheet
-        stage={selectedQuarter}
-        isOpen={flowModalOpen}
-        onOpenChange={setFlowModalOpen}
+        stage={flowSheetStage}
+        isOpen={flowSheetStage !== null}
+        onOpenChange={(open) => {
+          if (!open) setFlowSheetStage(null);
+        }}
+        isMonthly={isMonthly}
       />
     </div>
   );
-}
-
-function Plus({ className }: { className?: string }) {
-  return <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>;
 }

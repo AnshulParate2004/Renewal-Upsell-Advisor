@@ -1,51 +1,49 @@
 """
-Health Score Prediction Service.
+Health Score Calculation Service.
 """
-import pandas as pd
-import numpy as np
 from typing import Dict, Any
-from app.services.ml.model_loader import model_loader
-from app.core.exceptions import PredictionError, ModelLoadError
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 class HealthScorePredictor:
-    """Service for predicting customer health score."""
-    
-    def __init__(self):
-        self.model = None
-        self.preprocessing = None
-        self._load_model()
-    
-    def _load_model(self):
-        """Load health score model and preprocessing."""
-        try:
-            self.model, self.preprocessing = model_loader.load_model("health_score")
-        except Exception as e:
-            logger.error(f"Failed to load health score model: {e}")
-            raise ModelLoadError("health_score", str(e))
+    """Service for calculating customer health score based on a fixed formula."""
     
     def predict(self, features: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Predict health score for given features.
+        Calculate health score for given features.
         
-        Args:
-            features: Dictionary of input features
-            
-        Returns:
-            Dictionary with health_score and status
+        Formula:
+        - Utilization (40%): utilization_percentage (0-100)
+        - Sentiment (30%): sentiment_score * 100
+        - Recency (30%): Based on days since last contact
         """
         try:
-            # Prepare features
-            processed_features = self._preprocess_features(features)
+            # Handle both ratio (0-1) and percentage (0-100) for utilization
+            util = float(features.get("utilization_percentage", features.get("calculated_utilization", 0.5)))
+            util_points = util * 100 if util <= 1.0 else util
             
-            # Make prediction
-            health_score = float(self.model.predict(processed_features)[0])
+            # Sentiment points
+            sentiment = float(features.get("sentiment_score", 0.5))
+            sentiment_points = sentiment * 100
+            
+            # Recency points
+            dsbc = float(features.get("days_since_last_contact", 30))
+            if dsbc <= 30:
+                recency_points = 100
+            elif dsbc <= 60:
+                recency_points = 70
+            elif dsbc <= 90:
+                recency_points = 40
+            else:
+                recency_points = 10
+            
+            # Health Score = 40% Util + 30% Sentiment + 30% Recency
+            health_score = float((util_points * 0.4) + (sentiment_points * 0.3) + (recency_points * 0.3))
             
             # Clamp to 0-100 range
-            health_score = max(0, min(100, health_score))
+            health_score = max(0.0, min(100.0, health_score))
             
             # Determine status
             if health_score >= 70:
@@ -60,33 +58,8 @@ class HealthScorePredictor:
                 "status": status
             }
         except Exception as e:
-            logger.error(f"Health score prediction failed: {e}")
-            raise PredictionError("health_score", str(e))
-    
-    def _preprocess_features(self, features: Dict[str, Any]) -> np.ndarray:
-        """Apply preprocessing to input features."""
-        if not self.preprocessing:
-            raise ValueError("Preprocessing pipeline not loaded")
-        
-        # Convert to DataFrame
-        feature_df = pd.DataFrame([features])
-        
-        # Apply label encoders
-        if 'label_encoders' in self.preprocessing:
-            for col, encoder in self.preprocessing['label_encoders'].items():
-                if col in feature_df.columns:
-                    try:
-                        feature_df[col] = encoder.transform(feature_df[col].astype(str))
-                    except ValueError:
-                        feature_df[col] = 0
-        
-        # Select and order features
-        feature_names = self.preprocessing.get('feature_names', feature_df.columns.tolist())
-        feature_df = feature_df.reindex(columns=feature_names, fill_value=0)
-        
-        # Apply scaler
-        if 'scaler' in self.preprocessing:
-            scaled_features = self.preprocessing['scaler'].transform(feature_df)
-            return pd.DataFrame(scaled_features, columns=feature_names)
-        
-        return feature_df
+            logger.error(f"Health score calculation failed: {e}")
+            return {
+                "health_score": 50.0,
+                "status": "at_risk"
+            }
