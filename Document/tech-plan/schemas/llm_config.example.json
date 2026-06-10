@@ -1,0 +1,53 @@
+{
+  "_comment": "Stored in app_settings.config.llm_routing. provider_env values are env var NAMES (not secrets).",
+  "default": {
+    "model": "azure/gpt-4o",
+    "temperature": 0.0,
+    "provider_env": {
+      "api_key": "AZURE_OPENAI_API_KEY",
+      "api_base": "AZURE_OPENAI_ENDPOINT",
+      "api_version": "AZURE_OPENAI_API_VERSION"
+    }
+  },
+  "tasks": {
+    "sentiment": {
+      "model": "azure/gpt-4o",
+      "temperature": 0.0
+    },
+    "email_intent": {
+      "model": "anthropic/claude-3-5-sonnet-20241022",
+      "temperature": 0.0,
+      "provider_env": {
+        "api_key": "ANTHROPIC_API_KEY"
+      }
+    },
+    "email_personalization": {
+      "model": "azure/gpt-4o",
+      "temperature": 0.7
+    },
+    "voice_classify": {
+      "model": "azure/gpt-4o-mini",
+      "temperature": 0.0
+    },
+    "voice_respond": {
+      "model": "azure/gpt-4o",
+      "temperature": 0.7
+    },
+    "voice_summary": {
+      "model": "azure/gpt-4o",
+      "temperature": 0.3
+    },
+    "whatsapp_message": {
+      "model": "azure/gpt-4o-mini",
+      "temperature": 0.7
+    },
+    "workflow_content": {
+      "model": "azure/gpt-4o",
+      "temperature": 0.7
+    },
+    "nba_recommendation": {
+      "model": "azure/gpt-4o-mini",
+      "temperature": 0.5
+    }
+  }
+}

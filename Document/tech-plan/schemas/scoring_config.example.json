@@ -1,0 +1,49 @@
+{
+  "relationship": {
+    "recency_weight": 0.6,
+    "sentiment_weight": 0.4,
+    "recency_tiers": [
+      {"max_days": 30, "points": 100},
+      {"max_days": 60, "points": 70},
+      {"max_days": 90, "points": 40},
+      {"max_days": 365, "points": 10}
+    ],
+    "negative_sentiment_categories": ["negative", "very_negative"],
+    "negative_sentiment_multiplier": 0.7
+  },
+  "health": {
+    "util_weight": 0.40,
+    "sentiment_weight": 0.30,
+    "recency_weight": 0.30,
+    "relationship_blend": 0.0
+  },
+  "churn": {
+    "base_formula": "1 - health/100",
+    "urgency_renewal_days_lt": 30,
+    "urgency_health_below": 50,
+    "urgency_penalty": 0.20,
+    "at_risk_status_floor": 0.80
+  },
+  "risk": {
+    "derive_from_churn": true,
+    "at_risk_score_floor": 70,
+    "bands": {
+      "low_max": 39,
+      "medium_max": 69
+    }
+  },
+  "upsell": {
+    "gate_min_health_score": 65,
+    "gate_min_utilization_percent": 72,
+    "gate_max_risk_score": 45,
+    "blend_weights": {
+      "health": 0.5,
+      "utilization": 0.3,
+      "arr_log": 0.2
+    }
+  },
+  "threshold_links": {
+    "sync_with_lifecycle_buckets": true,
+    "map_expand_to_upsell_gates": true
+  }
+}

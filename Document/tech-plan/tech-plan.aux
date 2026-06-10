@@ -1,0 +1,133 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\providecommand \oddpage@label [2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Executive Technical Summary}{4}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Technology Stack}{4}{subsection.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Non-Functional Requirements}{4}{subsection.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}System Context}{4}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Platform Architecture}{5}{section.3}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Six-layer platform architecture --- presentation through data foundation with external integrations.}}{6}{figure.caption.1}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:platform}{{1}{6}{Six-layer platform architecture --- presentation through data foundation with external integrations}{figure.caption.1}{}}
+\gdef \LT@i {\LT@entry 
+    {1}{97.04872pt}\LT@entry 
+    {1}{168.49014pt}\LT@entry 
+    {1}{105.58464pt}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces End-to-end technical data flow --- ingest, score, act, feedback with store annotations.}}{7}{figure.caption.2}\protected@file@percent }
+\newlabel{fig:dataflow}{{2}{7}{End-to-end technical data flow --- ingest, score, act, feedback with store annotations}{figure.caption.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Service Decomposition}{7}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Data Architecture}{8}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}PostgreSQL --- Relational Source of Truth}{8}{subsection.5.1}\protected@file@percent }
+\gdef \LT@ii {\LT@entry 
+    {1}{105.58464pt}\LT@entry 
+    {1}{154.26378pt}\LT@entry 
+    {1}{77.13188pt}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces PostgreSQL entity-relationship diagram --- core tables and foreign keys.}}{9}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:erd}{{3}{9}{PostgreSQL entity-relationship diagram --- core tables and foreign keys}{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}MongoDB --- Unstructured Store}{9}{subsection.5.2}\protected@file@percent }
+\gdef \LT@iii {\LT@entry 
+    {1}{62.9055pt}\LT@entry 
+    {1}{168.49014pt}\LT@entry 
+    {1}{119.81102pt}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Redis --- Cache, Queue, Locks}{10}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Lifecycle Buckets \& Quarterly Pipelines}{10}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Dual-Axis Classification Model}{10}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Lifecycle Bucket Engine (Fit-Ratio System)}{10}{subsection.6.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces MongoDB collections and PostgreSQL pointer pattern.}}{11}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:mongo}{{4}{11}{MongoDB collections and PostgreSQL pointer pattern}{figure.caption.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Redis logical databases, key patterns, and Celery queue routing.}}{11}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:redis}{{5}{11}{Redis logical databases, key patterns, and Celery queue routing}{figure.caption.5}{}}
+\gdef \LT@iv {\LT@entry 
+    {1}{40.14322pt}\LT@entry 
+    {1}{68.9055pt}\LT@entry 
+    {1}{247.84842pt}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Lifecycle bucket filter bar --- ALL plus five stage cards with account counts (Protect P1 through Activate P5).}}{12}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:bucket-filter}{{6}{12}{Lifecycle bucket filter bar --- ALL plus five stage cards with account counts (Protect P1 through Activate P5)}{figure.caption.6}{}}
+\gdef \LT@v {\LT@entry 
+    {1}{48.67912pt}\LT@entry 
+    {1}{111.58464pt}\LT@entry 
+    {1}{134.0374pt}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Fit-ratio priority cascade --- P1 Protect through P5 Adopt with configurable threshold diamonds.}}{13}{figure.caption.7}\protected@file@percent }
+\newlabel{fig:bucket-cascade}{{7}{13}{Fit-ratio priority cascade --- P1 Protect through P5 Adopt with configurable threshold diamonds}{figure.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Quarterly Pipeline Matrix (Q1--Q4)}{13}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}Dynamic Workflow Execution (per Quarter)}{13}{subsection.6.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Quarterly pipeline matrix --- Q1--Q4 columns with five lifecycle bucket rows per column (count, ARR, percent).}}{14}{figure.caption.8}\protected@file@percent }
+\newlabel{fig:quarter-matrix}{{8}{14}{Quarterly pipeline matrix --- Q1--Q4 columns with five lifecycle bucket rows per column (count, ARR, percent)}{figure.caption.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Workflow step timeline --- vertical sequence of email/call steps with week, frequency, and follow-up annotations.}}{15}{figure.caption.9}\protected@file@percent }
+\newlabel{fig:workflow-timeline}{{9}{15}{Workflow step timeline --- vertical sequence of email/call steps with week, frequency, and follow-up annotations}{figure.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Dynamic workflow engine --- Celery evaluator, DB steps, channel router to Resend and Twilio, state advance.}}{15}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:workflow-engine}{{10}{15}{Dynamic workflow engine --- Celery evaluator, DB steps, channel router to Resend and Twilio, state advance}{figure.caption.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces LangGraph workflow executor --- load state, send window check, generate content, dispatch, advance.}}{16}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:lg-workflow}{{11}{16}{LangGraph workflow executor --- load state, send window check, generate content, dispatch, advance}{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}Dual-Axis Filter Combination}{16}{subsection.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Deterministic Scoring Engine (Phase 1)}{16}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Pipeline Order}{16}{subsection.7.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Scoring formula pipeline --- LLM sentiment node (blue) and deterministic formula nodes (green) with PostgreSQL persistence and bucket reclassification.}}{17}{figure.caption.12}\protected@file@percent }
+\newlabel{fig:scoring-formulas}{{12}{17}{Scoring formula pipeline --- LLM sentiment node (blue) and deterministic formula nodes (green) with PostgreSQL persistence and bucket reclassification}{figure.caption.12}{}}
+\gdef \LT@vi {\LT@entry 
+    {1}{119.81102pt}\LT@entry 
+    {1}{233.62204pt}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Raw Inputs}{18}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Fixed Formulas}{18}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Configurable Scoring Parameters}{19}{subsection.7.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}Persistence}{19}{subsection.7.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}LangGraph Algorithm Specifications}{19}{section.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Scoring Pipeline (\texttt  {ScoringState})}{19}{subsection.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Voice Agent Graph}{20}{subsection.8.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Email Intent Graph}{20}{subsection.8.3}\protected@file@percent }
+\gdef \LT@vii {\LT@entry 
+    {1}{91.35826pt}\LT@entry 
+    {1}{140.0374pt}\LT@entry 
+    {1}{134.0374pt}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}NBA Agent Graph}{21}{subsection.8.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Workflow Executor Graph}{21}{subsection.8.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}ML Migration Strategy (Phase 2+)}{21}{section.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}AI \& Agent Layer}{21}{section.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.1}LiteLLM Model Router}{21}{subsection.10.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.2}LangGraph Agent Graphs}{22}{subsection.10.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces LangGraph scoring pipeline --- deterministic nodes with optional LLM sentiment enrichment.}}{22}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:lg-score}{{13}{22}{LangGraph scoring pipeline --- deterministic nodes with optional LLM sentiment enrichment}{figure.caption.13}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces LangGraph voice agent --- Twilio-driven state machine with escalation and summarization.}}{22}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:lg-voice}{{14}{22}{LangGraph voice agent --- Twilio-driven state machine with escalation and summarization}{figure.caption.14}{}}
+\gdef \LT@viii {\LT@entry 
+    {1}{105.58464pt}\LT@entry 
+    {1}{97.35826pt}\LT@entry 
+    {1}{162.49014pt}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces LangGraph email intent --- branch actions enqueue Celery sub-tasks.}}{23}{figure.caption.15}\protected@file@percent }
+\newlabel{fig:lg-email}{{15}{23}{LangGraph email intent --- branch actions enqueue Celery sub-tasks}{figure.caption.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces LangGraph NBA agent --- human review gate for Protect stage and churn actions.}}{23}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:lg-nba}{{16}{23}{LangGraph NBA agent --- human review gate for Protect stage and churn actions}{figure.caption.16}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {11}Async Runtime \& Threading}{23}{section.11}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Async runtime --- Uvicorn workers, Celery Beat, worker pools, and data store connections.}}{25}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:async}{{17}{25}{Async runtime --- Uvicorn workers, Celery Beat, worker pools, and data store connections}{figure.caption.17}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {12}Cron \& Scheduled Jobs}{26}{section.12}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Celery Beat cron catalog --- schedules, target queues, and lock semantics.}}{26}{figure.caption.18}\protected@file@percent }
+\newlabel{fig:cron}{{18}{26}{Celery Beat cron catalog --- schedules, target queues, and lock semantics}{figure.caption.18}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {13}API Surface}{26}{section.13}\protected@file@percent }
+\gdef \LT@ix {\LT@entry 
+    {1}{114.12054pt}\LT@entry 
+    {1}{97.35826pt}\LT@entry 
+    {1}{162.49014pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {14}Module Technical Flows}{27}{section.14}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Campaign technical flow --- PostgreSQL filter, Redis lock, Celery dispatch, channel router.}}{27}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:flow-campaign}{{19}{27}{Campaign technical flow --- PostgreSQL filter, Redis lock, Celery dispatch, channel router}{figure.caption.19}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {15}Integration Layer}{27}{section.15}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Webhook ingest --- signature verify, Mongo archive, async Celery processing.}}{28}{figure.caption.20}\protected@file@percent }
+\newlabel{fig:flow-webhook}{{20}{28}{Webhook ingest --- signature verify, Mongo archive, async Celery processing}{figure.caption.20}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {15.1}Twilio}{28}{subsection.15.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {15.2}Email Provider}{28}{subsection.15.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {15.3}Salesforce}{28}{subsection.15.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {15.4}Stripe}{28}{subsection.15.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {16}Security \& Governance}{28}{section.16}\protected@file@percent }
+\gdef \LT@x {\LT@entry 
+    {1}{77.13188pt}\LT@entry 
+    {1}{154.26378pt}\LT@entry 
+    {1}{148.26378pt}}
+\@writefile{toc}{\contentsline {section}{\numberline {17}Deployment Topology}{29}{section.17}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces Production deployment --- load balancer, API/WebSocket nodes, data stores, Celery workers.}}{29}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:deploy}{{21}{29}{Production deployment --- load balancer, API/WebSocket nodes, data stores, Celery workers}{figure.caption.21}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {18}Implementation Phases}{29}{section.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {19}Appendix: Diagram Maintenance}{30}{section.19}\protected@file@percent }
+\gdef \@abspage@last{30}

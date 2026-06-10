@@ -1,0 +1,100 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: rnu
+      POSTGRES_PASSWORD: rnu_dev
+      POSTGRES_DB: revenue_navigator
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rnu -d revenue_navigator"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    ports:
+      - "8001:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://rnu:rnu_dev@postgres:5432/revenue_navigator
+      DATABASE_URL_SYNC: postgresql+psycopg2://rnu:rnu_dev@postgres:5432/revenue_navigator
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MONGODB_URL: mongodb://mongo:27017/revenue_navigator
+      JWT_SECRET: dev-secret-change-in-production
+      SCORING_MODE: formula
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  worker:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://rnu:rnu_dev@postgres:5432/revenue_navigator
+      DATABASE_URL_SYNC: postgresql+psycopg2://rnu:rnu_dev@postgres:5432/revenue_navigator
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MONGODB_URL: mongodb://mongo:27017/revenue_navigator
+      JWT_SECRET: dev-secret-change-in-production
+      SCORING_MODE: formula
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    command: celery -A app.workers.celery_app worker -l info -Q scoring,workflows,campaigns,email,voice,integrations,analytics,maintenance
+
+  beat:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+asyncpg://rnu:rnu_dev@postgres:5432/revenue_navigator
+      DATABASE_URL_SYNC: postgresql+psycopg2://rnu:rnu_dev@postgres:5432/revenue_navigator
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      MONGODB_URL: mongodb://mongo:27017/revenue_navigator
+      JWT_SECRET: dev-secret-change-in-production
+      SCORING_MODE: formula
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: celery -A app.workers.celery_app beat -l info
+
+volumes:
+  pgdata:
+  mongodata:

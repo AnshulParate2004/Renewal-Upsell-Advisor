@@ -1,0 +1,45 @@
+\contentsline {section}{\numberline {1}Executive Technical Summary}{4}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Technology Stack}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Non-Functional Requirements}{4}{subsection.1.2}%
+\contentsline {section}{\numberline {2}System Context}{4}{section.2}%
+\contentsline {section}{\numberline {3}Platform Architecture}{5}{section.3}%
+\contentsline {section}{\numberline {4}Service Decomposition}{7}{section.4}%
+\contentsline {section}{\numberline {5}Data Architecture}{8}{section.5}%
+\contentsline {subsection}{\numberline {5.1}PostgreSQL --- Relational Source of Truth}{8}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}MongoDB --- Unstructured Store}{9}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Redis --- Cache, Queue, Locks}{10}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Lifecycle Buckets \& Quarterly Pipelines}{10}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Dual-Axis Classification Model}{10}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Lifecycle Bucket Engine (Fit-Ratio System)}{10}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Quarterly Pipeline Matrix (Q1--Q4)}{13}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Dynamic Workflow Execution (per Quarter)}{13}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Dual-Axis Filter Combination}{16}{subsection.6.5}%
+\contentsline {section}{\numberline {7}Deterministic Scoring Engine (Phase 1)}{16}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Pipeline Order}{16}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Raw Inputs}{18}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Fixed Formulas}{18}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Configurable Scoring Parameters}{19}{subsection.7.4}%
+\contentsline {subsection}{\numberline {7.5}Persistence}{19}{subsection.7.5}%
+\contentsline {section}{\numberline {8}LangGraph Algorithm Specifications}{19}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Scoring Pipeline (\texttt {ScoringState})}{19}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Voice Agent Graph}{20}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Email Intent Graph}{20}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}NBA Agent Graph}{21}{subsection.8.4}%
+\contentsline {subsection}{\numberline {8.5}Workflow Executor Graph}{21}{subsection.8.5}%
+\contentsline {section}{\numberline {9}ML Migration Strategy (Phase 2+)}{21}{section.9}%
+\contentsline {section}{\numberline {10}AI \& Agent Layer}{21}{section.10}%
+\contentsline {subsection}{\numberline {10.1}LiteLLM Model Router}{21}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}LangGraph Agent Graphs}{22}{subsection.10.2}%
+\contentsline {section}{\numberline {11}Async Runtime \& Threading}{23}{section.11}%
+\contentsline {section}{\numberline {12}Cron \& Scheduled Jobs}{26}{section.12}%
+\contentsline {section}{\numberline {13}API Surface}{26}{section.13}%
+\contentsline {section}{\numberline {14}Module Technical Flows}{27}{section.14}%
+\contentsline {section}{\numberline {15}Integration Layer}{27}{section.15}%
+\contentsline {subsection}{\numberline {15.1}Twilio}{28}{subsection.15.1}%
+\contentsline {subsection}{\numberline {15.2}Email Provider}{28}{subsection.15.2}%
+\contentsline {subsection}{\numberline {15.3}Salesforce}{28}{subsection.15.3}%
+\contentsline {subsection}{\numberline {15.4}Stripe}{28}{subsection.15.4}%
+\contentsline {section}{\numberline {16}Security \& Governance}{28}{section.16}%
+\contentsline {section}{\numberline {17}Deployment Topology}{29}{section.17}%
+\contentsline {section}{\numberline {18}Implementation Phases}{29}{section.18}%
+\contentsline {section}{\numberline {19}Appendix: Diagram Maintenance}{30}{section.19}%
